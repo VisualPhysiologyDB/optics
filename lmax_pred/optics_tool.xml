@@ -1,16 +1,18 @@
 <tool id="optics_1" name="OPTICS" version="0.1.0">
   <description>Opsin Phenotype Tool for Inference of Color Sensitivity</description>
-  <command>python '$__tool_directory__/prediction_functions_galaxy.py' '$input' '$output' -m '$model' </command>
+  <command detect_errors="aggressive">
+  python '$__tool_directory__/prediction_functions_galaxy.py' '$input' '$output' -m '$model' </command>
+  
   <inputs>
     <param format="fasta" name="input" type="data" label="Source file"/>
-    <param name="model" type="select" optional="False" label="Select model used for predictions" default="Vertebrate Model"> 
+    <param name="model" type="select" optional="False" label="Select model used for predictions:" default="Vertebrate Model"> 
         <options from_file="db_model_names.tsv">  
             <column name="value" index="1"/>
         </options>
     </param>
   </inputs>
   <outputs>
-    <data format="tsv" name="output" />
+    <data format="tsv" name="output" label ="OPTICS on ${input.name}"/>
   </outputs>
 
   <tests>
@@ -22,7 +24,20 @@
   </tests>
 
   <help>
-    This tool predicts Opsin Phenotype (λmax) from an input sequence or FASTA file of sequences.
+    This tool predicts Opsin Phenotype (λmax) from an input file of opsin amino-acid sequences in FASTA format.     
+    
+    Output = A *.tsv* file of predictions matched to corresponding sequence 'name' take from the FASTA identifier. 
+    
+    Example of properly formatted FASTA entry:
+
+    &gt;NP_001014890.1_rhodopsin_Bos taurus  
+    MNGTEGPNFYVPFSNKTGVVRSPFEAPQYYLAEPWQFSMLAAYMFLLIMLGFPINFLTLYVTVQHKKLRT
+    PLNYILLNLAVADLFMVFGGFTTTLYTSLHGYFVFGPTGCNLEGFFATLGGEIALWSLVVLAIERYVVVC
+    KPMSNFRFGENHAIMGVAFTWVMALACAAPPLVGWSRYIPEGMQCSCGIDYYTPHEETNNESFVIYMFVV
+    HFIIPLIVIFFCYGQLVFTVKEAAAQQQESATTQKAEKEVTRMVIIMVIAFLICWLPYAGVAFYIFTHQG
+    SDFGPIFMTIPAFFAKTSAVYNPVIYIMMNKQFRNCMVTTLCCGKNPLGDDEASTTVSKTETSQVAPA
+
+    *WARNING - If your file is not in proper FASTA format, this tool will not work properly!*
   </help>
 
 </tool>
