@@ -10,19 +10,22 @@ import csv  # For CSV export
 import time
 
 def process_sequence(sequence, selected_model):
+    data_dir = "/home/PIA/galaxy/tools/optics/data"
     model_datasets = {
-    "Whole Dataset Model": "/home/PIA/galaxy/tools/optics/data/whole_dataset.fasta",
-    "Vertebrate Model": "/home/PIA/galaxy/tools/optics/data/vertebrate_opsins.fasta",
-    "Rod Model": "/home/PIA/galaxy/tools/optics/data/rod_opsins.fasta",
-
+    "Whole Dataset Model": f"{data_dir}/whole_dataset.fasta",
+    "Wild-Type Model": f"{data_dir}/wild_type_opsins.fasta",
+    "Vertebrate Model": f"{data_dir}/vertebrate_opsins.fasta",
+    "Invertebrate Model": f"{data_dir}/invertebrate_opsins.fasta",
+    "Rod Model": f"{data_dir}/rod_opsins.fasta",
     }   
 
+    model_dir = "/home/PIA/galaxy/tools/optics/models"
     model_directories = {
-        "Whole Dataset Model": "/home/PIA/galaxy/tools/optics/models/wds_gbc.pkl",
-        "Vertebrate Model": "/home/PIA/galaxy/tools/optics/models/vert_gbc.pkl",
-        "Rod Model": "/home/PIA/galaxy/tools/optics/models/rod_gbc.pkl",
-
-
+        "Whole Dataset Model": f"{model_dir}/wds_gbc.pkl",
+        "Wild-Type Model": f"{model_dir}/wt_gbc.pkl",
+        "Vertebrate Model": f"{model_dir}/vert_gbc.pkl",
+        "Invertebrate Model": f"{model_dir}/invert_lgbm.pkl",
+        "Rod Model": f"{model_dir}/rod_gbc.pkl",
     }
 
     if sequence == None:
@@ -32,17 +35,17 @@ def process_sequence(sequence, selected_model):
         return ('Error: No model selected')
     
     alignment_data = model_datasets[selected_model]
-    print(alignment_data)
+    #print(alignment_data)
     selected_model = model_directories[selected_model]
 
-    temp_seq = "/home/PIA/galaxy/tools/optics/temp_seq.fasta"
+    temp_seq = "/home/PIA/galaxy/tools/optics/tmp/temp_seq.fasta"
     with open(temp_seq, "w") as temp_file:  # Key change
         if '>' in sequence:
-            print(f"here is the sequence: {sequence}")
+            #print(f"here is the sequence: {sequence}")
             temp_file.write(sequence)
         else:
             sequence = ">placeholder_name\n" + sequence
-            print(f"here is the sequence: {sequence}")
+            #print(f"here is the sequence: {sequence}")
             temp_file.write(sequence) # Write your data to the file object
 
     with open(temp_seq, 'r') as f:
@@ -50,7 +53,7 @@ def process_sequence(sequence, selected_model):
             print(lines)
         
 
-    new_ali = '/home/PIA/galaxy/tools/optics/temp_ali.fasta'  
+    new_ali = '/home/PIA/galaxy/tools/optics/tmp/temp_ali.fasta'  
     # ... (Perform alignment using MAFFT with alignment_data)
     mafft_exe ='mafft' #change to your own directory for mafft.bat or mafft execution file
     seq_type = 'aa'
@@ -60,11 +63,10 @@ def process_sequence(sequence, selected_model):
         subprocess.run(cmd, stdout=f, stderr=subprocess.PIPE)
 
     new_seq_test = read_data(new_ali, seq_type = seq_type, is_main=True, gap_threshold=0.6)
-    print(new_seq_test)
     ref_copy = read_data(alignment_data, seq_type = seq_type, is_main=True, gap_threshold=0.6)
     last_seq = ref_copy.shape[0]
     new_seq_test = new_seq_test.iloc[last_seq:].copy()
-    print(new_seq_test)
+    #print(new_seq_test)
 
     # ... (Load the selected model and make a prediction)
     load_top_mod = load_obj(selected_model)
@@ -120,11 +122,15 @@ def process_sequences_from_file(file,selected_model):
 
 def main():
     
+    model_dir = "/home/PIA/galaxy/tools/optics/models"
     model_directories = {
-        "Whole Dataset Model": "./models/wds_gbc.pkl",
-        "Vertebrate Model": "./models/vert_gbc.pkl",
-        "Rod Model": "./models/rod_gbc.pkl",
+        "Whole Dataset Model": f"{model_dir}/wds_gbc.pkl",
+        "Wild-Type Model": f"{model_dir}/models/wt_gbc.pkl",
+        "Vertebrate Model": f"{model_dir}/vert_gbc.pkl",
+        "Invertebrate Model": f"{model_dir}/invert_lgbm.pkl",
+        "Rod Model": f"{model_dir}/rod_gbc.pkl",
     }
+
 
     parser = argparse.ArgumentParser(description="Process sequences using a selected model")
     parser.add_argument("input", help="Either a single sequence or a path to a FASTA file", type=str)
