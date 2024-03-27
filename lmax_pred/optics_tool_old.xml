@@ -1,7 +1,7 @@
 <tool id="optics_1" name="OPTICS" version="0.1.0">
   <description>Opsin Phenotype Tool for Inference of Color Sensitivity</description>
   <command detect_errors="aggressive">
-  python '$__tool_directory__/prediction_functions_galaxy.py' '$input' '$output' '$blast_report' -m '$model' -b $blast_checkbox </command>
+  python '$__tool_directory__/prediction_functions_galaxy.py' '$input' '$output' -m '$model' </command>
   
   <inputs>
     <param format="fasta" name="input" type="data" label="Source file"/>
@@ -10,15 +10,9 @@
             <column name="value" index="1"/>
         </options>
     </param>
-    <param name="blast_checkbox" type="boolean" 
-         truevalue="yes" falsevalue="no" 
-         checked="true" 
-         label="Enable for BLASTp analysis against corresponding model dataset" 
-         help="Enables or disables BLASTp analysis of query sequences against VPOD datasets"/> 
   </inputs>
   <outputs>
     <data format="tsv" name="output" label ="OPTICS on ${input.name}"/>
-    <data format="txt" name="blast_report" label ="OPTICS blast on ${input.name}"/>
   </outputs>
 
   <tests>
@@ -32,14 +26,11 @@
   <help>
     This tool predicts Opsin Phenotype (λmax) from an input file of opsin amino-acid sequences in FASTA format.     
     
-    Output 1 = A *.tsv* file of predictions matched to corresponding sequence 'name' take from the FASTA identifier. 
-
-    Output 2 (if enabled) = A *.txt* file of each query sequence BLASTed against the corresponding model dataset to find sequence with closest %identity and find highlight sites that differ.
+    Output = A *.tsv* file of predictions matched to corresponding sequence 'name' take from the FASTA identifier. 
     
     Example of properly formatted FASTA entry:
 
     &gt;NP_001014890.1_rhodopsin_Bos taurus  
-
     MNGTEGPNFYVPFSNKTGVVRSPFEAPQYYLAEPWQFSMLAAYMFLLIMLGFPINFLTLYVTVQHKKLRT
     PLNYILLNLAVADLFMVFGGFTTTLYTSLHGYFVFGPTGCNLEGFFATLGGEIALWSLVVLAIERYVVVC
     KPMSNFRFGENHAIMGVAFTWVMALACAAPPLVGWSRYIPEGMQCSCGIDYYTPHEETNNESFVIYMFVV

@@ -8,8 +8,9 @@ import argparse
 import os
 import csv  # For CSV export
 import time
+from optics_scripts.blastp_align import seq_sim_report
 
-def process_sequence(sequence, selected_model):
+def process_sequence(sequence, name, selected_model, identity_report, blastp):
     data_dir = "/home/PIA/galaxy/tools/optics/data"
     model_datasets = {
     "Whole Dataset Model": f"{data_dir}/whole_dataset.fasta",
@@ -17,6 +18,27 @@ def process_sequence(sequence, selected_model):
     "Vertebrate Model": f"{data_dir}/vertebrate_opsins.fasta",
     "Invertebrate Model": f"{data_dir}/invertebrate_opsins.fasta",
     "Rod Model": f"{data_dir}/rod_opsins.fasta",
+    }   
+    model_raw_data = {
+    "Whole Dataset Model": f"{data_dir}/wds.txt",
+    "Wild-Type Model": f"{data_dir}/wt.txt",
+    "Vertebrate Model": f"{data_dir}/vert.txt",
+    "Invertebrate Model": f"{data_dir}/invert.txt",
+    "Rod Model": f"{data_dir}/rod.txt",
+    }   
+    model_metadata = {
+    "Whole Dataset Model": f"{data_dir}/wds_meta.tsv",
+    "Wild-Type Model": f"{data_dir}/wt_meta.tsv",
+    "Vertebrate Model": f"{data_dir}/vert_meta.tsv",
+    "Invertebrate Model": f"{data_dir}/invert_meta.tsv",
+    "Rod Model": f"{data_dir}/rod_meta.tsv",
+    }   
+    model_blast_db = {
+    "Whole Dataset Model": f"{data_dir}/blast_dbs/wds_db",
+    "Wild-Type Model": f"{data_dir}/blast_dbs/wt_db",
+    "Vertebrate Model": f"{data_dir}/blast_dbs/vert_db",
+    "Invertebrate Model": f"{data_dir}/blast_dbs/invert_db",
+    "Rod Model": f"{data_dir}/blast_dbs/rod_db",
     }   
 
     model_dir = "/home/PIA/galaxy/tools/optics/models"
@@ -35,7 +57,10 @@ def process_sequence(sequence, selected_model):
         return ('Error: No model selected')
     
     alignment_data = model_datasets[selected_model]
-    #print(alignment_data)
+    raw_data = model_raw_data[selected_model]
+    metadata = model_metadata[selected_model]
+    blast_db = model_blast_db[selected_model]
+
     selected_model = model_directories[selected_model]
 
     temp_seq = "/home/PIA/galaxy/tools/optics/tmp/temp_seq.fasta"
@@ -48,10 +73,11 @@ def process_sequence(sequence, selected_model):
             #print(f"here is the sequence: {sequence}")
             temp_file.write(sequence) # Write your data to the file object
 
-    with open(temp_seq, 'r') as f:
-        for lines in f:
-            print(lines)
-        
+    if blastp == 'no' or blastp == False:
+        pass
+    else:
+        seq_sim_report(temp_seq, name, blast_db, raw_data, metadata, identity_report)
+        print('Query sequence processed via blastp')
 
     new_ali = '/home/PIA/galaxy/tools/optics/tmp/temp_ali.fasta'  
     # ... (Perform alignment using MAFFT with alignment_data)
@@ -75,7 +101,7 @@ def process_sequence(sequence, selected_model):
     return(prediction[0])
  
 
-def process_sequences_from_file(file,selected_model):
+def process_sequences_from_file(file,selected_model, identity_report, blastp):
     if file == None:
         return ('Error: No file given')
 
@@ -112,10 +138,12 @@ def process_sequences_from_file(file,selected_model):
     #print(names)
                      
     predictions = []
+    i = 0
     for seq in sequences:
         print(seq)
-        prediction = process_sequence(seq, selected_model)  # Process each sequence
+        prediction = process_sequence(seq, names[i], selected_model, identity_report, blastp)  # Process each sequence
         predictions.append(prediction)
+        i+=1
     #print(predictions)
 
     return(names,predictions)
@@ -135,13 +163,17 @@ def main():
     parser = argparse.ArgumentParser(description="Process sequences using a selected model")
     parser.add_argument("input", help="Either a single sequence or a path to a FASTA file", type=str)
     parser.add_argument("output", help="Name for output file", type=str, default = 'output.txt')
+    parser.add_argument("iden_output", help="Name for the sequence identity report output file", type=str, default = 'seq_identity_report.txt')
     parser.add_argument("-m", "--model", help="Model to use for prediction", 
-                        choices=list(model_directories.keys()), required=True)  
+                    choices=list(model_directories.keys()), required=True)
+    parser.add_argument("-b", "--blastp", help="Option to enable blastp analsis on query sequences", 
+                    type = str or bool , required=True)
+
 
     args = parser.parse_args()
 
     if os.path.isfile(args.input):
-        names, predictions = process_sequences_from_file(args.input, args.model)
+        names, predictions = process_sequences_from_file(args.input, args.model, args.iden_output, args.blastp)
         with open(args.output, 'w') as f:
             i = 0
             while i in range(len(names)):
