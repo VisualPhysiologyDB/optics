@@ -1,7 +1,7 @@
 <tool id="optics_1" name="OPTICS" version="0.1.0">
   <description>Opsin Phenotype Tool for Inference of Color Sensitivity</description>
   <command detect_errors="aggressive">
-  python '$__tool_directory__/prediction_functions_galaxy.py' '$input' '$output' '$blast_report' -m '$model' -b $blast_checkbox </command>
+  python '$__tool_directory__/prediction_functions_galaxy.py' '$input' '$output' '$blast_report' -m '$model' -b $blast_checkbox -r %ref_sequence</command>
   
   <inputs>
     <param format="fasta" name="input" type="data" label="Source file"/>
@@ -10,11 +10,21 @@
             <column name="value" index="1"/>
         </options>
     </param>
-    <param name="blast_checkbox" type="boolean" 
-         truevalue="yes" falsevalue="no" 
-         checked="true" 
-         label="Enable for BLASTp analysis against corresponding model dataset" 
-         help="Enables or disables BLASTp analysis of query sequences against VPOD datasets"/> 
+    
+    <conditional name="reference_options">
+      <param name="blast_checkbox" type="boolean" 
+          truevalue="yes" falsevalue="no" 
+          checked="true" 
+          label="Enable for BLASTp analysis against corresponding model dataset" 
+          help="Enables or disables BLASTp analysis of query sequences against VPOD datasets"/> 
+          <when value="yes"> 
+            <param name="ref_sequence" type="select" label="Select reference sequence">
+              <option value="Bovine">Bovine</option>
+              <option value="Squid">Squid</option>
+            </param>
+          </when>
+    </conditional>
+
   </inputs>
   <outputs>
     <data format="tsv" name="output" label ="OPTICS on ${input.name}"/>
@@ -36,6 +46,8 @@
 
     Output 2 (if enabled) = A *.txt* file of each query sequence BLASTed against the corresponding model dataset to find sequence with closest %identity and find highlight sites that differ.
     
+    *WARNING - If your file is not in proper FASTA format, this tool will not work properly!*
+
     Example of properly formatted FASTA entry:
 
     &gt;NP_001014890.1_rhodopsin_Bos taurus  
@@ -45,8 +57,12 @@
     KPMSNFRFGENHAIMGVAFTWVMALACAAPPLVGWSRYIPEGMQCSCGIDYYTPHEETNNESFVIYMFVV
     HFIIPLIVIFFCYGQLVFTVKEAAAQQQESATTQKAEKEVTRMVIIMVIAFLICWLPYAGVAFYIFTHQG
     SDFGPIFMTIPAFFAKTSAVYNPVIYIMMNKQFRNCMVTTLCCGKNPLGDDEASTTVSKTETSQVAPA
+  
+    Here is a link to a bibliography of the publications used to build VPOD_1.0: https://tinyurl.com/nm7tt3k8
 
-    *WARNING - If your file is not in proper FASTA format, this tool will not work properly!*
+    Know of publications for training opsin ML models not included in the VPOD_1.0 database?
+
+    If so, please send them to us through this form: https://tinyurl.com/29afaxyr
   </help>
 
 </tool>

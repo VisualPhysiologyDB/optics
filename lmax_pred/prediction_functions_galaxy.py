@@ -10,7 +10,7 @@ import csv  # For CSV export
 import time
 from optics_scripts.blastp_align import seq_sim_report
 
-def process_sequence(sequence, name, selected_model, identity_report, blastp):
+def process_sequence(sequence, name, selected_model, identity_report, blastp, refseq):
     data_dir = "/home/PIA/galaxy/tools/optics/data"
     model_datasets = {
     "Whole Dataset Model": f"{data_dir}/whole_dataset.fasta",
@@ -76,7 +76,7 @@ def process_sequence(sequence, name, selected_model, identity_report, blastp):
     if blastp == 'no' or blastp == False:
         pass
     else:
-        seq_sim_report(temp_seq, name, blast_db, raw_data, metadata, identity_report)
+        seq_sim_report(temp_seq, name, refseq, blast_db, raw_data, metadata, identity_report)
         print('Query sequence processed via blastp')
 
     new_ali = '/home/PIA/galaxy/tools/optics/tmp/temp_ali.fasta'  
@@ -101,7 +101,7 @@ def process_sequence(sequence, name, selected_model, identity_report, blastp):
     return(prediction[0])
  
 
-def process_sequences_from_file(file,selected_model, identity_report, blastp):
+def process_sequences_from_file(file,selected_model, identity_report, blastp, refseq):
     if file == None:
         return ('Error: No file given')
 
@@ -118,14 +118,14 @@ def process_sequences_from_file(file,selected_model, identity_report, blastp):
         for line in lines:
             if '>' in line:
                 if i == 1:
-                    names.append(line.replace('>','').strip())
+                    names.append(line.replace('>','').strip().replace(' ','_'))
                     sequences.append(entry)
                     entry = ""
                     entry += line
                     #print(sequences)
                     line_count+=1
                 else:
-                    names.append(line.replace('>','').strip())
+                    names.append(line.replace('>','').strip().replace(' ','_'))
                     entry += line
                     i+=1
                     line_count+=1
@@ -141,7 +141,7 @@ def process_sequences_from_file(file,selected_model, identity_report, blastp):
     i = 0
     for seq in sequences:
         print(seq)
-        prediction = process_sequence(seq, names[i], selected_model, identity_report, blastp)  # Process each sequence
+        prediction = process_sequence(seq, names[i], selected_model, identity_report, blastp, refseq)  # Process each sequence
         predictions.append(prediction)
         i+=1
     #print(predictions)
@@ -168,12 +168,15 @@ def main():
                     choices=list(model_directories.keys()), required=True)
     parser.add_argument("-b", "--blastp", help="Option to enable blastp analsis on query sequences", 
                     type = str or bool , required=True)
+    parser.add_argument("-r", "--refseq", help="Reference sequence used for blastp analysis.", 
+                type = str, required=False)
 
 
     args = parser.parse_args()
-
+    if args.refseq == None:
+        args.refseq = 'Bovine'
     if os.path.isfile(args.input):
-        names, predictions = process_sequences_from_file(args.input, args.model, args.iden_output, args.blastp)
+        names, predictions = process_sequences_from_file(args.input, args.model, args.iden_output, args.blastp, args.refseq)
         with open(args.output, 'w') as f:
             i = 0
             while i in range(len(names)):

@@ -15,12 +15,13 @@ def run_blastp(query_file, database):
     blast_result = subprocess.run(blast_cmd, capture_output=True, text=True).stdout
     blast_metrics = parse_blast_result(blast_result)
     closest_match_id = blast_result.splitlines()[1].split("\t")[1]
+    print(closest_match_id)
 
     return closest_match_id, blast_metrics
 
 # --- Alignment ---
 def align_sequences(query_seq, target_seq, reference_seq):
-    """Aligns query, target, and reference sequences using Clustal Omega."""
+    """Aligns query, target, and reference sequences using MAFFT"""
     #sequences = [query_seq, target_seq, reference_seq]
     #aligner = MultipleSeqAlignment(sequences)
     #alignment = aligner.align()
@@ -29,18 +30,19 @@ def align_sequences(query_seq, target_seq, reference_seq):
         temp_file.write(f'{reference_seq}\n')
         temp_file.write(f'{query_seq}\n')
         temp_file.write(f'{target_seq}\n')
-
+    #with open(temp_seqs, "r") as temp_file:
+        #for lines in temp_file:
+            #print(lines)
     new_ali = '/home/PIA/galaxy/tools/optics/tmp/blastp_temp_ali.fasta'  
     # ... (Perform alignment using MAFFT with alignment_data)
     mafft_exe ='mafft' #change to your own directory for mafft.bat or mafft execution file
     cmd = [mafft_exe,'--auto',temp_seqs]
     with open(new_ali, 'w') as f:
         try:
-            subprocess.run(cmd, stdout=f, stderr=subprocess.PIPE)
-        except:
-            return Exception('Something is wrong with the alignment!')
-
-
+            subprocess.run(cmd, stdout=f, stderr=subprocess.PIPE, check=True)
+            print('Alignment Successful!')
+        except subprocess.CalledProcessError as e:
+            raise Exception(f'MAFFT alignment failed.\n{e.stderr.decode()}')
     return new_ali
 
 # --- Extract sequences ---
@@ -48,7 +50,9 @@ def extract_from_fasta(fasta_file, seq_id):
     """Retrieves a sequence from a FASTA file by its ID."""
     for record in SeqIO.parse(fasta_file, "fasta"):
         if record.id == seq_id:
-            return (">" + record.id + "\n" + str(record.seq))  # Return the sequence as a string
+            seq = ">" + str(record.id).replace(' ','_') + "\n" + str(record.seq)
+            #print(f"The Sequence is: {seq}") 
+            return (seq)  # Return the sequence as a string
 
 
 # --- BLAST result parsing ---
@@ -66,48 +70,69 @@ def parse_blast_result(blast_output):
 
 # --- Difference analysis with bovine position mapping ---
 def analyze_differences(query_seq, closest_match_seq, reference_seq):
-    
-    query_seq_list = query_seq.split('\n')[1:]
-    query_seq = ''
-    closest_match_seq_list = closest_match_seq.split('\n')[1:]
-    closest_match_seq = ''
-    reference_seq_list = reference_seq.split('\n')[1:]
-    reference_seq = ''
+    try:
+        query_seq_list = query_seq.split('\n')[1:]
+        query_seq = ''
+        closest_match_seq_list = closest_match_seq.split('\n')[1:]
+        closest_match_seq = ''
+        reference_seq_list = reference_seq.split('\n')[1:]
+        reference_seq = ''
 
-    for x in range(len(query_seq_list)):
-        query_seq+=query_seq_list[x]
-        closest_match_seq+=closest_match_seq_list[x]
-        reference_seq+=reference_seq_list[x]
+        for x in range(len(query_seq_list)):
+            query_seq+=query_seq_list[x]
+            closest_match_seq+=closest_match_seq_list[x]
+            reference_seq+=reference_seq_list[x]
 
-    differences = []
-    bovine_pos = 1  # Initialize the bovine position counter
-    for i, (q, c, r) in enumerate(zip(query_seq, closest_match_seq, reference_seq)):
-        if q != c and r != '-':
-            differences.append((i, q, c, bovine_pos))
-            bovine_pos += 1 # Increment bovine position counter only if not a gap 
-        elif q != c:
-            differences.append((i, q, c, 'N/A'))
-    return differences
+        print(f'{query_seq}\n{closest_match_seq}\n{reference_seq}')
+        differences = []
+        bovine_pos = 1  # Initialize the bovine position counter
+        for i, (q, c, r) in enumerate(zip(query_seq, closest_match_seq, reference_seq)):
+            if q != c and r != '-':
+                differences.append((i, q, c, bovine_pos))
+                bovine_pos += 1 # Increment bovine position counter only if not a gap 
+            elif q != c and r == '-':
+                differences.append((i, q, c, 'N/A'))
+            elif q == c and r == '-':
+                pass
+            else:
+                bovine_pos+=1 
+        return differences
+    except:
+        raise Exception
 
 # --- Main script ---
-def seq_sim_report(query_file, name, opsin_database, opsin_db_fasta, opsin_db_meta, ouput_file):
+def seq_sim_report(query_file, name, ref_seq_id, opsin_database, opsin_db_fasta, opsin_db_meta, ouput_file):
     # BLAST search
     closest_match_id, blast_metrics = run_blastp(query_file, opsin_database)
     
     # Extract sequences
+    with open(query_file, 'r') as q:
+        for lines in q:
+            if '>' in lines:
+                name = lines.replace('>','').split(' ')[0]
+                print(name)
+                break
+            else:
+                pass
     query_record = extract_from_fasta(query_file, seq_id=name) # Replace with query ID
-    closest_match_record = extract_from_fasta(opsin_db_fasta, closest_match_id)
-    reference_record = extract_from_fasta(opsin_db_fasta, "Bovine")
+    print(f"Query record is still: {query_record}")
+    closest_match_record = extract_from_fasta(opsin_db_fasta, seq_id=closest_match_id)
+    if ref_seq_id == "Bovine":
+        reference_record = '>Bovine\nMNGTEGPNFYVPFSNKTGVVRSPFEAPQYYLAEPWQFSMLAAYMFLLIMLGFPINFLTLYVTVQHKKLRTPLNYILLNLAVADLFMVFGGFTTTLYTSLHGYFVFGPTGCNLEGFFATLGGEIALWSLVVLAIERYVVVCKPMSNFRFGENHAIMGVAFTWVMALACAAPPLVGWSRYIPEGMQCSCGIDYYTPHEETNNESFVIYMFVVHFIIPLIVIFFCYGQLVFTVKEAAAQQQESATTQKAEKEVTRMVIIMVIAFLICWLPYAGVAFYIFTHQGSDFGPIFMTIPAFFAKTSAVYNPVIYIMMNKQFRNCMVTTLCCGKNPLGDDEASTTVSKTETSQVAPA'
+    else:
+        reference_record = '>Squid\nMGRDLRDNETWWYNPSIVVHPHWREFDQVPDAVYYSLGIFIGICGIIGCGGNGIVIYLFTKTKSLQTPANMFIINLAFSDFTFSLVNGFPLMTISCFLKKWIFGFAACKVYGFIGGIFGFMSIMTMAMISIDRYNVIGRPMAASKKMSHRRAFIMIIFVWLWSVLWAIGPIFGWGAYTLEGVLCNCSFDYISRDSTTRSNILCMFILGFFGPILIIFFCYFNIVMSVSNHEKEMAAMAKRLNAKELRKAQAGANAEMRLAKISIVIVSQFLLSWSPYAVVALLAQFGPLEWVTPYAAQLPVMFAKASAIHNPMIYSVSHPKFREAISQTFPWVLTCCQFDDKETEDDKDAETEIPAGESSDAAPSADAAQMKEMMAMMQKMQQQQAAYPPQGYAPPPQGYPPQGYPPQGYPPQGYPPQGYPPPPQGAPPQGAPPAAPPQGVDNQAYQA'
+    #print(reference_record)
 
     # Alignment
     alignment = align_sequences(query_record, closest_match_record, reference_record)
-    
+
     with open(alignment, 'r') as f:
         aligned_sequences = []
         i = 0
         line_count = 0
         entry = ""
         lines = f.readlines()
+        #print(lines) #to check that the alignment actually worked
         num_lines = len(lines)
         #print(num_lines)
 
@@ -116,18 +141,19 @@ def seq_sim_report(query_file, name, opsin_database, opsin_db_fasta, opsin_db_me
                 if i == 1:
                     aligned_sequences.append(entry)
                     entry = ""
-                    entry += line
+                    entry += f'{line.strip()}\n'
                     #print(sequences)
                     line_count+=1
                 else:
-                    entry += line
+                    entry += f'{line.strip()}\n'
                     i+=1
                     line_count+=1
             else:
-                entry += line
+                entry += line.strip()
                 line_count+=1
                 if line_count >= num_lines:
                         aligned_sequences.append(entry)
+                        print(aligned_sequences)
 #print(sequences)
     # Difference analysis with bovine mapping
     reference_seq = str(aligned_sequences[0])
