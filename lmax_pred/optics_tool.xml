@@ -57,12 +57,14 @@
     KPMSNFRFGENHAIMGVAFTWVMALACAAPPLVGWSRYIPEGMQCSCGIDYYTPHEETNNESFVIYMFVV
     HFIIPLIVIFFCYGQLVFTVKEAAAQQQESATTQKAEKEVTRMVIIMVIAFLICWLPYAGVAFYIFTHQG
     SDFGPIFMTIPAFFAKTSAVYNPVIYIMMNKQFRNCMVTTLCCGKNPLGDDEASTTVSKTETSQVAPA
-  
-    Here is a link to a bibliography of the publications used to build VPOD_1.0: https://tinyurl.com/nm7tt3k8
+
+    Here is a link to a bibliography of the publications used to build VPOD_1.0 (the database we made and used to train our ML models): https://tinyurl.com/nm7tt3k8
 
     Know of publications for training opsin ML models not included in the VPOD_1.0 database?
 
     If so, please send them to us through this form: https://tinyurl.com/29afaxyr
+
+    For those interested in VPOD and how the pipeline for training ML models, visit our GitHub: https://github.com/VisualPhysiologyDB/visual-physiology-opsin-db
   </help>
 
 </tool>

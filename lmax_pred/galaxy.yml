@@ -337,7 +337,7 @@ gravity:
   # Configure dynamic handlers in this section.
   # See https://docs.galaxyproject.org/en/latest/admin/scaling.html#dynamically-defined-handlers for details.
   # handlers: {}
-  galaxy:
+galaxy:
 
   # The directory that will be prepended to relative paths in options
   # specifying other Galaxy config files (e.g. datatypes_config_file).
@@ -500,9 +500,9 @@ gravity:
   # files.
   # The value of this option will be resolved with respect to
   # <config_dir>.
-  #tool_config_file: tool_conf.xml
-#    tool_config_pia.xml
-#    tool_conf.xml.sample
+  tool_config_file: tool_conf.xml
+  #    tool_config_pia.xml
+  #    tool_conf.xml.sample
   # Tool config file for tools installed from the Galaxy Tool Shed. Must
   # be writable by Galaxy and generally should not be edited by hand. In
   # older Galaxy releases, this file was part of the tool_config_file
@@ -531,7 +531,7 @@ gravity:
   # create it.
   # The value of this option will be resolved with respect to
   # <managed_config_dir>.
-  #integrated_tool_panel_config: integrated_tool_panel.xml
+  integrated_tool_panel_config: integrated_tool_panel.xml
 
   # Default path to the directory containing the tools defined in
   # tool_conf.xml. Other tool config files must include the tool_path as
@@ -579,7 +579,7 @@ gravity:
 
   # Set to true to instruct Galaxy to look for and install missing tool
   # dependencies before each job runs.
-  conda_auto_install: true
+  #conda_auto_install: false
 
   # Set to true to instruct Galaxy to install Conda from the web
   # automatically if it cannot find a local copy and conda_exec is not

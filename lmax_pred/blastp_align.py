@@ -182,7 +182,7 @@ def seq_sim_report(query_file, name, ref_seq_id, opsin_database, opsin_db_fasta,
         with open(alignment, 'r') as infile:
             for line in infile:
                 f.write(line)
-        f.write("\nDifferences between query and closest match (with Bovine position):\n")
+        f.write(f"\nDifferences between query and closest match (with {ref_seq_id} position):\n")
 
         for pos, query_aa, closest_aa, bovine_pos in differences:
          f.write(f"Position: {bovine_pos}\tQuery: {query_aa}\tClosest Match: {closest_aa}\n")

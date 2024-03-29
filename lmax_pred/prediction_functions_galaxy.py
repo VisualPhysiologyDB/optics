@@ -98,7 +98,7 @@ def process_sequence(sequence, name, selected_model, identity_report, blastp, re
     load_top_mod = load_obj(selected_model)
     prediction = load_top_mod.predict(new_seq_test)
     
-    return(prediction[0])
+    return(round(float(prediction[0]),1))
  
 
 def process_sequences_from_file(file,selected_model, identity_report, blastp, refseq):
