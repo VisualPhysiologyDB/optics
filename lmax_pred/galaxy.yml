@@ -1961,7 +1961,7 @@ galaxy:
   # groups, roles, libraries, and more.  For more information, see:
   # https://galaxyproject.org/admin/
   #admin_users: null
-  admin_users: sethfrazer@ucsb.edu
+  admin_users: sethfrazer@ucsb.edu,oakley@ucsb.edu
 
   # Force everyone to log in (disable anonymous access).
   #require_login: false

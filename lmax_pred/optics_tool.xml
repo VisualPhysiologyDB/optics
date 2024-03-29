@@ -1,7 +1,7 @@
 <tool id="optics_1" name="OPTICS" version="0.1.0">
   <description>Opsin Phenotype Tool for Inference of Color Sensitivity</description>
   <command detect_errors="aggressive">
-  python '$__tool_directory__/prediction_functions_galaxy.py' '$input' '$output' '$blast_report' -m '$model' -b $blast_checkbox -r %ref_sequence</command>
+  python '$__tool_directory__/prediction_functions_galaxy.py' '$input' '$output' '$blast_report' -m '$model' -b '$blast_checkbox' -r '$ref_sequence' -f '$ref_seq_file'</command>
   
   <inputs>
     <param format="fasta" name="input" type="data" label="Source file"/>
@@ -11,24 +11,42 @@
         </options>
     </param>
     
-    <conditional name="reference_options">
-      <param name="blast_checkbox" type="boolean" 
+    <conditional name="ref_options">
+      <param name="blast_checkbox" type="boolean" optional = "True"
           truevalue="yes" falsevalue="no" 
           checked="true" 
           label="Enable for BLASTp analysis against corresponding model dataset" 
           help="Enables or disables BLASTp analysis of query sequences against VPOD datasets"/> 
-          <when value="yes"> 
-            <param name="ref_sequence" type="select" label="Select reference sequence">
-              <option value="Bovine">Bovine</option>
-              <option value="Squid">Squid</option>
-            </param>
+          
+          <when value="no" ref="blast_checkbox">
+            <param name="ref_sequence" type="hidden" value="null"/>
+            <param name="ref_seq_file" type="hidden" value="null"/>
+          </when>
+
+          <when value="yes" ref = "blast_checkbox"> 
+            <conditional name = 'custom_ref_seq'>
+              <param name="ref_sequence" type="select" label="Select reference sequence">
+                <option value="Bovine">Bovine</option>
+                <option value="Squid">Squid</option>
+                <option value="Custom">Custom</option>
+              </param>
+                <when value = "Custom">
+                <param format="fasta" name="ref_seq_file" type="data" label="Source file for custom reference sequence. *SHOULD CONTAIN 1 SEQUENCE* - Otherwise first sequence in file will be used."/>
+                </when>
+                <when value = "Bovine" ref = "ref_sequence">
+                  <param name="ref_seq_file" type="hidden" value="null"/>
+                </when>
+                <when value = "Squid" ref = "ref_sequence">
+                  <param name="ref_seq_file" type="hidden" value="null"/>
+                </when>
+            </conditional>
           </when>
     </conditional>
 
   </inputs>
   <outputs>
-    <data format="tsv" name="output" label ="OPTICS on ${input.name}"/>
-    <data format="txt" name="blast_report" label ="OPTICS blast on ${input.name}"/>
+    <data format="tsv" name="output" label ="OPTICS λmax prediction on ${input.name}"/>
+    <data format="txt" name="blast_report" label ="OPTICS blastp analysis on ${input.name}"/>
   </outputs>
 
   <tests>

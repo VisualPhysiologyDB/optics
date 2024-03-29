@@ -8,9 +8,10 @@ import argparse
 import os
 import csv  # For CSV export
 import time
+import random
 from optics_scripts.blastp_align import seq_sim_report
 
-def process_sequence(sequence, name, selected_model, identity_report, blastp, refseq):
+def process_sequence(sequence, name, selected_model, identity_report, blastp, refseq, reffile):
     data_dir = "/home/PIA/galaxy/tools/optics/data"
     model_datasets = {
     "Whole Dataset Model": f"{data_dir}/whole_dataset.fasta",
@@ -23,14 +24,14 @@ def process_sequence(sequence, name, selected_model, identity_report, blastp, re
     "Whole Dataset Model": f"{data_dir}/wds.txt",
     "Wild-Type Model": f"{data_dir}/wt.txt",
     "Vertebrate Model": f"{data_dir}/vert.txt",
-    "Invertebrate Model": f"{data_dir}/invert.txt",
+    "Invertebrate Model": f"{data_dir}/inv.txt",
     "Rod Model": f"{data_dir}/rod.txt",
     }   
     model_metadata = {
     "Whole Dataset Model": f"{data_dir}/wds_meta.tsv",
     "Wild-Type Model": f"{data_dir}/wt_meta.tsv",
     "Vertebrate Model": f"{data_dir}/vert_meta.tsv",
-    "Invertebrate Model": f"{data_dir}/invert_meta.tsv",
+    "Invertebrate Model": f"{data_dir}/inv_meta.tsv",
     "Rod Model": f"{data_dir}/rod_meta.tsv",
     }   
     model_blast_db = {
@@ -46,7 +47,7 @@ def process_sequence(sequence, name, selected_model, identity_report, blastp, re
         "Whole Dataset Model": f"{model_dir}/wds_gbc.pkl",
         "Wild-Type Model": f"{model_dir}/wt_gbc.pkl",
         "Vertebrate Model": f"{model_dir}/vert_gbc.pkl",
-        "Invertebrate Model": f"{model_dir}/invert_lgbm.pkl",
+        "Invertebrate Model": f"{model_dir}/invert_br.pkl",
         "Rod Model": f"{model_dir}/rod_gbc.pkl",
     }
 
@@ -61,9 +62,10 @@ def process_sequence(sequence, name, selected_model, identity_report, blastp, re
     metadata = model_metadata[selected_model]
     blast_db = model_blast_db[selected_model]
 
-    selected_model = model_directories[selected_model]
+    model = model_directories[selected_model]
 
-    temp_seq = "/home/PIA/galaxy/tools/optics/tmp/temp_seq.fasta"
+    random_number = str(random.randint(1, 10000))
+    temp_seq = f'/home/PIA/galaxy/tools/optics/tmp/temp_seq_{random_number}.fasta'
     with open(temp_seq, "w") as temp_file:  # Key change
         if '>' in sequence:
             #print(f"here is the sequence: {sequence}")
@@ -76,32 +78,36 @@ def process_sequence(sequence, name, selected_model, identity_report, blastp, re
     if blastp == 'no' or blastp == False:
         pass
     else:
-        seq_sim_report(temp_seq, name, refseq, blast_db, raw_data, metadata, identity_report)
+        seq_sim_report(temp_seq, name, refseq, blast_db, raw_data, metadata, identity_report, reffile)
         print('Query sequence processed via blastp')
 
-    new_ali = '/home/PIA/galaxy/tools/optics/tmp/temp_ali.fasta'  
+    new_ali = f'/home/PIA/galaxy/tools/optics/tmp/temp_ali_{random_number}.fasta'  
     # ... (Perform alignment using MAFFT with alignment_data)
-    mafft_exe ='mafft' #change to your own directory for mafft.bat or mafft execution file
-    seq_type = 'aa'
-
-    cmd = [mafft_exe, '--add', temp_seq, '--keeplength', alignment_data]
+    cmd = ['mafft', '--add', temp_seq, '--keeplength', alignment_data]
     with open(new_ali, 'w') as f:
         subprocess.run(cmd, stdout=f, stderr=subprocess.PIPE)
 
+    seq_type = 'aa'
     new_seq_test = read_data(new_ali, seq_type = seq_type, is_main=True, gap_threshold=0.6)
     ref_copy = read_data(alignment_data, seq_type = seq_type, is_main=True, gap_threshold=0.6)
-    last_seq = ref_copy.shape[0]
+    last_seq = int(ref_copy.shape[0])
     new_seq_test = new_seq_test.iloc[last_seq:].copy()
-    #print(new_seq_test)
+    print(new_seq_test)
 
     # ... (Load the selected model and make a prediction)
-    load_top_mod = load_obj(selected_model)
-    prediction = load_top_mod.predict(new_seq_test)
+    loaded_mod = load_obj(model)
+    prediction = loaded_mod.predict(new_seq_test)
+    
+    try:
+        os.remove(new_ali)
+        os.remove(temp_seq)
+    except FileNotFoundError:
+        raise Exception("File does not exist")
     
     return(round(float(prediction[0]),1))
  
 
-def process_sequences_from_file(file,selected_model, identity_report, blastp, refseq):
+def process_sequences_from_file(file,selected_model, identity_report, blastp, refseq, reffile):
     if file == None:
         return ('Error: No file given')
 
@@ -141,7 +147,7 @@ def process_sequences_from_file(file,selected_model, identity_report, blastp, re
     i = 0
     for seq in sequences:
         print(seq)
-        prediction = process_sequence(seq, names[i], selected_model, identity_report, blastp, refseq)  # Process each sequence
+        prediction = process_sequence(seq, names[i], selected_model, identity_report, blastp, refseq, reffile)  # Process each sequence
         predictions.append(prediction)
         i+=1
     #print(predictions)
@@ -170,13 +176,18 @@ def main():
                     type = str or bool , required=True)
     parser.add_argument("-r", "--refseq", help="Reference sequence used for blastp analysis.", 
                 type = str, required=False)
-
+    parser.add_argument("-f", "--reffile", help="Cutom reference sequence file used for blastp analysis.", 
+                type = str, required=False)
 
     args = parser.parse_args()
-    if args.refseq == None:
-        args.refseq = 'Bovine'
+
+    if args.blastp == "no":
+        with open(args.iden_output, 'w') as f:
+            f.write('Blastp analysis did not occur.')
+
+
     if os.path.isfile(args.input):
-        names, predictions = process_sequences_from_file(args.input, args.model, args.iden_output, args.blastp, args.refseq)
+        names, predictions = process_sequences_from_file(args.input, args.model, args.iden_output, args.blastp, args.refseq, args.reffile)
         with open(args.output, 'w') as f:
             i = 0
             while i in range(len(names)):

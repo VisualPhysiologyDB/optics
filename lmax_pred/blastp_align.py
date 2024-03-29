@@ -1,10 +1,11 @@
 #blastp_align.py 
 
 import subprocess
+import os
 from Bio import SeqIO
-from Bio.Align import MultipleSeqAlignment
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
+import random
 import pandas as pd
 
 # --- BLAST search ---
@@ -25,7 +26,8 @@ def align_sequences(query_seq, target_seq, reference_seq):
     #sequences = [query_seq, target_seq, reference_seq]
     #aligner = MultipleSeqAlignment(sequences)
     #alignment = aligner.align()
-    temp_seqs = '/home/PIA/galaxy/tools/optics/tmp/blastp_temp_seqs.fasta'  
+    random_number = str(random.randint(1, 10000))
+    temp_seqs = f'/home/PIA/galaxy/tools/optics/tmp/blastp_temp_seqs_{random_number}.fasta'  
     with open(temp_seqs, "w") as temp_file:  # Key change
         temp_file.write(f'{reference_seq}\n')
         temp_file.write(f'{query_seq}\n')
@@ -33,7 +35,7 @@ def align_sequences(query_seq, target_seq, reference_seq):
     #with open(temp_seqs, "r") as temp_file:
         #for lines in temp_file:
             #print(lines)
-    new_ali = '/home/PIA/galaxy/tools/optics/tmp/blastp_temp_ali.fasta'  
+    new_ali = f'/home/PIA/galaxy/tools/optics/tmp/blastp_temp_ali_{random_number}.fasta'  
     # ... (Perform alignment using MAFFT with alignment_data)
     mafft_exe ='mafft' #change to your own directory for mafft.bat or mafft execution file
     cmd = [mafft_exe,'--auto',temp_seqs]
@@ -43,6 +45,10 @@ def align_sequences(query_seq, target_seq, reference_seq):
             print('Alignment Successful!')
         except subprocess.CalledProcessError as e:
             raise Exception(f'MAFFT alignment failed.\n{e.stderr.decode()}')
+    try:
+        os.remove(temp_seqs)
+    except FileNotFoundError:
+        raise Exception("File does not exist")
     return new_ali
 
 # --- Extract sequences ---
@@ -101,27 +107,42 @@ def analyze_differences(query_seq, closest_match_seq, reference_seq):
         raise Exception
 
 # --- Main script ---
-def seq_sim_report(query_file, name, ref_seq_id, opsin_database, opsin_db_fasta, opsin_db_meta, ouput_file):
+def seq_sim_report(query_file, name, ref_seq_id, opsin_database, opsin_db_fasta, opsin_db_meta, ouput_file, reffile):
     # BLAST search
     closest_match_id, blast_metrics = run_blastp(query_file, opsin_database)
     
     # Extract sequences
+    query_record = ''
     with open(query_file, 'r') as q:
         for lines in q:
-            if '>' in lines:
-                name = lines.replace('>','').split(' ')[0]
-                print(name)
-                break
-            else:
-                pass
-    query_record = extract_from_fasta(query_file, seq_id=name) # Replace with query ID
-    print(f"Query record is still: {query_record}")
+            entry = lines.strip().replace('\n','') + '\n'
+            query_record+=entry
+    print(f'This is the query record:\n{query_record}\n')
+    
     closest_match_record = extract_from_fasta(opsin_db_fasta, seq_id=closest_match_id)
+    
     if ref_seq_id == "Bovine":
         reference_record = '>Bovine\nMNGTEGPNFYVPFSNKTGVVRSPFEAPQYYLAEPWQFSMLAAYMFLLIMLGFPINFLTLYVTVQHKKLRTPLNYILLNLAVADLFMVFGGFTTTLYTSLHGYFVFGPTGCNLEGFFATLGGEIALWSLVVLAIERYVVVCKPMSNFRFGENHAIMGVAFTWVMALACAAPPLVGWSRYIPEGMQCSCGIDYYTPHEETNNESFVIYMFVVHFIIPLIVIFFCYGQLVFTVKEAAAQQQESATTQKAEKEVTRMVIIMVIAFLICWLPYAGVAFYIFTHQGSDFGPIFMTIPAFFAKTSAVYNPVIYIMMNKQFRNCMVTTLCCGKNPLGDDEASTTVSKTETSQVAPA'
-    else:
+    elif ref_seq_id == "Squid":
         reference_record = '>Squid\nMGRDLRDNETWWYNPSIVVHPHWREFDQVPDAVYYSLGIFIGICGIIGCGGNGIVIYLFTKTKSLQTPANMFIINLAFSDFTFSLVNGFPLMTISCFLKKWIFGFAACKVYGFIGGIFGFMSIMTMAMISIDRYNVIGRPMAASKKMSHRRAFIMIIFVWLWSVLWAIGPIFGWGAYTLEGVLCNCSFDYISRDSTTRSNILCMFILGFFGPILIIFFCYFNIVMSVSNHEKEMAAMAKRLNAKELRKAQAGANAEMRLAKISIVIVSQFLLSWSPYAVVALLAQFGPLEWVTPYAAQLPVMFAKASAIHNPMIYSVSHPKFREAISQTFPWVLTCCQFDDKETEDDKDAETEIPAGESSDAAPSADAAQMKEMMAMMQKMQQQQAAYPPQGYAPPPQGYPPQGYPPQGYPPQGYPPQGYPPPPQGAPPQGAPPAAPPQGVDNQAYQA'
-    #print(reference_record)
+    else:
+        #this is for extracting the custom reference sequence from a fasta file of presumable 1 sequence.
+        reference_record = ''
+        with open(reffile, 'r') as f:
+            lines = f.readlines()
+            i = 0
+            for line in lines:
+                if '>' in line:
+                    if i == 0:
+                        entry = line.strip().replace('\n','') + '\n'
+                        reference_record+=entry
+                        ref_seq_id = line.strip().replace('\n','').replace('>','').split(' ')[0]
+                        i+=1
+                    else:
+                        break
+                else:
+                    reference_record+=line
+    print(f'This is the reference record:\n{reference_record}')
 
     # Alignment
     alignment = align_sequences(query_record, closest_match_record, reference_record)
@@ -187,7 +208,10 @@ def seq_sim_report(query_file, name, ref_seq_id, opsin_database, opsin_db_fasta,
         for pos, query_aa, closest_aa, bovine_pos in differences:
          f.write(f"Position: {bovine_pos}\tQuery: {query_aa}\tClosest Match: {closest_aa}\n")
         f.write("\n")
-
+    try:
+        os.remove(alignment)
+    except FileNotFoundError:
+        raise Exception("File does not exist")
     #print(f"Closest Match to Query Sequence: {accession}\n")
     #print(f"Species\tOpsin Family\tλmax")
     #print(f"{species}\t{opsin_family}\t{lmax}")
