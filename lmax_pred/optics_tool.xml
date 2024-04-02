@@ -1,10 +1,10 @@
 <tool id="optics_1" name="OPTICS" version="0.1.0">
   <description>Opsin Phenotype Tool for Inference of Color Sensitivity</description>
   <command detect_errors="aggressive">
-  python '$__tool_directory__/prediction_functions_galaxy.py' '$input' '$output' '$blast_report' -m '$model' -b '$blast_checkbox' -r '$ref_sequence' -f '$ref_seq_file'</command>
+  python '$__tool_directory__/prediction_functions_galaxy.py' '$input' '$output' '$blast_report' '$boot_strap_file' -m '$model' -b '$blast_checkbox' -r '$ref_sequence' -f '$ref_seq_file' -s '$boot_strap'</command>
   
   <inputs>
-    <param format="fasta" name="input" type="data" label="Source file"/>
+    <param format="fasta" name="input" type="data" label="Source file ⚠️Unaligned FASTA file⚠️"/>
     <param name="model" type="select" optional="False" label="Select model used for predictions:" default="Vertebrate Model"> 
         <options from_file="db_model_names.tsv">  
             <column name="value" index="1"/>
@@ -42,11 +42,19 @@
             </conditional>
           </when>
     </conditional>
+    
+    <param name="boot_strap" type="boolean" optional = "True"
+        truevalue="yes" falsevalue="no" 
+        checked="true" 
+        label="Enable for boot-strap prediction of query sequences. ⚠️Only SIX sequencces allowed at a time for this function⚠️ " 
+        help="Enables or disables boot-strap predictions of query sequences against VPOD datasets"/> 
+          
 
   </inputs>
   <outputs>
     <data format="tsv" name="output" label ="OPTICS λmax prediction on ${input.name}"/>
     <data format="txt" name="blast_report" label ="OPTICS blastp analysis on ${input.name}"/>
+    <data format="pdf" name="boot_strap_file" label ="OPTICS boot-strap prediction visualization on ${input.name}"/>
   </outputs>
 
   <tests>
@@ -58,7 +66,7 @@
   </tests>
 
   <help>
-    This tool predicts Opsin Phenotype (λmax) from an input file of opsin amino-acid sequences in FASTA format.     
+    This tool predicts Opsin Phenotype (λmax) from an input file of UNALIGNED opsin amino-acid sequences in FASTA format.     
     
     Output 1 = A *.tsv* file of predictions matched to corresponding sequence 'name' take from the FASTA identifier. 
 
