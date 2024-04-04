@@ -247,9 +247,9 @@ def main():
                     i+=1
                 else:
                     if i == 0:
-                        f.write('Names\tPrediction_Means\tPrediction_Lower_Bounds\tPrediction_Upper_Bounds\n')
-                        plot_predictions_with_CI(names, prediction_dict, mean_predictions, args.pdffile)
-                    f.write(f"{names[i]}:\t{mean_predictions[i]}\t{ci_lowers[i]}\t{ci_uppers[i]}\n")
+                        f.write('Names\tPrediction_Means\tPrediction_Medians\tPrediction_Lower_Bounds\tPrediction_Upper_Bounds\n')
+                        median_predictions = plot_predictions_with_CI(names, prediction_dict, mean_predictions, args.pdffile)
+                    f.write(f"{names[i]}:\t{mean_predictions[i]}\t{median_predictions[i]}\t{ci_lowers[i]}\t{ci_uppers[i]}\n")
                     print(f"{names[i]}:\t{mean_predictions[i]}\t{ci_lowers[i]}\t{ci_uppers[i]}\n")
                     i+=1
     else:

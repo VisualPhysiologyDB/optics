@@ -88,6 +88,10 @@ def plot_predictions_with_CI(names, predictions, mean_preds, pdf_file):
 
             x_pos = bplot['medians'][i].get_xdata()[1]  # Place slightly to the right of the median
             plt.text(x_pos, y_pos, seq_name, ha='center', va='top', color='black', fontsize=10, zorder = 3)  # Adjust horizontal alignment
+        
+        #getting median values to return for user
+        medians = bplot['medians']
+        median_values = [line.get_xydata()[1][0] for line in medians]  # Using list comprehension
 
         preds_handle = mpatches.Patch(facecolor='white', edgecolor='black', label='IQR')
         ci_handle = plt.Line2D([], [], color='black', label='95% Confidence Interval')
@@ -106,6 +110,8 @@ def plot_predictions_with_CI(names, predictions, mean_preds, pdf_file):
         plt.savefig(pdf_file, format = 'pdf', dpi = 300)
         plt.show()
         plt.close() 
+
+        return(median_values)
 
 
 
