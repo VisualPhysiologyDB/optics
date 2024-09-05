@@ -1,0 +1,78 @@
+<?xml version="1.0"?>
+<toolbox>
+    <!--
+    This is Galaxy's integrated tool panel and should be modified directly only for
+    reordering tools inside a section. Each time Galaxy starts up, this file is
+    synchronized with the various tool config files: tools, sections and labels
+    added to one of these files, will be added also here in the appropriate place,
+    while elements removed from the tool config files will be correspondingly
+    deleted from this file.
+    To modify locally managed tools (e.g. from tool_conf.xml) modify that file
+    directly and restart Galaxy. Whenever possible Tool Shed managed tools (e.g.
+    from shed_tool_conf.xml) should be managed from within the Galaxy interface or
+    via its API - but if changes are necessary (such as to hide a tool or re-assign
+    its section) modify that file and restart Galaxy.
+    -->
+    <section id="oTools" name="Opsin Phenotyping OPTICS" version="">
+
+        <tool id="optics_1" />
+
+    </section>
+
+    <section id="PIA_tools" name="Analyze Transcriptome Data LIT-PIA" version="">
+
+        <tool id="get_orfs_or_cdss" />
+
+        <tool id="pia" />
+
+        <tool id="tab2trees" />
+
+    </section>
+
+    <section id="getext" name="Get Data" version="">
+
+        <tool id="upload1" />
+
+        <tool id="get_sequences" />
+
+        <tool id="get_gb" />
+
+        <tool id="get_1_gb" />
+
+    </section>
+
+    <section id="textutil" name="Text Manipulation" version="">
+
+        <tool id="addValue" />
+
+        <tool id="cat1" />
+
+        <tool id="Cut1" />
+
+        <tool id="mergeCols1" />
+
+        <tool id="Convert characters1" />
+
+        <tool id="createInterval" />
+
+        <tool id="ChangeCase" />
+
+        <tool id="Paste1" />
+
+        <tool id="Remove beginning1" />
+
+        <tool id="random_lines1" />
+
+        <tool id="Show beginning1" />
+
+        <tool id="Show tail1" />
+
+        <tool id="trimmer" />
+
+        <tool id="wc_gnu" />
+
+        <tool id="secure_hash_message_digest" />
+
+    </section>
+
+</toolbox>
