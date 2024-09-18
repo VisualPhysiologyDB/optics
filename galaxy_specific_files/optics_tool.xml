@@ -1,0 +1,135 @@
+<tool id="optics_1" name="OPTICS" version="1.1">
+  <description>Opsin Phenotype Tool for Inference of Color Sensitivity</description>
+  <command detect_errors="aggressive">
+  python '$__tool_directory__/prediction_functions_galaxy.py' '$input' '$output' '$blast_report' '$boot_strap_file' -m '$model' -b '$blast_checkbox' -r '$ref_sequence' -f '$ref_seq_file' -s '$boot_strap' -e '$encode_method'
+  </command>
+
+  <inputs>
+    <param format="fasta" name="input" type="data" label="Source file ⚠️Unaligned FASTA file⚠️"/>
+    <param name="model" type="select" optional="False" label="Select model used for predictions:" default="Vertebrate Model"> 
+        <options from_file="db_model_names.tsv">  
+            <column name="value" index="1"/>
+        </options>
+    </param>
+
+    <param name="encode_method" type="select" 
+      label="Select preferred encoding method used to train model and make predictions ⚠️Models trained on Amino-Acid Property Enoding perform slightly better but predictions take longer!⚠️ " 
+      help="Choose between two avaliable encoding methods used during training of the selected model.">
+      <option value="one_hot">One-Hot Encoding</option>
+      <option value="aa_prop">Amino-Acid Property Encoding</option>
+    </param> 
+
+    <param name="boot_strap" type="boolean" optional = "True"
+    truevalue="yes" falsevalue="no" 
+    checked="true" 
+    label="Enable for boot-strap prediction of query sequences. ⚠️Only TEN sequencces allowed at a time for this function⚠️ " 
+    help="Enables or disables boot-strap predictions of query sequences against VPOD datasets"/> 
+
+    <conditional name="ref_options">
+      <param name="blast_checkbox" type="boolean" optional = "True"
+          truevalue="yes" falsevalue="no" 
+          checked="true" 
+          label="Enable for BLASTp analysis against corresponding model dataset" 
+          help="Enables or disables BLASTp analysis of query sequences against VPOD datasets"/> 
+          
+          <when value="no" ref="blast_checkbox">
+            <param name="ref_sequence" type="hidden" value="null"/>
+            <param name="ref_seq_file" type="hidden" value="null"/>
+          </when>
+
+          <when value="yes" ref = "blast_checkbox"> 
+            <conditional name = 'custom_ref_seq'>
+              <param name="ref_sequence" type="select" label="Select reference sequence">
+                <option value="Bovine">Bovine</option>
+                <option value="Squid">Squid</option>
+                <option value="Custom">Custom</option>
+              </param>
+                <when value = "Custom">
+                <param format="fasta" name="ref_seq_file" type="data" label="Source file for custom reference sequence. *SHOULD CONTAIN 1 SEQUENCE* - Otherwise first sequence in file will be used."/>
+                </when>
+                <when value = "Bovine" ref = "ref_sequence">
+                  <param name="ref_seq_file" type="hidden" value="null"/>
+                </when>
+                <when value = "Squid" ref = "ref_sequence">
+                  <param name="ref_seq_file" type="hidden" value="null"/>
+                </when>
+            </conditional>
+          </when>
+    </conditional>
+  </inputs>
+  
+  <outputs>
+    <data format="tsv" name="output" label ="OPTICS λmax prediction on ${input.name}"/>
+    <data format="txt" name="blast_report" label ="OPTICS blastp analysis on ${input.name}"/>
+    <data format="pdf" name="boot_strap_file" label ="OPTICS boot-strap prediction visualization on ${input.name}"/>
+  </outputs>
+
+  <help>
+    **What it does**
+
+    This Galaxy tool predicts the Opsin Phenotype (λmax) from an input file of UNALIGNED opsin amino-acid sequences in FASTA format. 
+
+    -----
+
+    **Inputs**
+
+    The tool requires the following input:
+
+    * Input Dataset (FASTA): A FASTA file containing unaligned opsin amino-acid sequences. Ensure your file adheres to the FASTA format. 
+
+    -----
+
+    **Outputs**
+
+    The tool generates the following outputs:
+
+    * Predictions (TSV): A TSV file containing predicted λmax values for each sequence, along with the model used and sequence encoding method.
+    * BLAST Results (TXT, optional): A TXT file showing BLAST results of each query sequence against the model dataset, highlighting differences (enabled optionally).
+    * Bootstrap Graphs (PDF, optional): A PDF file containing graphs generated from bootstrap predictions (enabled optionally).
+
+    -----
+
+    **Important Notes**
+
+    * FASTA Format: It's crucial that your input file is in proper FASTA format; otherwise, the tool may not function correctly. See the example below for correct formatting.
+
+    -----
+
+    **Example FASTA Entry**
+
+    &gt;NP_001014890.1_rhodopsin_Bos taurus
+
+    MNGTEGPNFYVPFSNKTGVVRSPFEAPQYYLAEPWQFSMLAAYMFLLIMLGFPINFLTLYVTVQHKKLRT
+    PLNYILLNLAVADLFMVFGGFTTTLYTSLHGYFVFGPTGCNLEGFFATLGGEIALWSLVVLAIERYVVVC
+    KPMSNFRFGENHAIMGVAFTWVMALACAAPPLVGWSRYIPEGMQCSCGIDYYTPHEETNNESFVIYMFVV
+    HFIIPLIVIFFCYGQLVFTVKEAAAQQQESATTQKAEKEVTRMVIIMVIAFLICWLPYAGVAFYIFTHQG
+    SDFGPIFMTIPAFFAKTSAVYNPVIYIMMNKQFRNCMVTTLCCGKNPLGDDEASTTVSKTETSQVAPA
+
+    -----
+
+    **Additional Information**
+
+    This version of OPTICS (v1.1) uses the Visual Physiology Opsin Database (VPOD) v1.2 for training.
+
+    * VPOD Bibliography: For publications used in VPOD_1.2, see: https://tinyurl.com/u7hn9adm
+    * Contribute to VPOD: To suggest publications for future VPOD versions, use this form: https://tinyurl.com/29afaxyr
+    * VPOD GitHub: For those interested in VPOD and our pipeline for training ML models, visit our GitHub: https://github.com/VisualPhysiologyDB/visual-physiology-opsin-db
+
+  </help>
+
+  <citations>
+      <citation type="bibtex">
+          @article{Frazer2024.02.12.579993,
+              author = {Frazer, Seth A. and Baghbanzadeh, Mahdi and Rahnavard, Ali and Crandall, Keith A. and Oakley, Todd H.},
+              title = {Discovering genotype-phenotype relationships with machine learning and the Visual Physiology Opsin Database (VPOD)},
+              elocation-id = {2024.02.12.579993},
+              year = {2024},
+              doi = {10.1101/2024.02.12.579993},
+              publisher = {Cold Spring Harbor Laboratory},
+              URL = {https://www.biorxiv.org/content/early/2024/02/14/2024.02.12.579993},
+              eprint = {https://www.biorxiv.org/content/early/2024/02/14/2024.02.12.579993.full.pdf},
+              journal = {bioRxiv}
+              }
+      </citation> 
+  </citations>
+</tool>

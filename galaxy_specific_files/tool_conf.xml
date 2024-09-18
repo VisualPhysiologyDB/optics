@@ -1,0 +1,36 @@
+<?xml version='1.0' encoding='utf-8'?>
+<toolbox monitor="true">
+  <section name="Opsin Phenotyping OPTICS" id="oTools">
+     <tool file="optics/optics_tool.xml"> 
+     </tool>
+  </section>
+  <section name="Analyze Transcriptome Data LIT-PIA" id="PIA_tools">
+    <tool file="pia/get_orfs_or_cdss.xml"/>
+    <tool file="pia/pia.xml"/>
+    <tool file="osiris_phylogenetics/phylographics/tab2trees.xml"/>
+  </section>
+  <section id="getext" name="Get Data">
+    <tool file="data_source/upload.xml" />
+    <tool file="osiris_phylogenetics/getdata/get_seqs.xml" />
+    <tool file="osiris_phylogenetics/getdata/get_gb.xml"/>
+    <tool file="osiris_phylogenetics/getdata/get_1_gb.xml"/>
+  </section>
+  <section id="textutil" name="Text Manipulation">
+    <tool file="filters/fixedValueColumn.xml" />
+    <tool file="filters/catWrapper.xml" />
+    <tool file="filters/cutWrapper.xml" />
+    <tool file="filters/mergeCols.xml" />
+    <tool file="filters/convert_characters.xml" />
+    <tool file="filters/CreateInterval.xml" />
+    <tool file="filters/cutWrapper.xml" />
+    <tool file="filters/changeCase.xml" />
+    <tool file="filters/pasteWrapper.xml" />
+    <tool file="filters/remove_beginning.xml" />
+    <tool file="filters/randomlines.xml" />
+    <tool file="filters/headWrapper.xml" />
+    <tool file="filters/tailWrapper.xml" />
+    <tool file="filters/trimmer.xml" />
+    <tool file="filters/wc_gnu.xml" />
+    <tool file="filters/secure_hash_message_digest.xml" />
+  </section>
+</toolbox>
