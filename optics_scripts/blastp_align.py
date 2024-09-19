@@ -37,14 +37,33 @@ def align_sequences(query_seq, target_seq, reference_seq):
             #print(lines)
     new_ali = f'/home/PIA/galaxy/tools/optics/tmp/blastp_temp_ali_{random_number}.fasta'  
     # ... (Perform alignment using MAFFT with alignment_data)
-    mafft_exe ='mafft' #change to your own directory for mafft.bat or mafft execution file
-    cmd = [mafft_exe,'--auto',temp_seqs]
-    with open(new_ali, 'w') as f:
-        try:
-            subprocess.run(cmd, stdout=f, stderr=subprocess.PIPE, check=True)
-            print('Alignment Successful!')
-        except subprocess.CalledProcessError as e:
-            raise Exception(f'MAFFT alignment failed.\n{e.stderr.decode()}')
+    try:
+        mafft_exe ='mafft' #change to your own directory for mafft.bat or mafft execution file
+        cmd = [mafft_exe,'--auto',temp_seqs]
+        with open(new_ali, 'w') as f:
+            #try:
+                subprocess.run(cmd, stdout=f, stderr=subprocess.PIPE, check=True)
+                #print('Alignment Successful!')
+            #except subprocess.CalledProcessError as e:
+            #    raise Exception(f'MAFFT alignment failed.\n{e.stderr.decode()}')
+    except:
+        mafft_exe = './optics_scripts/mafft/mafft-win/mafft.bat'
+        cmd = [mafft_exe,'--auto',temp_seqs]
+        with open(new_ali, 'w') as f:
+            #try:
+                subprocess.run(cmd, stdout=f, stderr=subprocess.PIPE, check=True)
+                #print('Alignment Successful!')
+            #except subprocess.CalledProcessError as e:
+            #    raise Exception(f'MAFFT alignment failed.\n{e.stderr.decode()}')
+    finally:
+        mafft_exe = './optics_scripts/mafft/mafft-mac/mafft.bat'
+        cmd = [mafft_exe,'--auto',temp_seqs]
+        with open(new_ali, 'w') as f:
+            try:
+                subprocess.run(cmd, stdout=f, stderr=subprocess.PIPE, check=True)
+                #print('Alignment Successful!')
+            except subprocess.CalledProcessError as e:
+                raise Exception(f'MAFFT alignment failed.\n{e.stderr.decode()}')
     try:
         os.remove(temp_seqs)
     except FileNotFoundError:

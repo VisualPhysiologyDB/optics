@@ -109,10 +109,22 @@ def process_sequence(sequence, name, selected_model, identity_report, blastp, re
 
     new_ali = f'./tmp/temp_ali_{random_number}.fasta'  
     # ... (Perform alignment using MAFFT with alignment_data)
-    cmd = ['mafft', '--add', temp_seq, '--keeplength', alignment_data]
-    with open(new_ali, 'w') as f:
-        subprocess.run(cmd, stdout=f, stderr=subprocess.PIPE)
-
+    
+    try:
+        cmd = ['mafft', '--add', temp_seq, '--keeplength', alignment_data]
+        with open(new_ali, 'w') as f:
+            subprocess.run(cmd, stdout=f, stderr=subprocess.PIPE)
+    except:
+        mafft_exe = './optics_scripts/mafft/mafft-win/mafft.bat'
+        cmd = [mafft_exe, '--add', temp_seq, '--keeplength', alignment_data]
+        with open(new_ali, 'w') as f:
+            subprocess.run(cmd, stdout=f, stderr=subprocess.PIPE)
+    finally: 
+        mafft_exe = './optics_scripts/mafft/mafft-mac/mafft.bat'
+        cmd = [mafft_exe, '--add', temp_seq, '--keeplength', alignment_data]
+        with open(new_ali, 'w') as f:
+            subprocess.run(cmd, stdout=f, stderr=subprocess.PIPE)
+            
     seq_type = 'aa'
     new_seq_test = read_data(new_ali, seq_type = seq_type, is_main=True, gap_threshold=0.5)
     ref_copy = read_data(alignment_data, seq_type = seq_type, is_main=True, gap_threshold=0.5)
@@ -231,7 +243,7 @@ def main():
                     type = str or bool , deafult = False, required=False)
     parser.add_argument("-e", "--encoding_method", help="Select preferred encoding method used to train model and make predictions", 
                 choices=encoding_methods, default='aa_prop', type = str, required=False)
-    # python '$__tool_directory__/prediction_functions_galaxy.py' '$input' '$output' '$blast_report' '$boot_strap_file' -m '$model' -b '$blast_checkbox' -r '$ref_sequence' -f '$ref_seq_file' -s '$boot_strap' -e '$encode_method'
+    # python prediction_functions_galaxy.py -in -out -ir -bsv -m -b -r -f -s -e
 
     args = parser.parse_args()
 
