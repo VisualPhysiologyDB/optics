@@ -1,7 +1,7 @@
 # prediction_functions.py
 import subprocess 
-from deepBreaks.utils import load_obj
-from deepBreaks.preprocessing import read_data
+from optics_scripts.deepBreaks.utils import load_obj
+from optics_scripts.deepBreaks.preprocessing import read_data
 from fpdf import FPDF
 import pandas as pd
 import argparse
@@ -111,15 +111,18 @@ def process_sequence(sequence, name, selected_model, identity_report, blastp, re
     # ... (Perform alignment using MAFFT with alignment_data)
     
     try:
+        print('Trying Linux execution of MAFFT')
         cmd = ['mafft', '--add', temp_seq, '--keeplength', alignment_data]
         with open(new_ali, 'w') as f:
             subprocess.run(cmd, stdout=f, stderr=subprocess.PIPE)
     except:
+        print('Trying Windows execution of MAFFT')
         mafft_exe = './optics_scripts/mafft/mafft-win/mafft.bat'
         cmd = [mafft_exe, '--add', temp_seq, '--keeplength', alignment_data]
         with open(new_ali, 'w') as f:
             subprocess.run(cmd, stdout=f, stderr=subprocess.PIPE)
     finally: 
+        print('Trying Mac execution of MAFFT')
         mafft_exe = './optics_scripts/mafft/mafft-mac/mafft.bat'
         cmd = [mafft_exe, '--add', temp_seq, '--keeplength', alignment_data]
         with open(new_ali, 'w') as f:

@@ -4,7 +4,7 @@ import subprocess
 import os
 from Bio import SeqIO
 from Bio.Seq import Seq
-from Bio.SeqRecord import SeqRecord
+#from Bio.SeqRecord import SeqRecord
 import random
 import pandas as pd
 
