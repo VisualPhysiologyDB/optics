@@ -1,7 +1,7 @@
 # prediction_functions.py
 import subprocess 
-from optics_scripts.deepBreaks.utils import load_obj
-from optics_scripts.deepBreaks.preprocessing import read_data
+from deepBreaks.utils import load_obj
+from deepBreaks.preprocessing import read_data
 #from fpdf import FPDF
 import pandas as pd
 import argparse
@@ -274,7 +274,7 @@ def main():
     if 'optics_on_unamed' in args.report_dir:
         report_dir = args.report_dir
     else:
-        report_dir = f'optics_on_{args.report_dir}_{dt_label}'
+        report_dir = f'./prediction_outputs/optics_on_{args.report_dir}_{dt_label}'
     os.makedirs(report_dir)
     blastp_file = f'{report_dir}/{args.iden_report}'
     bootstrap_file = f'{report_dir}/{args.bootstrap_viz_file}'
@@ -300,7 +300,7 @@ def main():
                         else:
                             bootstrap_plots = plot_predictions_with_CI(names, prediction_dict, mean_predictions, bootstrap_file)
                     f.write(f"{names[i]}:\t{predictions[i]}\t{mean_predictions[i]}\t{median_predictions[i]}\t{ci_lowers[i]}\t{ci_uppers[i]}\n")
-                    print(f"{names[i]}:\t{predictions[i]}\t{mean_predictions[i]}\t{median_predictions}\t{ci_lowers[i]}\t{ci_uppers[i]}\n")
+                    print(f"{names[i]}:\t{predictions[i]}\t{mean_predictions[i]}\t{median_predictions[i]}\t{ci_lowers[i]}\t{ci_uppers[i]}\n")
                     i+=1
             f.write(f"\nModel Used:\t{args.model}\nEncoding Method:\t{args.encoding_method}\n")
             print(f"\nModel Used:\t{args.model}\nEncoding Method:\t{args.encoding_method}\n")

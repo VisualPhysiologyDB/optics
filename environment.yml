@@ -1,4 +1,4 @@
-name: optics_env
+name: optics_env_2
 channels:
   - conda-forge
   - defaults
@@ -76,5 +76,4 @@ dependencies:
     - threadpoolctl==3.5.0
     - tzdata==2024.1
     - xgboost==2.1.1
-    - git+https://github.com/VisualPhysiologyDB/optics.git#subdirectory=optics_scripts/deepBreaks  # Assuming 'folder_to_copy' contains a Python package
 prefix: C:\Users\safra\anaconda3\envs\optics_env
