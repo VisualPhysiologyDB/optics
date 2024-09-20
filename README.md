@@ -2,7 +2,8 @@
 
 ## Description
 
-OPTICS is a Galaxy tool that predicts the Opsin Phenotype (λmax) from unaligned opsin amino-acid sequences. It leverages machine learning models trained on the Visual Physiology Opsin Database (VPOD).
+- **OPTICS** is an open-source tool that predicts the Opsin Phenotype (λmax) from unaligned opsin amino-acid sequences. 
+- **OPTICS** leverages machine learning models trained on the Visual Physiology Opsin Database (VPOD).
 
 ## Key Features
 
@@ -23,19 +24,20 @@ OPTICS is a Galaxy tool that predicts the Opsin Phenotype (λmax) from unaligned
     pip install -r requirements.txt 
 
 3. **Usage**
-    *Upload your FASTA file containing unaligned opsin sequences.
-    *Select the desired model and encoding method.
-    *Optionally enable BLAST analysis and/or bootstrap predictions.
-    *Run the tool and retrieve the output files.
-    *Command Line Example
+
+    - Upload your FASTA file containing unaligned opsin sequences.
+    - Select the desired model and encoding method.
+    - Optionally enable BLAST analysis and/or bootstrap predictions.
+    - Run the tool and retrieve the output files.
+    - Example Command Line Usage Below vvv
 
     ```bash
     python '$__tool_directory__/prediction_functions_galaxy.py' '$input' '$output' '$blast_report' '$boot_strap_file' -m '$model' -b '$blast_checkbox' -r '$ref_sequence' -f '$ref_seq_file' -s '$boot_strap' -e '$encode_method' 
 
 ## Input
 
-    *Unaligned FASTA file containing opsin amino-acid sequences.
-    *Example FASTA Entry:
+- **Unaligned** FASTA file containing opsin amino-acid sequences.
+- Example FASTA Entry:
 
     >NP_001014890.1_rhodopsin_Bos taurus 
     MNGTEGPNFYVPFSNKTGVVRSPFEAPQYYLAEPWQFSMLAAYMFLLIMLGFPINFLTLYVTVQHKKLRT 
@@ -46,13 +48,13 @@ OPTICS is a Galaxy tool that predicts the Opsin Phenotype (λmax) from unaligned
  
 ## Output
 
-    *Predictions (TSV): λmax values, model used, and encoding method.
-    *BLAST Results (TXT, optional): Comparison of query sequences to reference datasets.
-    *Bootstrap Graphs (PDF, optional): Visualization of bootstrap prediction results.
+- Predictions (TSV): λmax values, model used, and encoding method.
+- BLAST Results (TXT, optional): Comparison of query sequences to reference datasets.
+- Bootstrap Graphs (PDF, optional): Visualization of bootstrap prediction results.
     
 ## Citation
 
-    **If you use OPTICS in your research, please cite the following paper:**
+- **If you use OPTICS in your research, please cite the following paper:**
 
     @article{Frazer2024.02.12.579993,
     author = {Frazer, Seth A. and Baghbanzadeh, Mahdi and Rahnavard, Ali and Crandall, Keith A. and Oakley, Todd H.},
@@ -61,16 +63,17 @@ OPTICS is a Galaxy tool that predicts the Opsin Phenotype (λmax) from unaligned
     year = {2024},
     doi = {10.1101/2024.02.12.579993},
     publisher = {Cold Spring Harbor Laboratory},
-    URL = {[https://www.biorxiv.org/content/early/2024/02/14/2024.02.12.579993](https://www.biorxiv.org/content/early/2024/02/14/2024.02.12.579993)},
-    eprint = {[https://www.biorxiv.org/content/early/2024/02/14/2024.02.12.579993.full.pdf](https://www.biorxiv.org/content/early/2024/02/14/2024.02.12.579993.full.pdf)},
+    URL = {[https://www.biorxiv.org/content/early/2024/02/14/2024.02.12.579993]},
+    eprint = {[https://www.biorxiv.org/content/early/2024/02/14/2024.02.12.579993.full.pdf]},
     journal = {bioRxiv}
     }
 
 ## Additional Notes
 
-    *OPTICS v1.0 uses VPOD v1.2 for training.
-    *For more information about VPOD, visit:
-    *VPOD Bibliography: https://tinyurl.com/u7hn9adm
-    *Contribute to VPOD: https://tinyurl.com/29afaxyr
-    *VPOD GitHub: https://github.com/VisualPhysiologyDB/visual-physiology-opsin-db
-    *License -
+- *OPTICS v1.0 uses VPOD v1.2 for training.*
+- *License* - zzz
+
+For more information about VPOD, visit:
+- *VPOD Bibliography*: https://tinyurl.com/u7hn9adm
+- *Contribute to VPOD*: https://tinyurl.com/29afaxyr
+- *VPOD GitHub*: https://github.com/VisualPhysiologyDB/visual-physiology-opsin-db
