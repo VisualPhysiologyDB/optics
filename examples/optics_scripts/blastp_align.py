@@ -7,7 +7,6 @@ from Bio.Seq import Seq
 #from Bio.SeqRecord import SeqRecord
 import random
 import pandas as pd
-
 # --- BLAST search ---
 def run_blastp(query_file, database):
     """Performs BLASTp search and returns the top hit."""
@@ -16,18 +15,18 @@ def run_blastp(query_file, database):
     blast_result = subprocess.run(blast_cmd, capture_output=True, text=True).stdout
     blast_metrics = parse_blast_result(blast_result)
     closest_match_id = blast_result.splitlines()[1].split("\t")[1]
-    print(closest_match_id)
+    #print(closest_match_id)
 
     return closest_match_id, blast_metrics
 
 # --- Alignment ---
 def align_sequences(query_seq, target_seq, reference_seq):
     """Aligns query, target, and reference sequences using MAFFT"""
-    #sequences = [query_seq, target_seq, reference_seq]
-    #aligner = MultipleSeqAlignment(sequences)
-    #alignment = aligner.align()
+    #get working directory to make temp files
+    wrk_dir = os.getcwd().replace('\\','/')
+    #print(wrk_dir)
     random_number = str(random.randint(1, 10000))
-    temp_seqs = f'/home/PIA/galaxy/tools/optics/tmp/blastp_temp_seqs_{random_number}.fasta'  
+    temp_seqs = f'{wrk_dir}/tmp/blastp_temp_seqs_{random_number}.fasta'  
     with open(temp_seqs, "w") as temp_file:  # Key change
         temp_file.write(f'{reference_seq}\n')
         temp_file.write(f'{query_seq}\n')
@@ -35,7 +34,7 @@ def align_sequences(query_seq, target_seq, reference_seq):
     #with open(temp_seqs, "r") as temp_file:
         #for lines in temp_file:
             #print(lines)
-    new_ali = f'/home/PIA/galaxy/tools/optics/tmp/blastp_temp_ali_{random_number}.fasta'  
+    new_ali = f'{wrk_dir}/tmp/blastp_temp_ali_{random_number}.fasta'  
     # ... (Perform alignment using MAFFT with alignment_data)
     try:
         mafft_exe ='mafft' #change to your own directory for mafft.bat or mafft execution file
@@ -46,24 +45,27 @@ def align_sequences(query_seq, target_seq, reference_seq):
                 #print('Alignment Successful!')
             #except subprocess.CalledProcessError as e:
             #    raise Exception(f'MAFFT alignment failed.\n{e.stderr.decode()}')
-    except:
-        mafft_exe = './optics_scripts/mafft/mafft-win/mafft.bat'
-        cmd = [mafft_exe,'--auto',temp_seqs]
-        with open(new_ali, 'w') as f:
-            #try:
-                subprocess.run(cmd, stdout=f, stderr=subprocess.PIPE, check=True)
-                #print('Alignment Successful!')
-            #except subprocess.CalledProcessError as e:
-            #    raise Exception(f'MAFFT alignment failed.\n{e.stderr.decode()}')
-    finally:
-        mafft_exe = './optics_scripts/mafft/mafft-mac/mafft.bat'
-        cmd = [mafft_exe,'--auto',temp_seqs]
-        with open(new_ali, 'w') as f:
+    except Exception as e:
+        #print(f'Exception {e} has occured. Tring Windows MAFFT')
+        try:
+            mafft_exe = f'{wrk_dir}/optics_scripts/mafft/mafft-win/mafft.bat'
+            cmd = [mafft_exe,'--auto',temp_seqs]
+            with open(new_ali, 'w') as f:
+                #try:
+                    subprocess.run(cmd, stdout=f, stderr=subprocess.PIPE, check=True)
+                    #print('Alignment Successful!')
+                #except subprocess.CalledProcessError as e:
+                #    raise Exception(f'MAFFT alignment failed.\n{e.stderr.decode()}')`
+        except Exception as e: 
+            #print(f'Exception {e} has occured. Tring Max MAFFT')
             try:
-                subprocess.run(cmd, stdout=f, stderr=subprocess.PIPE, check=True)
-                #print('Alignment Successful!')
+                mafft_exe = f'{wrk_dir}/optics_scripts/mafft/mafft-mac/mafft.bat'
+                cmd = [mafft_exe,'--auto',temp_seqs]
+                with open(new_ali, 'w') as f:
+                    subprocess.run(cmd, stdout=f, stderr=subprocess.PIPE, check=True)
+                    #print('Alignment Successful!')
             except subprocess.CalledProcessError as e:
-                raise Exception(f'MAFFT alignment failed.\n{e.stderr.decode()}')
+                raise Exception(f'MAFFT alignment failed for all three options. Check your FASTA file to make sure it is formatted correctly\n{e.stderr.decode()}')
     try:
         os.remove(temp_seqs)
     except FileNotFoundError:
@@ -108,7 +110,7 @@ def analyze_differences(query_seq, closest_match_seq, reference_seq):
             closest_match_seq+=closest_match_seq_list[x]
             reference_seq+=reference_seq_list[x]
 
-        print(f'{query_seq}\n{closest_match_seq}\n{reference_seq}')
+        #print(f'{query_seq}\n{closest_match_seq}\n{reference_seq}')
         differences = []
         bovine_pos = 1  # Initialize the bovine position counter
         for i, (q, c, r) in enumerate(zip(query_seq, closest_match_seq, reference_seq)):
@@ -136,7 +138,7 @@ def seq_sim_report(query_file, name, ref_seq_id, opsin_database, opsin_db_fasta,
         for lines in q:
             entry = lines.strip().replace('\n','') + '\n'
             query_record+=entry
-    print(f'This is the query record:\n{query_record}\n')
+    #print(f'This is the query record:\n{query_record}\n')
     
     closest_match_record = extract_from_fasta(opsin_db_fasta, seq_id=closest_match_id)
     
@@ -161,7 +163,7 @@ def seq_sim_report(query_file, name, ref_seq_id, opsin_database, opsin_db_fasta,
                         break
                 else:
                     reference_record+=line
-    print(f'This is the reference record:\n{reference_record}')
+    #print(f'This is the reference record:\n{reference_record}')
 
     # Alignment
     alignment = align_sequences(query_record, closest_match_record, reference_record)
@@ -193,7 +195,7 @@ def seq_sim_report(query_file, name, ref_seq_id, opsin_database, opsin_db_fasta,
                 line_count+=1
                 if line_count >= num_lines:
                         aligned_sequences.append(entry)
-                        print(aligned_sequences)
+                        #print(aligned_sequences)
 #print(sequences)
     # Difference analysis with bovine mapping
     reference_seq = str(aligned_sequences[0])
@@ -211,7 +213,7 @@ def seq_sim_report(query_file, name, ref_seq_id, opsin_database, opsin_db_fasta,
     accession = closest_match_data["Accession"]
 
     # Report generation
-    with open(ouput_file, 'a+') as f:
+    with open(ouput_file, 'a+', encoding="utf-8") as f:
         f.write(f"Closest Match to Query Sequence - {name}:\n")
         f.write(f"VPOD_ID\tSpecies\tOpsin Family\tAccession\tλmax\n")
         f.write(f"{closest_match_id}\t{species}\t{opsin_family}\t{accession}\t{lmax}\n")

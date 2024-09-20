@@ -1,0 +1,9 @@
+Names	Single_Prediction	Prediction_Means	Prediction_Medians	Prediction_Lower_Bounds	Prediction_Upper_Bounds
+Neogonodactylus_oerstedii|334:	404.7	438.4	440.20000000000005	385.7	487.3
+Neogonodactylus_oerstedii|383:	403.7	411.5	412.05	364.8	455.5
+Bombus_impatiens|539:	552.0	535.7	533.35	517.0	555.8
+Bombus_impatiens|424:	426.8	435.3	433.45000000000005	409.7	466.2
+Bombus_impatiens|347:	342.4	369.9	365.6	334.7	415.0
+
+Model Used:	whole-dataset
+Encoding Method:	aa_prop

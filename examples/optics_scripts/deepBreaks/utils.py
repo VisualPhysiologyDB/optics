@@ -16,10 +16,10 @@ def get_models(ana_type):
         from sklearn.linear_model import LinearRegression, Lasso, BayesianRidge, HuberRegressor, LassoLars
         from xgboost import XGBRegressor
         from lightgbm import LGBMRegressor
-        from sklearn.kernel_ridge import KernelRidge
-        from sklearn.gaussian_process import GaussianProcessRegressor
-        from sklearn.gaussian_process.kernels import RBF, ConstantKernel as C
-        from catboost import CatBoostRegressor
+        #from sklearn.kernel_ridge import KernelRidge
+        #from sklearn.gaussian_process import GaussianProcessRegressor
+        #from sklearn.gaussian_process.kernels import RBF, ConstantKernel as C
+        #from catboost import CatBoostRegressor
 
         kernel = C(1.0, (1e-3, 1e3)) * RBF(10, (1e-2, 1e2))  # Example kernel
         

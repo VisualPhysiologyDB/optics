@@ -13,10 +13,10 @@ pandas==2.2.2
 pillow==10.4.0
 pyparsing==3.1.4
 pytz==2024.2
-pywin32==305.1
-scikit-learn==1.5.2
+scikit-learn==1.5.1
 scipy==1.14.1
 seaborn==0.13.2
 threadpoolctl==3.5.0
 tzdata==2024.1
 xgboost==2.1.1
+progress==1.6

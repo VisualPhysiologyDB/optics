@@ -1,0 +1,35 @@
+Names	Single_Prediction	Prediction_Means	Prediction_Medians	Prediction_Lower_Bounds	Prediction_Upper_Bounds
+Neogonodactylus_oerstedii|334:	404.7	438.4	440.2	385.7	487.3
+Neogonodactylus_oerstedii|383:	403.7	411.5	412.1	364.8	455.5
+Bombus_impatiens|539:	552.0	535.7	533.4	517.0	555.8
+Bombus_impatiens|424:	426.8	435.3	433.5	409.7	466.2
+Bombus_impatiens|347:	342.4	369.9	365.6	334.7	415.0
+Drosophilia_melanogaster|486:	483.6	483.4	483.4	480.2	486.4
+Drosophilia_melanogaster|418:	487.3	497.6	497.6	464.5	530.3
+Drosophilia_melanogaster|331:	357.2	367.1	354.8	345.3	420.3
+Drosophilia_melanogaster|355:	401.6	414.0	413.6	367.8	464.4
+Drosophilia_melanogaster|442:	434.6	434.5	434.8	431.2	436.8
+Drosophilia_melanogaster|515:	516.1	518.1	515.2	509.3	535.1
+Lycaena_rubidus|360:	349.7	369.9	359.1	341.1	420.8
+Lycaena_rubidus|437:	485.3	484.6	483.0	459.7	520.0
+Lycaena_rubidus|500:	503.8	506.6	503.4	461.5	543.3
+Lycaena_rubidus|568:	556.5	553.3	554.5	518.2	580.8
+Hemigrapsus_sanguineus|480:	485.1	480.7	482.1	424.7	522.6
+Schistocerca_gregaria|441:	459.9	463.0	462.3	423.8	494.6
+Schistocerca_gregaria|514:	523.7	524.0	522.3	497.8	552.1
+Schistocerca_gregaria|339:	383.7	393.7	392.2	355.2	437.0
+Gryllus_bimaculatus|515:	518.9	521.5	523.1	497.8	541.9
+Gryllus_bimaculatus|445:	420.8	439.9	439.9	401.4	474.7
+Gryllus_bimaculatus|332:	397.3	396.5	398.7	356.6	436.9
+Gryllus_bimaculatus|511:	518.8	525.6	524.8	504.7	549.5
+Apis_mellfera|544:	519.1	527.4	525.8	506.1	554.1
+Apis_mellfera|436:	428.8	434.7	430.6	409.2	476.5
+Apis_mellfera|344:	339.5	361.4	340.6	338.8	430.8
+Manduca_sexta|520:	534.5	536.6	536.5	521.1	553.0
+Manduca_sexta|450:	442.5	439.3	438.6	414.9	462.2
+Manduca_sexta|357:	358.7	384.2	382.7	345.9	429.8
+Acyrthosiphon_pisum|518:	563.1	520.7	519.9	486.8	551.1
+Vargula_tsujii|460:	488.8	461.8	463.6	407.7	509.2
+
+Model Used:	whole-dataset
+Encoding Method:	aa_prop

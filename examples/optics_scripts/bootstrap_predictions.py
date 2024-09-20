@@ -4,8 +4,12 @@ import random
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
-from deepBreaks.utils import load_obj
 #from matplotlib.backends.backend_pdf import PdfPages
+try:
+    from deepBreaks.utils import load_obj
+except:
+    from optics_scripts.deepBreaks.utils import load_obj
+
 
 def calculate_ensemble_CI(model_folder, query, name, predictions_dict):
     # Load models
@@ -25,13 +29,13 @@ def calculate_ensemble_CI(model_folder, query, name, predictions_dict):
     ci_lower = np.percentile(predictions_all, alpha / 2 * 100)
     ci_upper = np.percentile(predictions_all, 100 - alpha / 2 * 100)
     mean_predictions = np.mean(predictions_all)
+    median_predictions = np.median(predictions_all)
 
-    return mean_predictions, ci_lower, ci_upper, predictions_dict
+    return mean_predictions, ci_lower, ci_upper, predictions_dict, median_predictions
 
 
 def plot_predictions_with_CI(names, predictions, mean_preds, pdf_file):
-    if os.path.exists(pdf_file):
-
+#    if os.path.exists(pdf_file):
         # Customization
         plt.rcParams["figure.autolayout"] = True
         plt.rcParams["figure.figsize"] = [11.00, 5.00]
@@ -109,7 +113,7 @@ def plot_predictions_with_CI(names, predictions, mean_preds, pdf_file):
         #plt.legend(labels=['IQR', 'Confidence Interval']) 
         plt.grid(True, axis='x')  # Grid only on x-axis        
         plt.savefig(pdf_file, format = 'pdf', dpi = 300)
-        plt.show()
+        #plt.show()
         plt.close() 
 
         return(median_values)
