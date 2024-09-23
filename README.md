@@ -1,5 +1,13 @@
-# OPTICS - Opsin Phenotype Tool for Inference of Color Sensitivity 
+**Code**: [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0) **Data**: [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0) **VPOD_1.1 DOI**: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.12213246.svg)](https://doi.org/10.5281/zenodo.12213246)
 
+
+# Opsin Phenotype Tool for Inference of Color Sensitivity (OPTICS) 
+
+![](https://github.com/VisualPhysiologyDB/optics/blob/main/examples/optics_on_msp_test_of_optics_2024-09-19_19-48-49/msp_bs_viz.pdf?raw=True)
+
+  _Box Plot of Bootstrap λmax Predictions by OPTICS_
+
+---
 ## Description
 
 - **OPTICS** is an open-source tool that predicts the Opsin Phenotype (λmax) from unaligned opsin amino-acid sequences. 
@@ -51,7 +59,8 @@
 - Predictions (TSV): λmax values, model used, and encoding method.
 - BLAST Results (TXT, optional): Comparison of query sequences to reference datasets.
 - Bootstrap Graphs (PDF, optional): Visualization of bootstrap prediction results.
-    
+
+---
 ## Citation
 
 - **If you use OPTICS in your research, please cite the following paper:**
@@ -67,7 +76,8 @@
     eprint = {[https://www.biorxiv.org/content/early/2024/02/14/2024.02.12.579993.full.pdf]},
     journal = {bioRxiv}
     }
-
+  
+---
 ## Additional Notes
 
 - *OPTICS v1.0 uses VPOD v1.2 for training.*
