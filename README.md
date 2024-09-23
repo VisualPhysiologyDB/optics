@@ -3,7 +3,7 @@
 
 # Opsin Phenotype Tool for Inference of Color Sensitivity (OPTICS) 
 
-![embed](https://github.com/VisualPhysiologyDB/optics/blob/main/examples/optics_on_msp_test_of_optics_2024-09-19_19-48-49/msp_bs_viz.pdf)
+![](https://github.com/VisualPhysiologyDB/optics/blob/main/examples/optics_on_msp_test_of_optics_2024-09-19_19-48-49/msp_bs_viz.svg?raw=true)
 
   _Box Plot of Bootstrap λmax Predictions by OPTICS_
 
