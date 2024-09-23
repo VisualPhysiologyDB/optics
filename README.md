@@ -50,34 +50,45 @@
 
     - **MAKE SURE YOU ARE IN THE FOLDER DIRECTORY FOR OPTICS BEFORE RUNNING ANY SCRIPTS!**
     - Parameters
-      - -_in_ - FASTA file containing unaligned opsin sequences.
-      - _-rd_ - Name for job; used to create output folder. (deafult = optics_on_unamed_{date_and_time_label})
-      - _-out_ - Name for output file. (deafult = 'optics_predictions.txt')
-      - _-m_ - Select model to use for prediction. Options are 'whole-dataset', 'vertebrate', 'invertebrate', 'wildtype', or 'wildtype-vert'
-      - _-e_ - Select preferred encoding method used to train model and make predictions. Options are 'one-hot' or 'aa_prop'
-      - _-b_ - Option to enable/disable Blastp analysis on query sequences. [True/False]
-      - _-ir_ - Name for the blastp report output file. (deafult = 'blastp_report.txt')
-      - _-r_ - Select reference sequence used for position numbering for blastp analysis. Options are 'bovine', 'squid', or 'custom'
-      - _-f_ - Custom reference sequence file used for blastp analysis - **ONLY NEED TO PROVIDE IF SELECTED 'CUSTOM' FOR REFERENCE SEQUENCE**
-      - _-s_ - Option to enable/disable bootstrap predictions on query sequences. **NOTE: VISULIZATION ONLY PRODUCED FOR 10 SEQUENCES OR LESS**
-      - _-bsv_ - Name for the pdf file output file for visualizing bootstrap predictions. (default = 'bootstrap_viz.pdf')
-      - Example Command Line Usage vvv
+      ```
+        -in - FASTA file containing unaligned opsin sequences.
 
-      ```bash
-      python optics_predictions.py -in ./examples/msp_erg_raw.txt -rd msp_test_of_optics -out msp_predictions.tsv -m whole-dataset -e aa_prop -b True -ir msp_blastp_report.tsv -r squid -s True -bsv msp_bs_viz.pdf 
+        -rd - Name for job; used to create output folder. (deafult = optics_on_unamed_{date_and_time_label})
+
+        -out - Name for output file. (deafult = 'optics_predictions.txt')
+
+        -m - Select model to use for prediction. Options are 'whole-dataset', 'vertebrate', 'invertebrate', 'wildtype', or 'wildtype-vert'
+
+        -e - Select preferred encoding method used to train model and make predictions. Options are 'one-hot' or 'aa_prop'
+
+        -b - Option to enable/disable Blastp analysis on query sequences. [True/False]
+
+        -ir - Name for the blastp report output file. (deafult = 'blastp_report.txt')
+
+        -r - Select reference sequence used for position numbering for blastp analysis. Options are 'bovine', 'squid', or 'custom'
+
+        -f - Custom reference sequence file used for blastp analysis - **ONLY NEED TO PROVIDE IF SELECTED 'CUSTOM' FOR REFERENCE SEQUENCE**
+
+        -s - Option to enable/disable bootstrap predictions on query sequences. **NOTE: VISULIZATION ONLY PRODUCED FOR 10 SEQUENCES OR LESS**
+
+        -bsv - Name for the pdf file output file for visualizing bootstrap predictions. (default = 'bootstrap_viz.pdf')
+       ```     
+     - Example Command Line Usage vvv
+       ```bash
+        python optics_predictions.py -in ./examples/msp_erg_raw.txt -rd msp_test_of_optics -out msp_predictions.tsv -m whole-dataset -e aa_prop -b True -ir msp_blastp_report.tsv -r squid -s True -bsv msp_bs_viz.pdf 
 
 ## Input
 
 - **Unaligned** FASTA file containing opsin amino-acid sequences.
 - Example FASTA Entry:
-
+  ```
     >NP_001014890.1_rhodopsin_Bos taurus
     MNGTEGPNFYVPFSNKTGVVRSPFEAPQYYLAEPWQFSMLAAYMFLLIMLGFPINFLTLYVTVQHKKLRT 
     PLNYILLNLAVADLFMVFGGFTTTLYTSLHGYFVFGPTGCNLEGFFATLGGEIALWSLVVLAIERYVVVC 
     KPMSNFRFGENHAIMGVAFTWVMALACAAPPLVGWSRYIPEGMQCSCGIDYYTPHEETNNESFVIYMFVV 
     HFIIPLIVIFFCYGQLVFTVKEAAAQQQESATTQKAEKEVTRMVIIMVIAFLICWLPYAGVAFYIFTHQG 
     SDFGPIFMTIPAFFAKTSAVYNPVIYIMMNKQFRNCMVTTLCCGKNPLGDDEASTTVSKTETSQVAPA   
- 
+  ``` 
 ## Output
 
 - Predictions (TSV): λmax values, model used, and encoding method.
