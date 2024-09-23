@@ -19,7 +19,7 @@
 - **Model Selection**: Choose from different pre-trained models for prediction.
 - **Encoding Methods**: Select between one-hot encoding or amino-acid property encoding for model training and prediction.
 - **BLAST Analysis**: Optionally perform BLASTp analysis to compare query sequences against reference datasets.
-- **Bootstrap Predictions**: Optionally enable bootstrap predictions for enhanced accuracy assessment (limited to 10 sequences).
+- **Bootstrap Predictions**: Optionally enable bootstrap predictions for enhanced accuracy assessment (suggested limit to 10 sequences for bootstrap visulzations).
 
 ## Installation
 
@@ -29,18 +29,32 @@
 
 2. **Install dependencies:**
    ```bash
-    pip install -r requirements.txt 
+    pip install -r requirements.txt  
+    ```
+    OR 
+   ```bash
+   pip install -r requirements.txt
+   ```
 
 3. **Usage**
 
-    - Upload your FASTA file containing unaligned opsin sequences.
-    - Select the desired model and encoding method.
-    - Optionally enable BLAST analysis and/or bootstrap predictions.
-    - Run the tool and retrieve the output files.
-    - Example Command Line Usage Below vvv
+    - **MAKE SURE YOU ARE IN THE FOLDER DIRECTORY FOR OPTICS BEFORE RUNNING ANY SCRIPTS!**
+    - Parameters
+      - -_in_ - FASTA file containing unaligned opsin sequences.
+      - _-rd_ - Name for job; used to create output folder. (deafult = optics_on_unamed_{date_and_time_label})
+      - _-out_ - Name for output file. (deafult = 'optics_predictions.txt')
+      - _-m_ - Select model to use for prediction. Options are 'whole-dataset', 'vertebrate', 'invertebrate', 'wildtype', or 'wildtype-vert'
+      - _-e_ - Select preferred encoding method used to train model and make predictions. Options are 'one-hot' or 'aa_prop'
+      - _-b_ - Option to enable/disable Blastp analysis on query sequences. [True/False]
+      - _-ir_ - Name for the blastp report output file. (deafult = 'blastp_report.txt')
+      - _-r_ - Select reference sequence used for position numbering for blastp analysis. Options are 'bovine', 'squid', or 'custom'
+      - _-f_ - Custom reference sequence file used for blastp analysis - **ONLY NEED TO PROVIDE IF SELECTED 'CUSTOM' FOR REFERENCE SEQUENCE**
+      - _-s_ - Option to enable/disable bootstrap predictions on query sequences. **NOTE: VISULIZATION ONLY PRODUCED FOR 10 SEQUENCES OR LESS**
+      - _-bsv_ - Name for the pdf file output file for visualizing bootstrap predictions. (default = 'bootstrap_viz.pdf')
+      - Example Command Line Usage vvv
 
     ```bash
-    python '$__tool_directory__/prediction_functions_galaxy.py' '$input' '$output' '$blast_report' '$boot_strap_file' -m '$model' -b '$blast_checkbox' -r '$ref_sequence' -f '$ref_seq_file' -s '$boot_strap' -e '$encode_method' 
+    python optics_predictions.py -in ./examples/msp_erg_raw.txt -rd msp_test_of_optics -out msp_predictions.tsv -m whole-dataset -e aa_prop -b True -ir msp_blastp_report.tsv -r squid -s True -bsv msp_bs_viz.pdf 
 
 ## Input
 
@@ -72,14 +86,26 @@ All data and code is covered under a GNU General Public License (GPL)(Version 3)
     
 - **IF you use OPTICS in your research, please cite the following paper:**
 
-      Seth A. Frazer, Mahdi Baghbanzadeh, Ali Rahnavard, Keith A. Crandall, & Todd H Oakley. (2024). Discovering genotype-phenotype relationships with machine learning and the Visual Physiology Opsin Database (VPOD). bioRxiv, 2024.02.12.579993. https://doi.org/10.1101/2024.02.12.579993 [pre-print]
-  
+      Seth A. Frazer, Mahdi Baghbanzadeh, Ali Rahnavard, Keith A. Crandall, & Todd H Oakley. (2024). Discovering genotype-phenotype relationships with machine learning and the Visual Physiology Opsin Database (VPOD). GigaScience, 2024.09.01 https://doi.org/10.1093/gigascience/giae073
+
+## Contact
+Contact information for author questions or feedback.
+
+  **Todd H. Oakley** - [ORCID ID](https://orcid.org/0000-0002-4478-915X)
+    
+    oakley@ucsb.edu
+    
+**Seth A. Frazer** - [ORCID ID](https://orcid.org/0000-0002-3800-212X)
+
+    sethfrazer@ucsb.edu
+    
 ---
-## Additional Notes
+## Additional Notes/Resources
 
 - *OPTICS v1.0 uses VPOD v1.2 for training.*
 
-For more information about VPOD, visit:
-- *VPOD Bibliography*: https://tinyurl.com/u7hn9adm
-- *Contribute to VPOD*: https://tinyurl.com/29afaxyr
-- *VPOD GitHub*: https://github.com/VisualPhysiologyDB/visual-physiology-opsin-db
+- **[Here](https://tinyurl.com/u7hn9adm)** is a link to a bibliography of the publications used to build VPOD_1.2 (Full version not yet released)
+  
+- If you know of publications for training opsin ML models not included in the VPOD_1.2 database, please send them to us through **[this form](https://tinyurl.com/29afaxyr)**
+  
+- Check out the **[VPOD GitHub](https://github.com/VisualPhysiologyDB/visual-physiology-opsin-db) repository
