@@ -25,18 +25,28 @@
 
 1. **Clone the repository:**
    ```bash
-   git clone https://your_github_repository_url.git
+    git clone https://github.com/VisualPhysiologyDB/optics.git
 
-2. **Install dependencies:**
+2. **Install dependencies:** [Make sure you are working in the repository directory from here-after]
+   - Use the '.yml' file to create the environment
+     
    ```bash
-    pip install -r requirements.txt  
-    ```
-    OR 
+    conda env create -f environment.yml
+   ```
+   - OR use the 'requirements.txt' file
+
+   ```bash
+   conda create --name optics_env python=3.11 
+   ```
    ```bash
    pip install -r requirements.txt
    ```
-
-3. **Usage**
+   - THEN
+     
+   ```bash
+   conda activate optics_env
+   
+4. **Usage**
 
     - **MAKE SURE YOU ARE IN THE FOLDER DIRECTORY FOR OPTICS BEFORE RUNNING ANY SCRIPTS!**
     - Parameters
@@ -53,8 +63,8 @@
       - _-bsv_ - Name for the pdf file output file for visualizing bootstrap predictions. (default = 'bootstrap_viz.pdf')
       - Example Command Line Usage vvv
 
-    ```bash
-    python optics_predictions.py -in ./examples/msp_erg_raw.txt -rd msp_test_of_optics -out msp_predictions.tsv -m whole-dataset -e aa_prop -b True -ir msp_blastp_report.tsv -r squid -s True -bsv msp_bs_viz.pdf 
+      ```bash
+      python optics_predictions.py -in ./examples/msp_erg_raw.txt -rd msp_test_of_optics -out msp_predictions.tsv -m whole-dataset -e aa_prop -b True -ir msp_blastp_report.tsv -r squid -s True -bsv msp_bs_viz.pdf 
 
 ## Input
 
@@ -108,4 +118,4 @@ Contact information for author questions or feedback.
   
 - If you know of publications for training opsin ML models not included in the VPOD_1.2 database, please send them to us through **[this form](https://tinyurl.com/29afaxyr)**
   
-- Check out the **[VPOD GitHub](https://github.com/VisualPhysiologyDB/visual-physiology-opsin-db) repository
+- Check out the **[VPOD GitHub](https://github.com/VisualPhysiologyDB/visual-physiology-opsin-db)** repository
