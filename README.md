@@ -47,7 +47,7 @@
 - **Unaligned** FASTA file containing opsin amino-acid sequences.
 - Example FASTA Entry:
 
-    >NP_001014890.1_rhodopsin_Bos taurus 
+    >NP_001014890.1_rhodopsin_Bos taurus
     MNGTEGPNFYVPFSNKTGVVRSPFEAPQYYLAEPWQFSMLAAYMFLLIMLGFPINFLTLYVTVQHKKLRT 
     PLNYILLNLAVADLFMVFGGFTTTLYTSLHGYFVFGPTGCNLEGFFATLGGEIALWSLVVLAIERYVVVC 
     KPMSNFRFGENHAIMGVAFTWVMALACAAPPLVGWSRYIPEGMQCSCGIDYYTPHEETNNESFVIYMFVV 
@@ -61,27 +61,23 @@
 - Bootstrap Graphs (PDF, optional): Visualization of bootstrap prediction results.
 
 ---
+## License
+All data and code is covered under a GNU General Public License (GPL)(Version 3), in accordance with Open Source Initiative (OSI)-policies
+
 ## Citation
 
-- **If you use OPTICS in your research, please cite the following paper:**
+- **IF citing this GitHub and its contents use the following DOI provided by Zenodo...**
 
-    @article{Frazer2024.02.12.579993,
-    author = {Frazer, Seth A. and Baghbanzadeh, Mahdi and Rahnavard, Ali and Crandall, Keith A. and Oakley, Todd H.},
-    title = {Discovering genotype-phenotype relationships with machine learning and the Visual Physiology Opsin Database (VPOD)},
-    elocation-id = {2024.02.12.579993},
-    year = {2024},
-    doi = {10.1101/2024.02.12.579993},
-    publisher = {Cold Spring Harbor Laboratory},
-    URL = {[https://www.biorxiv.org/content/early/2024/02/14/2024.02.12.579993]},
-    eprint = {[https://www.biorxiv.org/content/early/2024/02/14/2024.02.12.579993.full.pdf]},
-    journal = {bioRxiv}
-    }
+      10.5281/zenodo.10667840
+    
+- **IF you use OPTICS in your research, please cite the following paper:**
+
+      Seth A. Frazer, Mahdi Baghbanzadeh, Ali Rahnavard, Keith A. Crandall, & Todd H Oakley. (2024). Discovering genotype-phenotype relationships with machine learning and the Visual Physiology Opsin Database (VPOD). bioRxiv, 2024.02.12.579993. https://doi.org/10.1101/2024.02.12.579993 [pre-print]
   
 ---
 ## Additional Notes
 
 - *OPTICS v1.0 uses VPOD v1.2 for training.*
-- *License* - zzz
 
 For more information about VPOD, visit:
 - *VPOD Bibliography*: https://tinyurl.com/u7hn9adm
