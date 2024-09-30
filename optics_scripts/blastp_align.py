@@ -12,10 +12,21 @@ def run_blastp(query_file, database):
     """Performs BLASTp search and returns the top hit."""
     blastp_path = "blastp"  # Replace with the actual path to blastp
     blast_cmd = [blastp_path, "-query", query_file, "-db", database, "-outfmt", "6"]
-    blast_result = subprocess.run(blast_cmd, capture_output=True, text=True).stdout
+    run_blastp = subprocess.run(blast_cmd, capture_output=True, text=True)
+
+    # Access standard output (stdout)
+    blast_result = run_blastp.stdout
+
+    # Access standard error (stderr)
+    stderr_data = run_blastp.stderr
+
     blast_metrics = parse_blast_result(blast_result)
-    closest_match_id = blast_result.splitlines()[1].split("\t")[1]
-    #print(closest_match_id)
+    try:    
+        closest_match_id = blast_result.splitlines()[1].split("\t")[1]
+    except:
+        closest_match_id = '-'
+        print(f'This is the blast result which raised the following error:\n{blast_result}\n')
+        print(f'This is the error message from blastp:\n{stderr_data}\n')
 
     return closest_match_id, blast_metrics
 
@@ -86,14 +97,30 @@ def extract_from_fasta(fasta_file, seq_id):
 def parse_blast_result(blast_output):
     """Extracts key metrics from BLAST tabular output (outfmt 6)."""
     lines = blast_output.splitlines()
-    top_hit_data = lines[1].split("\t")  # Data from the second line
-    return {
+    try:
+        top_hit_data = lines[1].split("\t")  # Data from the second line
+        return {
         "percent_identity": float(top_hit_data[2]),
         "alignment_length": int(top_hit_data[3]),
         "mismatches": int(top_hit_data[4]),
         "gap_opens": int(top_hit_data[5]),
         "e_value": float(top_hit_data[10]),
-    }
+        }
+    except:
+        try:
+            top_hit_data = lines[0].split("\t")  # Data from the second line
+            return {
+            "percent_identity": float(top_hit_data[2]),
+            "alignment_length": int(top_hit_data[3]),
+            "mismatches": int(top_hit_data[4]),
+            "gap_opens": int(top_hit_data[5]),
+            "e_value": float(top_hit_data[10]),
+            }
+        except:
+            print("\nAn error occured during blastp but moving on with blank '-' entries for this sequence\n")
+            #print(lines)
+            return None
+
 
 # --- Difference analysis with bovine position mapping ---
 def analyze_differences(query_seq, closest_match_seq, reference_seq):
@@ -131,7 +158,8 @@ def analyze_differences(query_seq, closest_match_seq, reference_seq):
 def seq_sim_report(query_file, name, ref_seq_id, opsin_database, opsin_db_fasta, opsin_db_meta, ouput_file, reffile):
     # BLAST search
     closest_match_id, blast_metrics = run_blastp(query_file, opsin_database)
-    
+    if closest_match_id == '-':
+        return('blastp unsuccessful')
     # Extract sequences
     query_record = ''
     with open(query_file, 'r') as q:
@@ -219,6 +247,8 @@ def seq_sim_report(query_file, name, ref_seq_id, opsin_database, opsin_db_fasta,
         f.write(f"{closest_match_id}\t{species}\t{opsin_family}\t{accession}\t{lmax}\n")
         f.write("*** BLAST Metrics ***\n")
         for metric, value in blast_metrics.items():
+            if 'percent' in metric:
+                percent_iden = value
             f.write(f"{metric.capitalize()}: {value}\n")
         f.write("Alignment:\n")
         with open(alignment, 'r') as infile:
@@ -233,6 +263,7 @@ def seq_sim_report(query_file, name, ref_seq_id, opsin_database, opsin_db_fasta,
         os.remove(alignment)
     except FileNotFoundError:
         raise Exception("File does not exist")
+    return(percent_iden)
     #print(f"Closest Match to Query Sequence: {accession}\n")
     #print(f"Species\tOpsin Family\tλmax")
     #print(f"{species}\t{opsin_family}\t{lmax}")

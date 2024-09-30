@@ -2,7 +2,6 @@
 import subprocess 
 from deepBreaks.utils import load_obj
 from deepBreaks.preprocessing import read_data
-#from fpdf import FPDF
 import pandas as pd
 import argparse
 import os
@@ -10,7 +9,7 @@ import random
 import datetime
 from progress.bar import ShadyBar
 from optics_scripts.blastp_align import seq_sim_report
-from optics_scripts.bootstrap_predictions import calculate_ensemble_CI , plot_predictions_with_CI
+from optics_scripts.bootstrap_predictions import calculate_ensemble_CI , plot_predictions_with_CI, plot_prediction_subsets_with_CI
 
 def process_sequence(sequence, name, selected_model, identity_report, blastp, refseq, reffile, bootstrap, prediction_dict = None, encoding_method='one_hot'):
     data_dir = "./data"
@@ -105,9 +104,9 @@ def process_sequence(sequence, name, selected_model, identity_report, blastp, re
             temp_file.write(sequence) # Write your data to the file object
 
     if blastp == 'no' or blastp == False or blastp == 'False':
-        pass
+        percent_iden = '-'
     else:
-        seq_sim_report(temp_seq, name, refseq, blast_db, raw_data, metadata, identity_report, reffile)
+        percent_iden = seq_sim_report(temp_seq, name, refseq, blast_db, raw_data, metadata, identity_report, reffile)
         #print('Query sequence processed via blastp')
 
     new_ali = f'{wrk_dir}/tmp/temp_ali_{random_number}.fasta'  
@@ -150,21 +149,21 @@ def process_sequence(sequence, name, selected_model, identity_report, blastp, re
 
     if bootstrap == 'yes' or bootstrap == True or bootstrap == 'True':
         # ... (Load the selected model and make a bootstrap prediction)
-        mean_prediction, ci_lower, ci_upper, prediction_dict, median_prediction = calculate_ensemble_CI(model_bs_folder, new_seq_test, name, prediction_dict)
+        mean_prediction, ci_lower, ci_upper, prediction_dict, median_prediction, std_dev = calculate_ensemble_CI(model_bs_folder, new_seq_test, name, prediction_dict)
         #print(f'{mean_prediction}, {ci_lower}, {ci_upper}, {prediction_dict}')
         
         # ... (Load the selected model and make a single prediction)
         loaded_mod = load_obj(model)
         prediction = loaded_mod.predict(new_seq_test)
         
-        return (round(float(mean_prediction),1), round(float(ci_lower),1), round(float(ci_upper),1), prediction_dict, round(float(prediction[0]),1), round(float(median_prediction),1))
+        return (round(float(mean_prediction),1), round(float(ci_lower),1), round(float(ci_upper),1), prediction_dict, round(float(prediction[0]),1), round(float(median_prediction),1), str(percent_iden), round(float(std_dev),1))
 
     else:
         # ... (Load the selected model and make a prediction)
         loaded_mod = load_obj(model)
         prediction = loaded_mod.predict(new_seq_test)
         
-        return(round(float(prediction[0]),1))
+        return(round(float(prediction[0]),1), str(percent_iden))
  
 
 def process_sequences_from_file(file,selected_model, identity_report, blastp, refseq, reffile, bootstrap, encoding_method):
@@ -206,39 +205,36 @@ def process_sequences_from_file(file,selected_model, identity_report, blastp, re
     predictions = []
     mean_predictions = []
     median_predictions = []
+    std_dev_list = []
     ci_lowers = []
     ci_uppers = []
     prediction_dict = {}
+    per_iden_list = []
     i = 0
-    
+
     bar = ShadyBar('Processing Sequences', max=len(names), charset='ascii')
     for seq in sequences:
         if bootstrap == 'no' or bootstrap == False or bootstrap == 'False':    
             #print(seq)
-            prediction = process_sequence(seq, names[i], selected_model, identity_report, blastp, refseq, reffile, bootstrap, prediction_dict, encoding_method)  # Process each sequence
+            prediction, percent_iden = process_sequence(seq, names[i], selected_model, identity_report, blastp, refseq, reffile, bootstrap, prediction_dict, encoding_method)  # Process each sequence
             predictions.append(prediction)
+            per_iden_list.append(percent_iden)
             bar.next()
 
         else:
-            if len(names) > 10 and i==0:
-                print("More than TEN sequences detected for bootstrap prediction protocol.\nDue to the way the bootstrap visuliazation graph is produced we recommend resubmitting with 10 sequences or less.\nTo aviod strange outputs the bootstrap visulization will be disabled.\nThe 95% confidence interval will still be reported with mean, mwdian and upper/lower bounds.\n")
-                visualize = False
-            elif len(names) <= 10 and i==0:
-                visualize = True
-            else:
-                pass
-            
-            mean_prediction, ci_lower, ci_upper, prediction_dict, prediction, median_prediction = process_sequence(seq, names[i], selected_model, identity_report, blastp, refseq, reffile, bootstrap, prediction_dict, encoding_method)  # Process each sequence
+            mean_prediction, ci_lower, ci_upper, prediction_dict, prediction, median_prediction, percent_iden, std_dev = process_sequence(seq, names[i], selected_model, identity_report, blastp, refseq, reffile, bootstrap, prediction_dict, encoding_method)  # Process each sequence
             mean_predictions.append(mean_prediction)
             predictions.append(prediction)
             ci_lowers.append(ci_lower)
             ci_uppers.append(ci_upper)
             median_predictions.append(median_prediction)
+            per_iden_list.append(percent_iden)
+            std_dev_list.append(std_dev)
             bar.next()
         i+=1
     #print(predictions)
     bar.finish()
-    return(names, mean_predictions, ci_lowers, ci_uppers, prediction_dict, predictions, visualize, median_predictions)
+    return(names, mean_predictions, ci_lowers, ci_uppers, prediction_dict, predictions, median_predictions, per_iden_list, std_dev_list)
 
 def main():
     
@@ -264,10 +260,10 @@ def main():
                 type = str, default = 'not_real.txt', required=False)
     parser.add_argument("-s", "--bootstrap", help="Option to enable bootstrap predictions on query sequences", 
                     type = str or bool , default = False, required=False)
-    parser.add_argument("-bsv","--bootstrap_viz_file", help="Name for the pdf file output file for visualizing bootstrap predictions", type=str, default = 'bootstrap_viz.pdf', required = False)
+    parser.add_argument("-bsv","--bootstrap_viz_file", help="Name for the pdf file output file for visualizing bootstrap predictions", type=str, default = 'bootstrap_viz', required = False)
 
     # python optics_predictions.py -in ./examples/msp_erg_raw.txt -rd msp_test_of_optics -out msp_predictions.tsv -m whole-dataset -e aa_prop -b True -ir msp_blastp_report.tsv -r squid -s False
-    # python optics_predictions.py -in ./examples/msp_erg_raw.txt -rd msp_test_of_optics -out msp_predictions.tsv -m whole-dataset -e aa_prop -b True -ir msp_blastp_report.tsv -r squid -s True -bsv msp_bs_viz.pdf
+    # python optics_predictions.py -in ./examples/msp_erg_raw.txt -rd msp_test_of_optics -out msp_predictions.tsv -m whole-dataset -e aa_prop -b True -ir msp_blastp_report.tsv -r squid -s True -bsv msp_bs_viz
 
     args = parser.parse_args()
     
@@ -276,35 +272,46 @@ def main():
     else:
         report_dir = f'./prediction_outputs/optics_on_{args.report_dir}_{dt_label}'
     os.makedirs(report_dir)
+    if os.path.isdir('./tmp'):
+        pass
+    else:    
+        os.makedirs(f'./tmp')
+
     blastp_file = f'{report_dir}/{args.iden_report}'
     bootstrap_file = f'{report_dir}/{args.bootstrap_viz_file}'
+    log_file = f'{report_dir}/arg_log.txt'
 
     if os.path.isfile(args.input):
-        names, mean_predictions, ci_lowers, ci_uppers, prediction_dict, predictions, visualize, median_predictions = process_sequences_from_file(args.input, args.model, blastp_file, args.blastp, args.refseq, args.reffile, args.bootstrap, args.encoding_method)
+        names, mean_predictions, ci_lowers, ci_uppers, prediction_dict, predictions, median_predictions, per_iden_list, std_dev_list = process_sequences_from_file(args.input, args.model, blastp_file, args.blastp, args.refseq, args.reffile, args.bootstrap, args.encoding_method)
         output = f'{report_dir}/{args.output}'
         with open(output, 'w') as f:
             i = 0
             while i in range(len(names)):
                 if args.bootstrap == 'no' or args.bootstrap == False or args.bootstrap == 'False':
                     if i == 0:
-                        f.write('Names\tPredictions\n')
-                    f.write(f"{names[i]}:\t{predictions[i]}\n")
-                    print(f"{names[i]}:\t{predictions[i]}\n")
+                        f.write('Names\tPredictions\t%Identity_Nearest_VPOD_Sequence\n')
+                    f.write(f"{names[i]}\t{predictions[i]}\t{per_iden_list[i]}\n")
+                    print(f"{names[i]}\t{predictions[i]}\t{per_iden_list[i]}\n")
                     i+=1
                 else:
                     if i == 0:
-                        f.write('Names\tSingle_Prediction\tPrediction_Means\tPrediction_Medians\tPrediction_Lower_Bounds\tPrediction_Upper_Bounds\n')
-                        print('Names\tSingle_Prediction\tPrediction_Means\tPrediction_Medians\tPrediction_Lower_Bounds\tPrediction_Upper_Bounds\n')
-                        if visualize == False:
-                            pass
+                        f.write('Names\tSingle_Prediction\tPrediction_Means\tPrediction_Medians\tPrediction_Lower_Bounds\tPrediction_Upper_Bounds\tStd_Deviation\t%Identity_Nearest_VPOD_Sequence\n')
+                        print('Names\tSingle_Prediction\tPrediction_Means\tPrediction_Medians\tPrediction_Lower_Bounds\tPrediction_Upper_Bounds\tStd_Deviation\t%Identity_Nearest_VPOD_Sequence\n')
+                        if len(names) > 10:
+                            bs = plot_prediction_subsets_with_CI(names, prediction_dict, mean_predictions, bootstrap_file)
                         else:
-                            bootstrap_plots = plot_predictions_with_CI(names, prediction_dict, mean_predictions, bootstrap_file)
-                    f.write(f"{names[i]}:\t{predictions[i]}\t{mean_predictions[i]}\t{median_predictions[i]}\t{ci_lowers[i]}\t{ci_uppers[i]}\n")
-                    print(f"{names[i]}:\t{predictions[i]}\t{mean_predictions[i]}\t{median_predictions[i]}\t{ci_lowers[i]}\t{ci_uppers[i]}\n")
+                            bs = plot_predictions_with_CI(names, prediction_dict, mean_predictions, bootstrap_file)
+                    f.write(f"{names[i]}\t{predictions[i]}\t{mean_predictions[i]}\t{median_predictions[i]}\t{ci_lowers[i]}\t{ci_uppers[i]}\t{std_dev_list[i]}\t{per_iden_list[i]}\n")
+                    print(f"{names[i]}\t{predictions[i]}\t{mean_predictions[i]}\t{median_predictions[i]}\t{ci_lowers[i]}\t{ci_uppers[i]}\t{std_dev_list[i]}\t{per_iden_list[i]}\n")
                     i+=1
-            f.write(f"\nModel Used:\t{args.model}\nEncoding Method:\t{args.encoding_method}\n")
+                    
+        with open(log_file, 'w') as f:
+            f.write(f"Model Used:\t{args.model}\nEncoding Method:\t{args.encoding_method}\n")
             print(f"\nModel Used:\t{args.model}\nEncoding Method:\t{args.encoding_method}\n")
-            print('Predictions Complete!')
+            
+        print('Predictions Complete!')
+        #os.remove('./tmp')
+
     else:
         raise Exception("No file passed to input for predictions")
 
