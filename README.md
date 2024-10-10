@@ -96,6 +96,10 @@
 - Predictions (TSV): λmax values, model used, and encoding method.
 - BLAST Results (TXT, optional): Comparison of query sequences to reference datasets.
 - Bootstrap Graphs (PDF, optional): Visualization of bootstrap prediction results.
+- Job Log (TXT): Log file containing input command to OPTICS, including encoding method and model used.
+
+  **Note** - All outputs are written into sub-folders within the 'prediction_outputs' folder, and are marked by time and date.
+
 
 ---
 ## License
