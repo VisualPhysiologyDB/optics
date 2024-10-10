@@ -49,7 +49,8 @@
    
 4. **Usage**
 
-    - **MAKE SURE YOU ARE IN THE FOLDER DIRECTORY FOR OPTICS BEFORE RUNNING ANY SCRIPTS!**
+    - **MAKE SURE YOU HAVE [BLAST+](https://blast.ncbi.nlm.nih.gov/doc/blast-help/downloadblastdata.html#downloadblastdata) INSTALLED AND ARE IN THE FOLDER DIRECTORY FOR OPTICS BEFORE RUNNING ANY SCRIPTS!**
+
     - Parameters
       ```
         -in - FASTA file containing unaligned opsin sequences.
