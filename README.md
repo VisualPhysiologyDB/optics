@@ -29,16 +29,12 @@
     git clone https://github.com/VisualPhysiologyDB/optics.git
 
 2. **Install dependencies:** [Make sure you are working in the repository directory from here-after]
-   - Use the '.yml' file to create the environment
-     
-   ```bash
-    conda env create -f environment.yml
-   ```
-   - OR use the 'requirements.txt' file
 
+   A. Create a Conda environment for OPTICS (make sure you have [Conda](https://www.anaconda.com/) installed)
    ```bash
    conda create --name optics_env python=3.11 
    ```
+   B. Use the 'requirements.txt' file to download base package dependencies for OPTICS
    ```bash
    pip install -r requirements.txt
    ```
@@ -46,10 +42,24 @@
      
    ```bash
    conda activate optics_env
+   ```
+   C. **Download MAFFT and BLAST**
+   
+     IF working on MAC or LINUX device:
+
+     - Install _BLAST_ and _MAFFT_ directly from the _bioconda_ channel
+       ```bash
+       conda install bioconda::blast bioconda::mafft
+       ```
+     
+     IF working on WINDOWS device:
+      - Manaully install the Windows compatable [BLAST](https://blast.ncbi.nlm.nih.gov/doc/blast-help/downloadblastdata.html#downloadblastdata) executable on your system PATH; [the download list is here](https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/)
+        - We suggest downloading '[ncbi-blast-2.16.0+-win64.exe](https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/ncbi-blast-2.16.0+-win64.exe)' 
+      - You DO NOT need to download MAFFT, OPTICS should be able to run MAFFT from the files we provide when downloading this GitHub.
    
 4. **Usage**
 
-    - **MAKE SURE YOU HAVE [BLAST+](https://blast.ncbi.nlm.nih.gov/doc/blast-help/downloadblastdata.html#downloadblastdata) INSTALLED AND ARE IN THE FOLDER DIRECTORY FOR OPTICS BEFORE RUNNING ANY SCRIPTS!**
+    - **MAKE SURE YOU HAVE ALL DEPENDENCIES DOWNLOADED ARE IN THE FOLDER DIRECTORY FOR OPTICS BEFORE RUNNING ANY SCRIPTS!**
 
     - Parameters
       ```
