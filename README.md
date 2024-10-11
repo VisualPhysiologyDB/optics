@@ -12,7 +12,7 @@
 
 - **OPTICS** is an open-source tool that predicts the Opsin Phenotype (λmax) from unaligned opsin amino-acid sequences. 
 - **OPTICS** leverages machine learning models trained on the Visual Physiology Opsin Database (VPOD).
-- **OPTICS** is also avaliable as an online tool [**here**](http://galaxy-dev.cnsi.ucsb.edu:8080/?tool_id=optics_1&version=latest), hosted on our [**Galaxy Project**]([https://usegalaxy.org/](http://galaxy-dev.cnsi.ucsb.edu:8080/)) server.
+- **OPTICS** is also avaliable as an online tool [**here**](http://galaxy-dev.cnsi.ucsb.edu:8080/?tool_id=optics_1&version=latest), hosted on our [**Galaxy Project**](https://usegalaxy.org/) server.
 
 ## Key Features
 
@@ -123,7 +123,7 @@ All data and code is covered under a GNU General Public License (GPL)(Version 3)
     
 - **IF you use OPTICS in your research, please cite the following paper:**
 
-      Seth A. Frazer, Mahdi Baghbanzadeh, Ali Rahnavard, Keith A. Crandall, & Todd H Oakley. (2024). Discovering genotype-phenotype relationships with machine learning and the Visual Physiology Opsin Database (VPOD). GigaScience, 2024.09.01 https://doi.org/10.1093/gigascience/giae073
+      Seth A. Frazer, Mahdi Baghbanzadeh, Ali Rahnavard, Keith A. Crandall, & Todd H Oakley. Discovering genotype-phenotype relationships with machine learning and the Visual Physiology Opsin Database (VPOD). GigaScience, 2024.09.01. https://doi.org/10.1093/gigascience/giae073
 
 ## Contact
 Contact information for author questions or feedback.
