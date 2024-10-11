@@ -87,7 +87,8 @@
        ```     
      - **Example Command Line Usage vvv**
        ```bash
-        python optics_predictions.py -in ./examples/optics_ex_full.txt -rd ex_test_of_optics -out ex_predictions.tsv -m wild-type -e aa_prop -b True -ir ex_blastp_report.tsv -r squid -s True -bsv ex_bs_viz
+        python optics_predictions.py -in ./examples/optics_ex_short.txt -rd ex_test_of_optics -out ex_predictions.tsv -m wildtype -e aa_prop -b True -ir ex_blastp_report.tsv -r squid -s True -bsv ex_bs_viz
+
 ## Input
 
 - **Unaligned** FASTA file containing opsin amino-acid sequences.
