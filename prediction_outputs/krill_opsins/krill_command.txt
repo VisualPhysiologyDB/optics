@@ -1,0 +1,1 @@
+python optics_predictions.py -in krill_opsins/opsins.prot.curated.fasta.visual.fasta -rd krill_opsin_preds -out krill_predictions.tsv -m wildtype -e aa_prop -b True -ir krill_blastp_report.tsv -r bovine -s True -bsv krill_bs_viz
