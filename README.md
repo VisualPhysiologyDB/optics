@@ -12,7 +12,7 @@
 
 - **OPTICS** is an open-source tool that predicts the Opsin Phenotype (λmax) from unaligned opsin amino-acid sequences. 
 - **OPTICS** leverages machine learning models trained on the Visual Physiology Opsin Database (VPOD).
-- **OPTICS** is also avaliable as an online tool [**here**](http://galaxy-dev.cnsi.ucsb.edu:8080/?tool_id=optics_1&version=latest), hosted on our [**Galaxy Project**]([https://usegalaxy.org/](http://galaxy-dev.cnsi.ucsb.edu:8080/)) server.
+- **OPTICS** is also avaliable as an online tool [**here**](http://galaxy-dev.cnsi.ucsb.edu:8080/?tool_id=optics_1&version=latest), hosted on our [**Galaxy Project**](https://usegalaxy.org/) server.
 
 ## Key Features
 
@@ -29,16 +29,12 @@
     git clone https://github.com/VisualPhysiologyDB/optics.git
 
 2. **Install dependencies:** [Make sure you are working in the repository directory from here-after]
-   - Use the '.yml' file to create the environment
-     
-   ```bash
-    conda env create -f environment.yml
-   ```
-   - OR use the 'requirements.txt' file
 
+   A. Create a Conda environment for OPTICS (make sure you have [Conda](https://www.anaconda.com/) installed)
    ```bash
    conda create --name optics_env python=3.11 
    ```
+   B. Use the 'requirements.txt' file to download base package dependencies for OPTICS
    ```bash
    pip install -r requirements.txt
    ```
@@ -46,10 +42,25 @@
      
    ```bash
    conda activate optics_env
+   ```
+   C. **Download MAFFT and BLAST**
+   
+     IF working on MAC or LINUX device:
+
+     - Install _BLAST_ and _MAFFT_ directly from the _bioconda_ channel
+       ```bash
+       conda install bioconda::blast bioconda::mafft
+       ```
+     
+     IF working on WINDOWS device:
+      - Manaully install the Windows compatable [BLAST](https://blast.ncbi.nlm.nih.gov/doc/blast-help/downloadblastdata.html#downloadblastdata) executable on your system PATH; [the download list is here](https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/)
+        - We suggest downloading '[ncbi-blast-2.16.0+-win64.exe](https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/ncbi-blast-2.16.0+-win64.exe)' 
+      - You DO NOT need to download MAFFT, OPTICS should be able to run MAFFT from the files we provide when downloading this GitHub.
    
 4. **Usage**
 
-    - **MAKE SURE YOU ARE IN THE FOLDER DIRECTORY FOR OPTICS BEFORE RUNNING ANY SCRIPTS!**
+    - **MAKE SURE YOU HAVE ALL DEPENDENCIES DOWNLOADED ARE IN THE FOLDER DIRECTORY FOR OPTICS BEFORE RUNNING ANY SCRIPTS!**
+
     - Parameters
       ```
         -in - FASTA file containing unaligned opsin sequences.
@@ -74,9 +85,9 @@
 
         -bsv - Name for the pdf file output file for visualizing bootstrap predictions. (default = 'bootstrap_viz.pdf')
        ```     
-     - Example Command Line Usage vvv
+     - **Example Command Line Usage vvv**
        ```bash
-        python optics_predictions.py -in ./examples/msp_erg_raw.txt -rd msp_test_of_optics -out msp_predictions.tsv -m whole-dataset -e aa_prop -b True -ir msp_blastp_report.tsv -r squid -s True -bsv msp_bs_viz.pdf 
+        python optics_predictions.py -in ./examples/optics_ex_short.txt -rd ex_test_of_optics -out ex_predictions.tsv -m wildtype -e aa_prop -b True -ir ex_blastp_report.tsv -r squid -s True -bsv ex_bs_viz
 
 ## Input
 
@@ -95,6 +106,10 @@
 - Predictions (TSV): λmax values, model used, and encoding method.
 - BLAST Results (TXT, optional): Comparison of query sequences to reference datasets.
 - Bootstrap Graphs (PDF, optional): Visualization of bootstrap prediction results.
+- Job Log (TXT): Log file containing input command to OPTICS, including encoding method and model used.
+
+  **Note** - All outputs are written into sub-folders within the 'prediction_outputs' folder, and are marked by time and date.
+
 
 ---
 ## License
@@ -108,7 +123,7 @@ All data and code is covered under a GNU General Public License (GPL)(Version 3)
     
 - **IF you use OPTICS in your research, please cite the following paper:**
 
-      Seth A. Frazer, Mahdi Baghbanzadeh, Ali Rahnavard, Keith A. Crandall, & Todd H Oakley. (2024). Discovering genotype-phenotype relationships with machine learning and the Visual Physiology Opsin Database (VPOD). GigaScience, 2024.09.01 https://doi.org/10.1093/gigascience/giae073
+      Seth A. Frazer, Mahdi Baghbanzadeh, Ali Rahnavard, Keith A. Crandall, & Todd H Oakley. Discovering genotype-phenotype relationships with machine learning and the Visual Physiology Opsin Database (VPOD). GigaScience, 2024.09.01. https://doi.org/10.1093/gigascience/giae073
 
 ## Contact
 Contact information for author questions or feedback.
