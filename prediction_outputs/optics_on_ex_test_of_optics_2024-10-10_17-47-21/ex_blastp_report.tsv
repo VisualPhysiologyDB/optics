@@ -5094,3 +5094,179 @@ Position: 365	Query: P	Closest Match: T
 Position: 367	Query: A	Closest Match: T
 Position: 369	Query: A	Closest Match: -
 
+Closest Match to Query Sequence - Acyrthosiphon_pisum|518:
+VPOD_ID	Species	Opsin Family	Accession	λmax
+S270	Automeris_io	IV-LWS	OK930069.1	532.0
+*** BLAST Metrics ***
+Percent_identity: 67.867
+Alignment_length: 361
+Mismatches: 113
+Gap_opens: 1
+E_value: 0.0
+Alignment:
+>Squid
+M------GRDLRDNETW--------WYNPSIV----------VHPHWREFDQVPDAVYYS
+LGIFIGICGIIGCGGNGIVIYLFTKTKSLQTPANMFIINLAFSDFTFSLVNGFPLMTISC
+FLKKWIFGFAACKVYGFIGGIFGFMSIMTMAMISIDRYNVIGRPMAASKKMSHRRAFIMI
+IFVWLWSVLWAIGPIFGWGAYTLEGVLCNCSFDYISRDSTTRSNILCMFILGFFGPILII
+FFCYFNIVMSVSNHEKEMAAMAKRLNAKELRKA-QAGANAEMRLAKISIVIVSQFLLSWS
+PYAVVALLAQFGPLEWVTPYAAQLPVMFAKASAIHNPMIYSVSHPKFREAISQTFPWVLT
+CCQFDDKETEDDKDAETEIPAGESSDAAPSADAAQMKEMMAMMQKMQQQQAAYPPQGYAP
+PPQGYPPQGYPPQGYPPQGYPPQGYPPPPQGAPPQGAPPAAPPQGVDNQAYQA
+>Acyrthosiphon_pisum|518
+MLNKI--GSHYERQENW---VAEGGFGNETVVDRVPADMMHLIDPSWYQFPPMESMWYKW
+LGVTIFFLGILSVVGNGMVIYIFTCTKNLRTPSNLLIVNLAFSDFCL-MFTMCPAMVWNC
+FYETWMFGPFACELYAMFGSLFGVTSIWTMVFIALDRYNVIVKGLSA-KPMTTKLALLQI
+FCIYLHGLFWTLTPFFGWSRYVPEANMTACGTDYLTLAWHSRSYVLVYAIFAYYLPLLVI
+IYAYYFIVKAVASHEKSMREQAKKMNVSSLRSGDQSNTSAEFKLAKVALMTISLWFMAWT
+PYMVINFAGIFQLMT-IDPLFTIWGSVFAKANAVYNPIVYAISHPKYRLALDKKFP-CLV
+CGKLEDDRSDSKSVASAQTTISEDK-----------------------------------
+----------------------------------------------------V
+>S270
+MTISLDPGPGLAALQAWGGQVAAYGAANQTVVDKVPPDMLHMVDAHWYQFPPMNPLWHAL
+LGFTIGVLGFISISGNGMVIYIFMSTKSLKTPSNLLVVNLAFSDFLM-MCAMSPAMVVNC
+YNETWVFGPFACELYGCAGSLFGCASIWTMTMIAFDRYNVIVKGIAA-KPMTNNGALLRI
+LGIWTFSLAWTLAPFFGWNRYVPEGNMTACGTDYLSKDWFSRSYILIYSVFVYYTPLLLI
+IYSYFFIVQAVAAHEKAMREQAKKMNVASLRSSDAANTSAECKLAKVALMTISLWFMAWT
+PYLVINYTGVFESAP-ISPLATIWGSLFAKANAVYNPIVYGISHPKYQAALYARFP-SLQ
+CQSAPD---ESGSVASATTAVSEEK---PA------------------------------
+----------------------------------------------------A
+
+Differences between query and closest match (with squid position):
+Position: N/A	Query: L	Closest Match: T
+Position: N/A	Query: N	Closest Match: I
+Position: N/A	Query: K	Closest Match: S
+Position: N/A	Query: I	Closest Match: L
+Position: N/A	Query: -	Closest Match: D
+Position: N/A	Query: -	Closest Match: P
+Position: 3	Query: S	Closest Match: P
+Position: 4	Query: H	Closest Match: G
+Position: 5	Query: Y	Closest Match: L
+Position: 6	Query: E	Closest Match: A
+Position: 7	Query: R	Closest Match: A
+Position: 8	Query: Q	Closest Match: L
+Position: 9	Query: E	Closest Match: Q
+Position: 10	Query: N	Closest Match: A
+Position: N/A	Query: -	Closest Match: G
+Position: N/A	Query: -	Closest Match: G
+Position: N/A	Query: -	Closest Match: Q
+Position: N/A	Query: E	Closest Match: A
+Position: N/A	Query: G	Closest Match: Y
+Position: 12	Query: F	Closest Match: A
+Position: 13	Query: G	Closest Match: A
+Position: 15	Query: E	Closest Match: Q
+Position: N/A	Query: R	Closest Match: K
+Position: N/A	Query: A	Closest Match: P
+Position: N/A	Query: M	Closest Match: L
+Position: N/A	Query: L	Closest Match: M
+Position: 19	Query: I	Closest Match: V
+Position: 21	Query: P	Closest Match: A
+Position: 22	Query: S	Closest Match: H
+Position: 30	Query: E	Closest Match: N
+Position: 31	Query: S	Closest Match: P
+Position: 32	Query: M	Closest Match: L
+Position: 34	Query: Y	Closest Match: H
+Position: 35	Query: K	Closest Match: A
+Position: 36	Query: W	Closest Match: L
+Position: 39	Query: V	Closest Match: F
+Position: 42	Query: F	Closest Match: G
+Position: 43	Query: F	Closest Match: V
+Position: 46	Query: I	Closest Match: F
+Position: 47	Query: L	Closest Match: I
+Position: 49	Query: V	Closest Match: I
+Position: 50	Query: V	Closest Match: S
+Position: 60	Query: T	Closest Match: M
+Position: 61	Query: C	Closest Match: S
+Position: 64	Query: N	Closest Match: S
+Position: 66	Query: R	Closest Match: K
+Position: 73	Query: I	Closest Match: V
+Position: 82	Query: C	Closest Match: L
+Position: 83	Query: L	Closest Match: M
+Position: 86	Query: F	Closest Match: C
+Position: 87	Query: T	Closest Match: A
+Position: 89	Query: C	Closest Match: S
+Position: 94	Query: W	Closest Match: V
+Position: 97	Query: F	Closest Match: Y
+Position: 98	Query: Y	Closest Match: N
+Position: 102	Query: M	Closest Match: V
+Position: 112	Query: A	Closest Match: G
+Position: 113	Query: M	Closest Match: C
+Position: 114	Query: F	Closest Match: A
+Position: 120	Query: V	Closest Match: C
+Position: 121	Query: T	Closest Match: A
+Position: 127	Query: V	Closest Match: T
+Position: 128	Query: F	Closest Match: M
+Position: 131	Query: L	Closest Match: F
+Position: 141	Query: L	Closest Match: I
+Position: 142	Query: S	Closest Match: A
+Position: 149	Query: T	Closest Match: N
+Position: 150	Query: K	Closest Match: N
+Position: 151	Query: L	Closest Match: G
+Position: 155	Query: Q	Closest Match: R
+Position: 157	Query: F	Closest Match: L
+Position: 158	Query: C	Closest Match: G
+Position: 160	Query: Y	Closest Match: W
+Position: 161	Query: L	Closest Match: T
+Position: 162	Query: H	Closest Match: F
+Position: 163	Query: G	Closest Match: S
+Position: 165	Query: F	Closest Match: A
+Position: 169	Query: T	Closest Match: A
+Position: 175	Query: S	Closest Match: N
+Position: 181	Query: A	Closest Match: G
+Position: 192	Query: T	Closest Match: S
+Position: 193	Query: L	Closest Match: K
+Position: 194	Query: A	Closest Match: D
+Position: 196	Query: H	Closest Match: F
+Position: 201	Query: V	Closest Match: I
+Position: 203	Query: V	Closest Match: I
+Position: 205	Query: A	Closest Match: S
+Position: 206	Query: I	Closest Match: V
+Position: 208	Query: A	Closest Match: V
+Position: 211	Query: L	Closest Match: T
+Position: 215	Query: V	Closest Match: L
+Position: 219	Query: A	Closest Match: S
+Position: 221	Query: Y	Closest Match: F
+Position: 225	Query: K	Closest Match: Q
+Position: 229	Query: S	Closest Match: A
+Position: 233	Query: S	Closest Match: A
+Position: 244	Query: S	Closest Match: A
+Position: 249	Query: G	Closest Match: S
+Position: 250	Query: Q	Closest Match: A
+Position: 251	Query: S	Closest Match: A
+Position: 257	Query: F	Closest Match: C
+Position: 278	Query: M	Closest Match: L
+Position: 282	Query: F	Closest Match: Y
+Position: 283	Query: A	Closest Match: T
+Position: 285	Query: I	Closest Match: V
+Position: 287	Query: Q	Closest Match: E
+Position: 288	Query: L	Closest Match: S
+Position: 289	Query: M	Closest Match: A
+Position: 290	Query: T	Closest Match: P
+Position: 293	Query: D	Closest Match: S
+Position: 296	Query: F	Closest Match: A
+Position: 302	Query: V	Closest Match: L
+Position: 316	Query: A	Closest Match: G
+Position: 323	Query: R	Closest Match: Q
+Position: 324	Query: L	Closest Match: A
+Position: 327	Query: D	Closest Match: Y
+Position: 328	Query: K	Closest Match: A
+Position: 329	Query: K	Closest Match: R
+Position: 333	Query: C	Closest Match: S
+Position: 335	Query: V	Closest Match: Q
+Position: 337	Query: G	Closest Match: Q
+Position: 338	Query: K	Closest Match: S
+Position: 339	Query: L	Closest Match: A
+Position: 340	Query: E	Closest Match: P
+Position: 342	Query: D	Closest Match: -
+Position: 343	Query: R	Closest Match: -
+Position: 344	Query: S	Closest Match: -
+Position: 345	Query: D	Closest Match: E
+Position: 347	Query: K	Closest Match: G
+Position: 353	Query: Q	Closest Match: T
+Position: 355	Query: T	Closest Match: A
+Position: 356	Query: I	Closest Match: V
+Position: 359	Query: D	Closest Match: E
+Position: 364	Query: -	Closest Match: P
+Position: 365	Query: -	Closest Match: A
+Position: 448	Query: V	Closest Match: A
+
