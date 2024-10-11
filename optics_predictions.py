@@ -5,6 +5,7 @@ from deepBreaks.preprocessing import read_data
 import pandas as pd
 import argparse
 import os
+import sys
 import random
 import datetime
 from progress.bar import ShadyBar
@@ -306,6 +307,8 @@ def main():
                     i+=1
                     
         with open(log_file, 'w') as f:
+            command_line_input = ' '.join(sys.argv)
+            f.write(f"Command executed:\t{command_line_input}\n")
             f.write(f"Model Used:\t{args.model}\nEncoding Method:\t{args.encoding_method}\n")
             print(f"\nModel Used:\t{args.model}\nEncoding Method:\t{args.encoding_method}\n")
             

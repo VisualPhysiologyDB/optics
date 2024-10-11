@@ -1,2 +1,0 @@
-LoadModule wsgi_module /usr/lib/apache2/modules/mod_wsgi-py39.cpython-39-x86_64-linux-gnu.so
-LoadModule wsgi_module /home/local/ADS/sethfrazer/miniconda3/envs/optics/lib/python3.9/site-packages/mod_wsgi/server/mod_wsgi-py39.cpython-39-x86_64-linux-gnu.so
