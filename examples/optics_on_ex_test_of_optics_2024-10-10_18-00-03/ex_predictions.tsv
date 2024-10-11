@@ -1,0 +1,6 @@
+Names	Single_Prediction	Prediction_Means	Prediction_Medians	Prediction_Lower_Bounds	Prediction_Upper_Bounds	Std_Deviation	%Identity_Nearest_VPOD_Sequence
+Neogonodactylus_oerstedii|334	451.0	433.8	432.6	398.4	474.9	19.5	49.85
+Neogonodactylus_oerstedii|383	389.7	413.4	411.4	382.2	451.1	19.7	54.023
+Bombus_impatiens|539	531.6	536.6	537.2	512.5	555.2	10.4	76.033
+Bombus_impatiens|424	418.7	430.0	428.1	412.0	455.4	10.4	62.234
+Bombus_impatiens|347	340.1	369.5	361.5	339.0	428.9	26.4	65.289
