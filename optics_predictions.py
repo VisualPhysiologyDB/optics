@@ -331,13 +331,13 @@ def main():
                 ci_uppers, std_dev_list, hex_color_list, seq_lens_list)
                         
             with open(f'{report_dir}/fig_tree_color_annotation.txt', 'w') as g:
-                g.write("Name\!color\n")  # Header row
+                g.write("Name\t!color\n")  # Header row
                 for name, hex_color in zip(names, hex_color_list):
                     g.write(f"{name}\t{hex_color}\n") 
             with open(f'{report_dir}/itol_color_annotation.txt', 'w') as g:
                 g.write("TREE_COLORS\nSEPARATOR TAB\nDATA\n")
                 for name, hex_color in zip(names, hex_color_list):
-                    g.write(f"{name}\t'label_background'\t{hex_color}\n") 
+                    g.write(f"{name}\tlabel_background\t{hex_color}\n") 
             
         print('Predictions Complete!')
         #os.remove('./tmp')

@@ -45,7 +45,7 @@ def plot_prediction_subsets_with_CI(names, predictions, mean_preds, pdf_file, vi
     # Number of plots to generate
     num_plots = (len(names) + 4) // 5
     
-    if visualize_bootstrap == True:
+    if visualize_bootstrap == 'True' or visualize_bootstrap == True:
         # Function to generate a plot for a subset of names
         for plot_idx in range(num_plots):
             plt.rcParams["figure.autolayout"] = True

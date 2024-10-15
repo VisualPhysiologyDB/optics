@@ -1,4 +1,4 @@
-Name	Color
+Name	!color
 Neogonodactylus_oerstedii|334	#2700f0
 Neogonodactylus_oerstedii|383	#6300bd
 Bombus_impatiens|539	#76ff00
