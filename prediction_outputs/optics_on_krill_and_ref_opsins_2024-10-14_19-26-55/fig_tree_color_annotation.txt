@@ -1,4 +1,4 @@
-Name	Color
+Name	!color
 KRILL|earm|RNASPADES|earm_24707	#00b4ff
 KRILL|earm|TRINITY|earm_105754	#00ff91
 KRILL|ecry|RNASPADES|ecry_3008	#00d5ff

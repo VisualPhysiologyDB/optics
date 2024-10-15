@@ -10,7 +10,7 @@ import random
 import datetime
 from progress.bar import ShadyBar
 from optics_scripts.blastp_align import seq_sim_report
-from optics_scripts.bootstrap_predictions import calculate_ensemble_CI , plot_predictions_with_CI, plot_prediction_subsets_with_CI
+from optics_scripts.bootstrap_predictions import calculate_ensemble_CI, plot_prediction_subsets_with_CI
 
 def process_sequence(sequence, name, selected_model, identity_report, blastp, refseq, reffile, bootstrap, prediction_dict = None, encoding_method='one_hot'):
     data_dir = "./data"
@@ -148,7 +148,7 @@ def process_sequence(sequence, name, selected_model, identity_report, blastp, re
     except FileNotFoundError:
         raise Exception("File does not exist")
 
-    if bootstrap == 'yes' or bootstrap == True or bootstrap == 'True':
+    if bootstrap == 'yes' or bootstrap == True or bootstrap == 'True'  or bootstrap == 'true':
         # ... (Load the selected model and make a bootstrap prediction)
         mean_prediction, ci_lower, ci_upper, prediction_dict, median_prediction, std_dev = calculate_ensemble_CI(model_bs_folder, new_seq_test, name, prediction_dict)
         #print(f'{mean_prediction}, {ci_lower}, {ci_upper}, {prediction_dict}')
@@ -217,7 +217,7 @@ def process_sequences_from_file(file,selected_model, identity_report, blastp, re
     bar = ShadyBar('Processing Sequences', max=len(names), charset='ascii')
     for seq in sequences:
         seq_lens.append(len(seq))
-        if bootstrap == 'no' or bootstrap == False or bootstrap == 'False':    
+        if bootstrap == 'no' or bootstrap == False or bootstrap == 'False' or bootstrap == 'false':    
             #print(seq)
             prediction, percent_iden = process_sequence(seq, names[i], selected_model, identity_report, blastp, refseq, reffile, bootstrap, prediction_dict, encoding_method)  # Process each sequence
             predictions.append(prediction)
@@ -260,7 +260,9 @@ def main():
     parser.add_argument("-f", "--reffile", help="Custom reference sequence file used for blastp analysis.", 
                 type = str, default = 'not_real.txt', required=False)
     parser.add_argument("-s", "--bootstrap", help="Option to enable bootstrap predictions on query sequences", 
-                    type = str or bool , default = False, required=False)
+                    type = str or bool , default = True, required=False)
+    parser.add_argument("-viz", "--visualize_bootstrap", help="Option to enable/disable visualization of bootstrap predictions on query sequences", 
+                type = str or bool , default = True, required=False)
     parser.add_argument("-bsv","--bootstrap_viz_file", help="Name for the pdf file output file for visualizing bootstrap predictions", type=str, default = 'bootstrap_viz', required = False)
 
     # python optics_predictions.py -in ./examples/msp_erg_raw.txt -rd msp_test_of_optics -out msp_predictions.tsv -m whole-dataset -e aa_prop -b True -ir msp_blastp_report.tsv -r squid -s False
@@ -278,21 +280,18 @@ def main():
     else:    
         os.makedirs(f'./tmp')
 
-    if '.txt' in args.iden_report:
+    if '.txt' in args.iden_report or 'tsv in args.iden_report':
         blastp_file = f'{report_dir}/{args.iden_report}'
     else:
         blastp_file = f'{report_dir}/{args.iden_report}.txt'
-    
-    if '.svg' in args.iden_report:
-        bootstrap_file = f'{report_dir}/{args.bootstrap_viz_file}'
-    else:
-        bootstrap_file = f'{report_dir}/{args.bootstrap_viz_file}.svg'
+
+    bootstrap_file = f'{report_dir}/{args.bootstrap_viz_file}'
    
     log_file = f'{report_dir}/arg_log.txt'
 
     if os.path.isfile(args.input):
         names, mean_predictions, ci_lowers, ci_uppers, prediction_dict, predictions, median_predictions, per_iden_list, std_dev_list, seq_lens_list = process_sequences_from_file(args.input, args.model, blastp_file, args.blastp, args.refseq, args.reffile, args.bootstrap, args.encoding_method)
-        if '.tsv' in args.output:
+        if '.tsv' in args.output or '.txt' in args.output:
             output = f'{report_dir}/{args.output}'
             sub_output = args.output.replace('.tsv','')
             excel_output = f'{report_dir}/{sub_output}_for_excel.xlsx'
@@ -303,7 +302,7 @@ def main():
         with open(output, 'w') as f:
             i = 0
             while i in range(len(names)):
-                if args.bootstrap == 'no' or args.bootstrap == False or args.bootstrap == 'False':
+                if args.bootstrap == 'no' or args.bootstrap == False or args.bootstrap == 'False' or args.bootstrap == 'false':
                     if i == 0:
                         f.write('Names\tPredictions\t%Identity_Nearest_VPOD_Sequence\n')
                     f.write(f"{names[i]}\t{predictions[i]}\t{per_iden_list[i]}\n")
@@ -315,7 +314,7 @@ def main():
                         print('Names\tSingle_Prediction\tPrediction_Means\tPrediction_Medians\tPrediction_Lower_Bounds\tPrediction_Upper_Bounds\tStd_Deviation\t%Identity_Nearest_VPOD_Sequence\tSequence_Length\n')
                         
                         # colors for hex_color_list generated from the mean prediction of the bootstraped predictions during the visulization steps    
-                        hex_color_list = plot_prediction_subsets_with_CI(names, prediction_dict, mean_predictions, bootstrap_file)
+                        hex_color_list = plot_prediction_subsets_with_CI(names, prediction_dict, mean_predictions, bootstrap_file, args.visualize_bootstrap)
 
                     f.write(f"{names[i]}\t{predictions[i]}\t{mean_predictions[i]}\t{median_predictions[i]}\t{ci_lowers[i]}\t{ci_uppers[i]}\t{std_dev_list[i]}\t{per_iden_list[i]}\t{seq_lens_list[i]}\t{hex_color_list[i]}\n")
                     print(f"{names[i]}\t{predictions[i]}\t{mean_predictions[i]}\t{median_predictions[i]}\t{ci_lowers[i]}\t{ci_uppers[i]}\t{std_dev_list[i]}\t{per_iden_list[i]}\t{seq_lens_list[i]}\n")
@@ -332,13 +331,13 @@ def main():
                 ci_uppers, std_dev_list, hex_color_list, seq_lens_list)
                         
             with open(f'{report_dir}/fig_tree_color_annotation.txt', 'w') as g:
-                g.write("Name\tColor\n")  # Header row
+                g.write("Name\!color\n")  # Header row
                 for name, hex_color in zip(names, hex_color_list):
                     g.write(f"{name}\t{hex_color}\n") 
             with open(f'{report_dir}/itol_color_annotation.txt', 'w') as g:
                 g.write("TREE_COLORS\nSEPARATOR TAB\nDATA\n")
                 for name, hex_color in zip(names, hex_color_list):
-                    g.write(f"{name}\t{hex_color}\n") 
+                    g.write(f"{name}\t'label_background'\t{hex_color}\n") 
             
         print('Predictions Complete!')
         #os.remove('./tmp')
