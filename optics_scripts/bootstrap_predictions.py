@@ -196,7 +196,8 @@ def plot_prediction_subsets_with_CI(names, predictions, mean_preds, pdf_file):
         plt.savefig(f'{pdf_file}_part{plot_idx + 1}.svg', format='svg')
         plt.close()
         
-    return(print('\nBootstrap plots done!\n'))
+    #print('\nBootstrap plots done!\n')
+    return(color_specs)
 
 def wavelength_to_rgb(wavelength, gamma=0.8):
     ''' taken from http://www.noah.org/wiki/Wavelength_to_RGB_in_Python

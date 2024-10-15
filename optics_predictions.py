@@ -211,17 +211,17 @@ def process_sequences_from_file(file,selected_model, identity_report, blastp, re
     ci_uppers = []
     prediction_dict = {}
     per_iden_list = []
+    seq_lens = []
     i = 0
 
     bar = ShadyBar('Processing Sequences', max=len(names), charset='ascii')
     for seq in sequences:
+        seq_lens.append(len(seq))
         if bootstrap == 'no' or bootstrap == False or bootstrap == 'False':    
             #print(seq)
             prediction, percent_iden = process_sequence(seq, names[i], selected_model, identity_report, blastp, refseq, reffile, bootstrap, prediction_dict, encoding_method)  # Process each sequence
             predictions.append(prediction)
             per_iden_list.append(percent_iden)
-            bar.next()
-
         else:
             mean_prediction, ci_lower, ci_upper, prediction_dict, prediction, median_prediction, percent_iden, std_dev = process_sequence(seq, names[i], selected_model, identity_report, blastp, refseq, reffile, bootstrap, prediction_dict, encoding_method)  # Process each sequence
             mean_predictions.append(mean_prediction)
@@ -231,11 +231,11 @@ def process_sequences_from_file(file,selected_model, identity_report, blastp, re
             median_predictions.append(median_prediction)
             per_iden_list.append(percent_iden)
             std_dev_list.append(std_dev)
-            bar.next()
+        bar.next()
         i+=1
     #print(predictions)
     bar.finish()
-    return(names, mean_predictions, ci_lowers, ci_uppers, prediction_dict, predictions, median_predictions, per_iden_list, std_dev_list)
+    return(names, mean_predictions, ci_lowers, ci_uppers, prediction_dict, predictions, median_predictions, per_iden_list, std_dev_list, seq_lens)
 
 def main():
     
@@ -278,13 +278,28 @@ def main():
     else:    
         os.makedirs(f'./tmp')
 
-    blastp_file = f'{report_dir}/{args.iden_report}'
-    bootstrap_file = f'{report_dir}/{args.bootstrap_viz_file}'
+    if '.txt' in args.iden_report:
+        blastp_file = f'{report_dir}/{args.iden_report}'
+    else:
+        blastp_file = f'{report_dir}/{args.iden_report}.txt'
+    
+    if '.svg' in args.iden_report:
+        bootstrap_file = f'{report_dir}/{args.bootstrap_viz_file}'
+    else:
+        bootstrap_file = f'{report_dir}/{args.bootstrap_viz_file}.svg'
+   
     log_file = f'{report_dir}/arg_log.txt'
 
     if os.path.isfile(args.input):
-        names, mean_predictions, ci_lowers, ci_uppers, prediction_dict, predictions, median_predictions, per_iden_list, std_dev_list = process_sequences_from_file(args.input, args.model, blastp_file, args.blastp, args.refseq, args.reffile, args.bootstrap, args.encoding_method)
-        output = f'{report_dir}/{args.output}'
+        names, mean_predictions, ci_lowers, ci_uppers, prediction_dict, predictions, median_predictions, per_iden_list, std_dev_list, seq_lens_list = process_sequences_from_file(args.input, args.model, blastp_file, args.blastp, args.refseq, args.reffile, args.bootstrap, args.encoding_method)
+        if '.tsv' in args.output:
+            output = f'{report_dir}/{args.output}'
+            sub_output = args.output.replace('.tsv','')
+            excel_output = f'{report_dir}/{sub_output}_for_excel.xlsx'
+        else:
+            output = f'{report_dir}/{args.output}.tsv'
+            excel_output = f'{report_dir}/{args.output}_for_excel.xlsx'
+
         with open(output, 'w') as f:
             i = 0
             while i in range(len(names)):
@@ -296,27 +311,80 @@ def main():
                     i+=1
                 else:
                     if i == 0:
-                        f.write('Names\tSingle_Prediction\tPrediction_Means\tPrediction_Medians\tPrediction_Lower_Bounds\tPrediction_Upper_Bounds\tStd_Deviation\t%Identity_Nearest_VPOD_Sequence\n')
-                        print('Names\tSingle_Prediction\tPrediction_Means\tPrediction_Medians\tPrediction_Lower_Bounds\tPrediction_Upper_Bounds\tStd_Deviation\t%Identity_Nearest_VPOD_Sequence\n')
-                        if len(names) > 10:
-                            bs = plot_prediction_subsets_with_CI(names, prediction_dict, mean_predictions, bootstrap_file)
-                        else:
-                            bs = plot_predictions_with_CI(names, prediction_dict, mean_predictions, bootstrap_file)
-                    f.write(f"{names[i]}\t{predictions[i]}\t{mean_predictions[i]}\t{median_predictions[i]}\t{ci_lowers[i]}\t{ci_uppers[i]}\t{std_dev_list[i]}\t{per_iden_list[i]}\n")
-                    print(f"{names[i]}\t{predictions[i]}\t{mean_predictions[i]}\t{median_predictions[i]}\t{ci_lowers[i]}\t{ci_uppers[i]}\t{std_dev_list[i]}\t{per_iden_list[i]}\n")
+                        f.write('Names\tSingle_Prediction\tPrediction_Means\tPrediction_Medians\tPrediction_Lower_Bounds\tPrediction_Upper_Bounds\tStd_Deviation\t%Identity_Nearest_VPOD_Sequence\tSequence_Length\tLmax_Hex_Color\n')
+                        print('Names\tSingle_Prediction\tPrediction_Means\tPrediction_Medians\tPrediction_Lower_Bounds\tPrediction_Upper_Bounds\tStd_Deviation\t%Identity_Nearest_VPOD_Sequence\tSequence_Length\n')
+                        
+                        # colors for hex_color_list generated from the mean prediction of the bootstraped predictions during the visulization steps    
+                        hex_color_list = plot_prediction_subsets_with_CI(names, prediction_dict, mean_predictions, bootstrap_file)
+
+                    f.write(f"{names[i]}\t{predictions[i]}\t{mean_predictions[i]}\t{median_predictions[i]}\t{ci_lowers[i]}\t{ci_uppers[i]}\t{std_dev_list[i]}\t{per_iden_list[i]}\t{seq_lens_list[i]}\t{hex_color_list[i]}\n")
+                    print(f"{names[i]}\t{predictions[i]}\t{mean_predictions[i]}\t{median_predictions[i]}\t{ci_lowers[i]}\t{ci_uppers[i]}\t{std_dev_list[i]}\t{per_iden_list[i]}\t{seq_lens_list[i]}\n")
                     i+=1
-                    
         with open(log_file, 'w') as f:
             command_line_input = ' '.join(sys.argv)
             f.write(f"Command executed:\t{command_line_input}\n")
             f.write(f"Model Used:\t{args.model}\nEncoding Method:\t{args.encoding_method}\n")
             print(f"\nModel Used:\t{args.model}\nEncoding Method:\t{args.encoding_method}\n")
+                            
+        if hex_color_list:
+            write_to_excel(names, predictions, per_iden_list, excel_output, 
+                mean_predictions, median_predictions, ci_lowers, 
+                ci_uppers, std_dev_list, hex_color_list, seq_lens_list)
+                        
+            with open(f'{report_dir}/fig_tree_color_annotation.txt', 'w') as g:
+                g.write("Name\tColor\n")  # Header row
+                for name, hex_color in zip(names, hex_color_list):
+                    g.write(f"{name}\t{hex_color}\n") 
+            with open(f'{report_dir}/itol_color_annotation.txt', 'w') as g:
+                g.write("TREE_COLORS\nSEPARATOR TAB\nDATA\n")
+                for name, hex_color in zip(names, hex_color_list):
+                    g.write(f"{name}\t{hex_color}\n") 
             
         print('Predictions Complete!')
         #os.remove('./tmp')
 
     else:
         raise Exception("No file passed to input for predictions")
+    
+from openpyxl import Workbook
+from openpyxl.styles import PatternFill
 
+def write_to_excel(names, predictions, per_iden_list, output_filename="output.xlsx", 
+                  mean_predictions=None, median_predictions=None, ci_lowers=None, 
+                  ci_uppers=None, std_dev_list=None, hex_color_list=None, seq_lens_list=None):
+    """
+    Writes data to an Excel sheet, including bootstrap statistics and
+    hexadecimal color codes, and colors the cells based on the hex codes.
+
+    Args:
+        names: List of names.
+        predictions: List of predictions.
+        per_iden_list: List of percentage identities.
+        output_filename: Name of the output Excel file.
+        mean_predictions: List of mean predictions (optional, for bootstrap).
+        median_predictions: List of median predictions (optional, for bootstrap).
+        ci_lowers: List of lower confidence intervals (optional, for bootstrap).
+        ci_uppers: List of upper confidence intervals (optional, for bootstrap).
+        std_dev_list: List of standard deviations (optional, for bootstrap).
+        hex_color_list: List of hexadecimal color codes.
+        seq_lens_list: List of sequence lengths
+        """
+
+    wb = Workbook()
+    ws = wb.active
+
+    ws.append(['Names', 'Single_Prediction', 'Prediction_Means', 'Prediction_Medians',
+                'Prediction_Lower_Bounds', 'Prediction_Upper_Bounds', 'Std_Deviation', 
+                '%Identity_Nearest_VPOD_Sequence', 'Sequence_Lengths','Lmax_Hex_Color'])
+    for i in range(len(names)):
+        # Because openpyxel is picky about hex-codes we need to remove the '#' symbol for it to accept it as a fill color.
+        hex_color = hex_color_list[i].replace('#','') 
+        ws.append([names[i], predictions[i], mean_predictions[i], median_predictions[i],
+                    ci_lowers[i], ci_uppers[i], std_dev_list[i], float(per_iden_list[i]), seq_lens_list[i], hex_color_list[i]])
+        ws.cell(row=i+2, column=10).fill = PatternFill(start_color=hex_color, 
+                                                    end_color=hex_color, 
+                                                    fill_type="solid")
+    wb.save(output_filename)
+    
 if __name__ == "__main__":
     main()
