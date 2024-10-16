@@ -270,15 +270,21 @@ def main():
 
     args = parser.parse_args()
     
+    if os.path.isdir('./tmp'):
+        pass
+    else:    
+        os.makedirs(f'./tmp')
+    
+    if os.path.isdir('./prediction_outputs'):
+        pass
+    else:    
+        os.makedirs('./prediction_outputs')
+        
     if 'optics_on_unamed' in args.report_dir:
         report_dir = args.report_dir
     else:
         report_dir = f'./prediction_outputs/optics_on_{args.report_dir}_{dt_label}'
     os.makedirs(report_dir)
-    if os.path.isdir('./tmp'):
-        pass
-    else:    
-        os.makedirs(f'./tmp')
 
     if '.txt' in args.iden_report or 'tsv in args.iden_report':
         blastp_file = f'{report_dir}/{args.iden_report}'
