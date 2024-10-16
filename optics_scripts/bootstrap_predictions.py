@@ -35,91 +35,7 @@ def calculate_ensemble_CI(model_folder, query, name, predictions_dict):
     return mean_predictions, ci_lower, ci_upper, predictions_dict, median_predictions, std_dev
 
 
-def plot_predictions_with_CI(names, predictions, mean_preds, pdf_file):
-        # Customization
-        plt.rcParams["figure.autolayout"] = True
-        plt.rcParams["figure.figsize"] = [11.00, 5.00]
-        #plt.subplots_adjust(left=0.1)  # More space to the left of the subplot
-
-        # Customize colors 
-        # Color palette with hex codes 
-        colors=[wavelength_to_rgb(pred) for pred in mean_preds]
-        color_specs = [matplotlib.colors.to_hex(color) for color in colors]  # Convert RGBA tuples to hex codes
-
-        #Confidence interval calculation (you can adjust)
-        confidence_level = 0.95
-
-        #Box plots (group them together for each protein)
-        boxprops = {'alpha': 0.6}  # Adjust alpha as needed
-        bp_data = [predictions[seq] for seq in names] 
-        bplot = plt.boxplot(bp_data, showfliers=False, positions=range(1, len(bp_data) + 1), vert = False, patch_artist=True, boxprops=boxprops, widths=0.5) 
-        for i, seq in enumerate(names):
-            y_jitter = np.random.uniform(-0.05, 0.05, size=len(predictions[seq]))  # Add slight y-jitter
-            plt.scatter(predictions[seq], np.full_like(predictions[seq], i + 1)+ y_jitter, color='gray', s=20, alpha=0.5)
-
-        for box, color in zip(bplot['boxes'], color_specs):
-            box.set_facecolor(color)  # Set median line color to black
-
-        for line in bplot['medians']:  
-            line.set_color('black')  
-            line.set_linewidth(1)  
-
-        # Confidence intervals (calculated per protein sequence)
-        for i, seq in enumerate(names):
-            alpha = 1 - confidence_level
-            lower_ci = np.percentile(predictions[seq], alpha / 2 * 100)
-            upper_ci = np.percentile(predictions[seq], 100 - alpha / 2 * 100)
-            plt.axhline(i + 1, lower_ci, upper_ci, color='b', linestyle='--')
-
-        # Add protein names above boxes
-        concat_names = []
-        for name in names:
-            if name.count('_') >= 3:
-                temp = name.split('_')
-                concat_names.append(f'{temp[0]}_{temp[1]}_{temp[2]}')
-            else:
-                concat_names.append(name)
-
-        for i, seq_name in enumerate(concat_names):
-            #if len(concat_names) > 4:
-            #    y_pos = i + 1.50  # Center the text vertically
-            #else:
-            #    y_pos = i + 1.40  # Center the text vertically
-            
-            median_y = bplot['medians'][i].get_ydata()[0]  # Get the y-coordinate of the median line
-            y_pos = median_y + 0.71 # Add an offset above the median
-            x_pos = bplot['medians'][i].get_xdata()[1]  # Place slightly to the right of the median
-            plt.text(x_pos, y_pos, seq_name, ha='center', va='top', color='black', fontsize=10, zorder = 3)  # Adjust horizontal alignment
-        
-        # Adjust plot limits to ensure annotations are visible
-        #plt.ylim(top=plt.ylim()[1] + 0.2) # Increase the upper y-limit
-        #plt.xlim(left=plt.xlim()[0] - 0.2) # Decrease the left x-limit by 0.2
-        #getting median values to return for user
-        medians = bplot['medians']
-        median_values = [line.get_xydata()[1][0] for line in medians]  # Using list comprehension
-
-        preds_handle = mpatches.Patch(facecolor='white', edgecolor='black', label='IQR')
-        ci_handle = plt.Line2D([], [], color='black', label='95% Confidence Interval')
-
-        #plt.title(f"λmax Predictions ({confidence_level * 100}% CI)")
-        #seq_id = []
-        #for i in range(len(names)):
-            #seq_id.append(f"Seq{i}")
-        plt.xlabel("Predicted λmax (nm)")
-        plt.ylabel("Opsin Sequences")
-        #plt.yticks(range(1, len(names) + 1), seq_id, rotation = 45)  # Set protein names as y-ticks
-        plt.yticks([])
-        plt.legend(handles=[preds_handle, ci_handle])
-        #plt.legend(labels=['IQR', 'Confidence Interval']) 
-        plt.grid(True, axis='x')  # Grid only on x-axis        
-        plt.savefig(f'{pdf_file}.pdf', format = 'pdf', dpi = 300)
-        plt.savefig(f'{pdf_file}.svg', format = 'svg')
-        #plt.show()
-        plt.close() 
-
-        return(print('\nBootstrap plot done!\n'))
-
-def plot_prediction_subsets_with_CI(names, predictions, mean_preds, pdf_file):
+def plot_prediction_subsets_with_CI(names, predictions, mean_preds, pdf_file, visualize_bootstrap):
     # Customize colors 
     colors = [wavelength_to_rgb(pred) for pred in mean_preds]
     color_specs = [matplotlib.colors.to_hex(color) for color in colors]
@@ -129,74 +45,76 @@ def plot_prediction_subsets_with_CI(names, predictions, mean_preds, pdf_file):
     # Number of plots to generate
     num_plots = (len(names) + 4) // 5
     
-    # Function to generate a plot for a subset of names
-    for plot_idx in range(num_plots):
-        plt.rcParams["figure.autolayout"] = True
-        plt.rcParams["figure.figsize"] = [11.00, 5.00]
-        plt.rcParams["figure.autolayout"] = True
-        plt.rcParams["figure.figsize"] = [11.00, 5.00]
+    if visualize_bootstrap == 'True' or visualize_bootstrap == True:
+        # Function to generate a plot for a subset of names
+        for plot_idx in range(num_plots):
+            plt.rcParams["figure.autolayout"] = True
+            plt.rcParams["figure.figsize"] = [11.00, 5.00]
+            plt.rcParams["figure.autolayout"] = True
+            plt.rcParams["figure.figsize"] = [11.00, 5.00]
+            
+            start_idx = plot_idx * 5
+            end_idx = min(start_idx + 5, len(names))
+            subset_names = names[start_idx:end_idx]
+            
+            
+            bp_data = [predictions[seq] for seq in subset_names]
+            bplot = plt.boxplot(bp_data, showfliers=False, positions=range(1, len(bp_data) + 1), vert=False, patch_artist=True, boxprops={'alpha': 0.6}, widths=0.5)
+
+            for i, seq in enumerate(subset_names):
+                y_jitter = np.random.uniform(-0.05, 0.05, size=len(predictions[seq]))
+                plt.scatter(predictions[seq], np.full_like(predictions[seq], i + 1) + y_jitter, color='gray', s=20, alpha=0.5)
+
+            for box, color in zip(bplot['boxes'], color_specs[start_idx:start_idx + len(subset_names)]):
+                box.set_facecolor(color)
+
+            for line in bplot['medians']:
+                line.set_color('black')
+                line.set_linewidth(1)
+
+            # Confidence intervals
+            for i, seq in enumerate(subset_names):
+                alpha = 1 - confidence_level
+                lower_ci = np.percentile(predictions[seq], alpha / 2 * 100)
+                upper_ci = np.percentile(predictions[seq], 100 - alpha / 2 * 100)
+                plt.axhline(i + 1, lower_ci, upper_ci, color='b', linestyle='--')
+
+            # Add protein names
+            concat_names = []
+            for name in subset_names:
+                if name.count('_') >= 3:
+                    temp = name.split('_')
+                    concat_names.append(f'{temp[0]}_{temp[1]}_{temp[2]}')
+                else:
+                    concat_names.append(name)
+
+            for i, seq_name in enumerate(concat_names):
+                median_y = bplot['medians'][i].get_ydata()[0]
+                y_pos = median_y + 0.71
+                x_pos = bplot['medians'][i].get_xdata()[1]
+                plt.text(x_pos, y_pos, seq_name, ha='center', va='top', color='black', fontsize=10, zorder=3)
+
+            # plotting code for labels, legend, grid, etc.
+            #medians = bplot['medians']
+            #median_values = [line.get_xydata()[1][0] for line in medians]  # Using list comprehension
+
+            preds_handle = mpatches.Patch(facecolor='white', edgecolor='black', label='IQR')
+            ci_handle = plt.Line2D([], [], color='black', label='95% Confidence Interval')
+            
+            plt.xlabel("Predicted λmax (nm)")
+            plt.ylabel("Opsin Sequences")
+            #plt.yticks(range(1, len(names) + 1), seq_id, rotation = 45)  # Set protein names as y-ticks
+            plt.yticks([])
+            plt.legend(handles=[preds_handle, ci_handle])
+            #plt.legend(labels=['IQR', 'Confidence Interval']) 
+            plt.grid(True, axis='x')  # Grid only on x-axis        
+            # Save each plot with a unique filename
+            plt.savefig(f'{pdf_file}_part{plot_idx + 1}.pdf', format='pdf', dpi=300)
+            plt.savefig(f'{pdf_file}_part{plot_idx + 1}.svg', format='svg')
+            plt.close()
         
-        start_idx = plot_idx * 5
-        end_idx = min(start_idx + 5, len(names))
-        subset_names = names[start_idx:end_idx]
-        
-        
-        bp_data = [predictions[seq] for seq in subset_names]
-        bplot = plt.boxplot(bp_data, showfliers=False, positions=range(1, len(bp_data) + 1), vert=False, patch_artist=True, boxprops={'alpha': 0.6}, widths=0.5)
-
-        for i, seq in enumerate(subset_names):
-            y_jitter = np.random.uniform(-0.05, 0.05, size=len(predictions[seq]))
-            plt.scatter(predictions[seq], np.full_like(predictions[seq], i + 1) + y_jitter, color='gray', s=20, alpha=0.5)
-
-        for box, color in zip(bplot['boxes'], color_specs[start_idx:start_idx + len(subset_names)]):
-            box.set_facecolor(color)
-
-        for line in bplot['medians']:
-            line.set_color('black')
-            line.set_linewidth(1)
-
-        # Confidence intervals
-        for i, seq in enumerate(subset_names):
-            alpha = 1 - confidence_level
-            lower_ci = np.percentile(predictions[seq], alpha / 2 * 100)
-            upper_ci = np.percentile(predictions[seq], 100 - alpha / 2 * 100)
-            plt.axhline(i + 1, lower_ci, upper_ci, color='b', linestyle='--')
-
-        # Add protein names
-        concat_names = []
-        for name in subset_names:
-            if name.count('_') >= 3:
-                temp = name.split('_')
-                concat_names.append(f'{temp[0]}_{temp[1]}_{temp[2]}')
-            else:
-                concat_names.append(name)
-
-        for i, seq_name in enumerate(concat_names):
-            median_y = bplot['medians'][i].get_ydata()[0]
-            y_pos = median_y + 0.71
-            x_pos = bplot['medians'][i].get_xdata()[1]
-            plt.text(x_pos, y_pos, seq_name, ha='center', va='top', color='black', fontsize=10, zorder=3)
-
-        # plotting code for labels, legend, grid, etc.
-        #medians = bplot['medians']
-        #median_values = [line.get_xydata()[1][0] for line in medians]  # Using list comprehension
-
-        preds_handle = mpatches.Patch(facecolor='white', edgecolor='black', label='IQR')
-        ci_handle = plt.Line2D([], [], color='black', label='95% Confidence Interval')
-        
-        plt.xlabel("Predicted λmax (nm)")
-        plt.ylabel("Opsin Sequences")
-        #plt.yticks(range(1, len(names) + 1), seq_id, rotation = 45)  # Set protein names as y-ticks
-        plt.yticks([])
-        plt.legend(handles=[preds_handle, ci_handle])
-        #plt.legend(labels=['IQR', 'Confidence Interval']) 
-        plt.grid(True, axis='x')  # Grid only on x-axis        
-        # Save each plot with a unique filename
-        plt.savefig(f'{pdf_file}_part{plot_idx + 1}.pdf', format='pdf', dpi=300)
-        plt.savefig(f'{pdf_file}_part{plot_idx + 1}.svg', format='svg')
-        plt.close()
-        
-    return(print('\nBootstrap plots done!\n'))
+    #print('\nBootstrap plots done!\n')
+    return(color_specs)
 
 def wavelength_to_rgb(wavelength, gamma=0.8):
     ''' taken from http://www.noah.org/wiki/Wavelength_to_RGB_in_Python
