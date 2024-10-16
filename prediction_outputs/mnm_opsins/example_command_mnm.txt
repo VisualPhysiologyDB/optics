@@ -1,1 +1,0 @@
-python optics_predictions.py -in msp_mined_seqs2.fasta -rd mined_msp_seqs2 -out msp_predictions.tsv -m wildtype -e aa_prop -b True -ir msp_blastp_report.tsv -r bovine -s True -bsv msp_bs_viz
