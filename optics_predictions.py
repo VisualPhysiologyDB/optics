@@ -386,7 +386,7 @@ def write_to_excel(names, predictions, per_iden_list, output_filename="output.xl
         # Because openpyxel is picky about hex-codes we need to remove the '#' symbol for it to accept it as a fill color.
         hex_color = hex_color_list[i].replace('#','') 
         ws.append([names[i], predictions[i], mean_predictions[i], median_predictions[i],
-                    ci_lowers[i], ci_uppers[i], std_dev_list[i], float(per_iden_list[i]), seq_lens_list[i], hex_color_list[i]])
+                    ci_lowers[i], ci_uppers[i], std_dev_list[i], per_iden_list[i], seq_lens_list[i], hex_color_list[i]])
         ws.cell(row=i+2, column=10).fill = PatternFill(start_color=hex_color, 
                                                     end_color=hex_color, 
                                                     fill_type="solid")
