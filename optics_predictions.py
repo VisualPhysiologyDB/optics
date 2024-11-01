@@ -20,6 +20,7 @@ def process_sequence(sequence, name, selected_model, identity_report, blastp, re
     "vertebrate": f"{data_dir}/fasta/vpod_1.2/vert_aligned_VPOD_1.2_het.fasta",
     "invertebrate": f"{data_dir}/fasta/vpod_1.2/inv_only_aligned_VPOD_1.2_het.fasta",
     "wildtype-vert": f"{data_dir}/fasta/vpod_1.2/wt_vert_aligned_VPOD_1.2_het.fasta",
+    "type-one": f"{data_dir}/fasta/vpod_1.2/Karyasuyama_T1_ops_aligned.fasta"
     }   
     model_raw_data = {
     "whole-dataset": f"{data_dir}/fasta/vpod_1.2/wds.txt",
@@ -27,6 +28,8 @@ def process_sequence(sequence, name, selected_model, identity_report, blastp, re
     "vertebrate": f"{data_dir}/fasta/vpod_1.2/vert.txt",
     "invertebrate": f"{data_dir}/fasta/vpod_1.2/inv_only.txt",
     "wildtype-vert": f"{data_dir}/fasta/vpod_1.2/wt_vert.txt",
+    "type-one": f"{data_dir}/fasta/vpod_1.2/Karyasuyama_T1_ops.txt"
+
     }   
     model_metadata = {
     "whole-dataset": f"{data_dir}/fasta/vpod_1.2/wds_meta.tsv",
@@ -34,6 +37,7 @@ def process_sequence(sequence, name, selected_model, identity_report, blastp, re
     "vertebrate": f"{data_dir}/fasta/vpod_1.2/vert_meta.tsv",
     "invertebrate": f"{data_dir}/fasta/vpod_1.2/inv_meta.tsv",
     "wildtype-vert": f"{data_dir}/fasta/vpod_1.2/wt_vert_meta.tsv",
+    "type-one": f"{data_dir}/fasta/vpod_1.2/Karyasuyama_T1_ops_meta.tsv"
     }   
     model_blast_db = {
     "whole-dataset": f"{data_dir}/blast_dbs/vpod_1.2/wds_db",
@@ -41,6 +45,7 @@ def process_sequence(sequence, name, selected_model, identity_report, blastp, re
     "vertebrate": f"{data_dir}/blast_dbs/vpod_1.2/vert_db",
     "invertebrate": f"{data_dir}/blast_dbs/vpod_1.2/invert_db",
     "wildtype-vert": f"{data_dir}/blast_dbs/vpod_1.2/wt_vert_db",
+    "type-one": f"{data_dir}/blast_dbs/vpod_1.2/t1_db",
     }   
 
     model_dir = "./models"
@@ -52,6 +57,7 @@ def process_sequence(sequence, name, selected_model, identity_report, blastp, re
             "vertebrate": f"{model_dir}/reg_models/vpod_1.2/aa_prop/vert_gbr.pkl",
             "invertebrate": f"{model_dir}/reg_models/vpod_1.2/aa_prop/invert_gbr.pkl",
             "wildtype-vert": f"{model_dir}/reg_models/vpod_1.2/aa_prop/wt_vert_gbr.pkl",
+            "type-one": f"{model_dir}/reg_models/vpod_1.2/aa_prop/t1_xgb.pkl",
         }
         
         model_bs_dirs = {
@@ -60,6 +66,7 @@ def process_sequence(sequence, name, selected_model, identity_report, blastp, re
             "vertebrate": f"{model_dir}/bs_models/vpod_1.2/aa_prop/vert_bootstrap",
             "invertebrate": f"{model_dir}/bs_models/vpod_1.2/aa_prop/invert_bootstrap",
             "wildtype-vert": f"{model_dir}/bs_models/vpod_1.2/aa_prop/wt_vert_bootstrap",
+            "type-one": f"{model_dir}/reg_models/vpod_1.2/aa_prop/t1_bootstrap",
         }
     else:
         model_directories = {
@@ -68,6 +75,8 @@ def process_sequence(sequence, name, selected_model, identity_report, blastp, re
             "vertebrate": f"{model_dir}/reg_models/vpod_1.2/one_hot/vert_xgb.pkl",
             "invertebrate": f"{model_dir}/reg_models/vpod_1.2/one_hot/invert_BayesianRidge.pkl",
             "wildtype-vert": f"{model_dir}/reg_models/vpod_1.2/one_hot/wt_vert_xgb.pkl",
+            "type-one": f"{model_dir}/reg_models/vpod_1.2/one_hot/t1_xgb.pkl",
+
         }
         
         model_bs_dirs = {
@@ -76,6 +85,7 @@ def process_sequence(sequence, name, selected_model, identity_report, blastp, re
             "vertebrate": f"{model_dir}/bs_models/vpod_1.2/one_hot/vert_bootstrap",
             "invertebrate": f"{model_dir}/bs_models/vpod_1.2/one_hot/invert_bootstrap",
             "wildtype-vert": f"{model_dir}/bs_models/vpod_1.2/one_hot/wt_vert_bootstrap",
+            "type-one": f"{model_dir}/reg_models/vpod_1.2/one_hot/t1_bootstrap",
         }
 
 
@@ -148,7 +158,7 @@ def process_sequence(sequence, name, selected_model, identity_report, blastp, re
     except FileNotFoundError:
         raise Exception("File does not exist")
 
-    if bootstrap == 'yes' or bootstrap == True or bootstrap == 'True'  or bootstrap == 'true':
+    if bootstrap == True or bootstrap == 'True'  or bootstrap == 'true':
         # ... (Load the selected model and make a bootstrap prediction)
         mean_prediction, ci_lower, ci_upper, prediction_dict, median_prediction, std_dev = calculate_ensemble_CI(model_bs_folder, new_seq_test, name, prediction_dict)
         #print(f'{mean_prediction}, {ci_lower}, {ci_upper}, {prediction_dict}')
@@ -239,9 +249,10 @@ def process_sequences_from_file(file,selected_model, identity_report, blastp, re
 
 def main():
     
-    models = ['whole-dataset', 'wildtype', 'vertebrate', 'invertebrate', 'wildtype-vert']
+    models = ['whole-dataset', 'wildtype', 'vertebrate', 'invertebrate', 'wildtype-vert','type-one']
     encoding_methods=['one_hot','aa_prop']
-    ref_seq_choices = ['bovine', 'squid', 'custom']
+    ref_seq_choices = ['bovine', 'squid', 'microbe','custom']
+    bool_choices = ['true', 'True', 'false','False', True, False]
     dt_label = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
     
     parser = argparse.ArgumentParser(description="Process sequences using a selected model")
@@ -253,16 +264,16 @@ def main():
     parser.add_argument("-e", "--encoding_method", help="Select preferred encoding method used to train model and make predictions", 
                     choices=encoding_methods, default='aa_prop', type = str, required=False)
     parser.add_argument("-b", "--blastp", help="Option to enable blastp analsis on query sequences", 
-                    type = str or bool , default = True, required=False)
+                    type = str or bool, choices=bool_choices, default = True, required=False)
     parser.add_argument("-ir","--iden_report", help="Name for the blastp report output file", type=str, default = 'blastp_report.txt', required = False)
     parser.add_argument("-r", "--refseq", help="Reference sequence used for blastp analysis.", 
                 type = str, choices = ref_seq_choices, default= 'bovine', required=False)
     parser.add_argument("-f", "--reffile", help="Custom reference sequence file used for blastp analysis.", 
                 type = str, default = 'not_real.txt', required=False)
     parser.add_argument("-s", "--bootstrap", help="Option to enable bootstrap predictions on query sequences", 
-                    type = str or bool , default = True, required=False)
+                    type = str or bool , choices=bool_choices, default = True, required=False)
     parser.add_argument("-viz", "--visualize_bootstrap", help="Option to enable/disable visualization of bootstrap predictions on query sequences", 
-                type = str or bool , default = True, required=False)
+                type = str or bool, choices=bool_choices, default = True, required=False)
     parser.add_argument("-bsv","--bootstrap_viz_file", help="Name for the pdf file output file for visualizing bootstrap predictions", type=str, default = 'bootstrap_viz', required = False)
 
     # python optics_predictions.py -in ./examples/msp_erg_raw.txt -rd msp_test_of_optics -out msp_predictions.tsv -m whole-dataset -e aa_prop -b True -ir msp_blastp_report.tsv -r squid -s False
@@ -295,7 +306,10 @@ def main():
     bootstrap_file = f'{report_dir}/{args.bootstrap_viz_file}'
    
     log_file = f'{report_dir}/arg_log.txt'
-
+    
+    if (args.bootstrap == True or args.bootstrap == 'True' or args.bootstrap == 'true') and (args.model == 'type-one'):
+        raise(Exception('Currently No Bootsrap Functionality for Type-one (Microbiral) Opsins! Check Back Soon!'))
+    
     if os.path.isfile(args.input):
         names, mean_predictions, ci_lowers, ci_uppers, prediction_dict, predictions, median_predictions, per_iden_list, std_dev_list, seq_lens_list = process_sequences_from_file(args.input, args.model, blastp_file, args.blastp, args.refseq, args.reffile, args.bootstrap, args.encoding_method)
         if '.tsv' in args.output or '.txt' in args.output:
@@ -309,7 +323,7 @@ def main():
         with open(output, 'w') as f:
             i = 0
             while i in range(len(names)):
-                if args.bootstrap == 'no' or args.bootstrap == False or args.bootstrap == 'False' or args.bootstrap == 'false':
+                if args.bootstrap == False or args.bootstrap == 'False' or args.bootstrap == 'false':
                     if i == 0:
                         f.write('Names\tPredictions\t%Identity_Nearest_VPOD_Sequence\n')
                     f.write(f"{names[i]}\t{predictions[i]}\t{per_iden_list[i]}\n")
