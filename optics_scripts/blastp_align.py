@@ -246,7 +246,7 @@ def seq_sim_report(query_file, name, ref_seq_id, opsin_database, opsin_db_fasta,
         species = '-'
         opsin_family = '-'
         lmax = '-'
-        accession = closest_match_data["Name"]
+        accession = closest_match_id
 
     # Report generation
     with open(ouput_file, 'a+', encoding="utf-8") as f:

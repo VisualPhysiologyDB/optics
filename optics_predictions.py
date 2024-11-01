@@ -8,9 +8,10 @@ import os
 import sys
 import random
 import datetime
+import matplotlib
 from progress.bar import ShadyBar
 from optics_scripts.blastp_align import seq_sim_report
-from optics_scripts.bootstrap_predictions import calculate_ensemble_CI, plot_prediction_subsets_with_CI
+from optics_scripts.bootstrap_predictions import calculate_ensemble_CI, plot_prediction_subsets_with_CI, wavelength_to_rgb
 
 def process_sequence(sequence, name, selected_model, identity_report, blastp, refseq, reffile, bootstrap, prediction_dict = None, encoding_method='one_hot'):
     data_dir = "./data"
@@ -325,18 +326,27 @@ def main():
             while i in range(len(names)):
                 if args.bootstrap == False or args.bootstrap == 'False' or args.bootstrap == 'false':
                     if i == 0:
-                        f.write('Names\tPredictions\t%Identity_Nearest_VPOD_Sequence\n')
-                    f.write(f"{names[i]}\t{predictions[i]}\t{per_iden_list[i]}\n")
-                    print(f"{names[i]}\t{predictions[i]}\t{per_iden_list[i]}\n")
+                        f.write('Names\tPredictions\t%Identity_Nearest_VPOD_Sequence\tSequence_Length\n')
+                        colors = [wavelength_to_rgb(pred) for pred in predictions]
+                        hex_color_list = [matplotlib.colors.to_hex(color) for color in colors]
+                        write_to_excel(names, predictions, per_iden_list, excel_output, hex_color_list=hex_color_list, seq_lens_list=seq_lens_list)
+                    f.write(f"{names[i]}\t{predictions[i]}\t{per_iden_list[i]}\t{seq_lens_list[i]}\n")
+                    print(f"{names[i]}\t{predictions[i]}\t{per_iden_list[i]}\t{seq_lens_list[i]}\n")
                     i+=1
+
                 else:
                     if i == 0:
                         f.write('Names\tSingle_Prediction\tPrediction_Means\tPrediction_Medians\tPrediction_Lower_Bounds\tPrediction_Upper_Bounds\tStd_Deviation\t%Identity_Nearest_VPOD_Sequence\tSequence_Length\tLmax_Hex_Color\n')
                         print('Names\tSingle_Prediction\tPrediction_Means\tPrediction_Medians\tPrediction_Lower_Bounds\tPrediction_Upper_Bounds\tStd_Deviation\t%Identity_Nearest_VPOD_Sequence\tSequence_Length\n')
                         
                         # colors for hex_color_list generated from the mean prediction of the bootstraped predictions during the visulization steps    
-                        hex_color_list = plot_prediction_subsets_with_CI(names, prediction_dict, mean_predictions, bootstrap_file, args.visualize_bootstrap)
-
+                        hex_color_list = plot_prediction_subsets_with_CI(names, prediction_dict, mean_predictions, 
+                                                                         bootstrap_file, args.visualize_bootstrap)
+                        
+                        write_to_excel(names, predictions, per_iden_list, excel_output, 
+                                        mean_predictions, median_predictions, ci_lowers, 
+                                        ci_uppers, std_dev_list, hex_color_list, seq_lens_list)
+                        
                     f.write(f"{names[i]}\t{predictions[i]}\t{mean_predictions[i]}\t{median_predictions[i]}\t{ci_lowers[i]}\t{ci_uppers[i]}\t{std_dev_list[i]}\t{per_iden_list[i]}\t{seq_lens_list[i]}\t{hex_color_list[i]}\n")
                     print(f"{names[i]}\t{predictions[i]}\t{mean_predictions[i]}\t{median_predictions[i]}\t{ci_lowers[i]}\t{ci_uppers[i]}\t{std_dev_list[i]}\t{per_iden_list[i]}\t{seq_lens_list[i]}\n")
                     i+=1
@@ -346,19 +356,15 @@ def main():
             f.write(f"Model Used:\t{args.model}\nEncoding Method:\t{args.encoding_method}\n")
             print(f"\nModel Used:\t{args.model}\nEncoding Method:\t{args.encoding_method}\n")
                             
-        if hex_color_list:
-            write_to_excel(names, predictions, per_iden_list, excel_output, 
-                mean_predictions, median_predictions, ci_lowers, 
-                ci_uppers, std_dev_list, hex_color_list, seq_lens_list)
                         
-            with open(f'{report_dir}/fig_tree_color_annotation.txt', 'w') as g:
-                g.write("Name\t!color\n")  # Header row
-                for name, hex_color in zip(names, hex_color_list):
-                    g.write(f"{name}\t{hex_color}\n") 
-            with open(f'{report_dir}/itol_color_annotation.txt', 'w') as g:
-                g.write("TREE_COLORS\nSEPARATOR TAB\nDATA\n")
-                for name, hex_color in zip(names, hex_color_list):
-                    g.write(f"{name}\tlabel_background\t{hex_color}\n") 
+        with open(f'{report_dir}/fig_tree_color_annotation.txt', 'w') as g:
+            g.write("Name\t!color\n")  # Header row
+            for name, hex_color in zip(names, hex_color_list):
+                g.write(f"{name}\t{hex_color}\n") 
+        with open(f'{report_dir}/itol_color_annotation.txt', 'w') as g:
+            g.write("TREE_COLORS\nSEPARATOR TAB\nDATA\n")
+            for name, hex_color in zip(names, hex_color_list):
+                g.write(f"{name}\tlabel_background\t{hex_color}\n") 
             
         print('Predictions Complete!')
         #os.remove('./tmp')
@@ -393,17 +399,28 @@ def write_to_excel(names, predictions, per_iden_list, output_filename="output.xl
     wb = Workbook()
     ws = wb.active
 
-    ws.append(['Names', 'Single_Prediction', 'Prediction_Means', 'Prediction_Medians',
-                'Prediction_Lower_Bounds', 'Prediction_Upper_Bounds', 'Std_Deviation', 
-                '%Identity_Nearest_VPOD_Sequence', 'Sequence_Lengths','Lmax_Hex_Color'])
-    for i in range(len(names)):
-        # Because openpyxel is picky about hex-codes we need to remove the '#' symbol for it to accept it as a fill color.
-        hex_color = hex_color_list[i].replace('#','') 
-        ws.append([names[i], predictions[i], mean_predictions[i], median_predictions[i],
-                    ci_lowers[i], ci_uppers[i], std_dev_list[i], per_iden_list[i], seq_lens_list[i], hex_color_list[i]])
-        ws.cell(row=i+2, column=10).fill = PatternFill(start_color=hex_color, 
-                                                    end_color=hex_color, 
-                                                    fill_type="solid")
+    
+    if mean_predictions == None:
+        ws.append(['Names', 'Single_Prediction', '%Identity_Nearest_VPOD_Sequence', 'Sequence_Length','Lmax_Hex_Color'])
+        for i in range(len(names)):
+            # Because openpyxel is picky about hex-codes we need to remove the '#' symbol for it to accept it as a fill color.
+            hex_color = hex_color_list[i].replace('#','') 
+            ws.append([names[i], predictions[i], per_iden_list[i], seq_lens_list[i], hex_color_list[i]])
+            ws.cell(row=i+2, column=5).fill = PatternFill(start_color=hex_color, 
+                                                        end_color=hex_color, 
+                                                        fill_type="solid")
+    else:
+        ws.append(['Names', 'Single_Prediction', 'Prediction_Means', 'Prediction_Medians',
+                    'Prediction_Lower_Bounds', 'Prediction_Upper_Bounds', 'Std_Deviation', 
+                    '%Identity_Nearest_VPOD_Sequence', 'Sequence_Lengths','Lmax_Hex_Color'])
+        for i in range(len(names)):
+            # Because openpyxel is picky about hex-codes we need to remove the '#' symbol for it to accept it as a fill color.
+            hex_color = hex_color_list[i].replace('#','') 
+            ws.append([names[i], predictions[i], mean_predictions[i], median_predictions[i],
+                        ci_lowers[i], ci_uppers[i], std_dev_list[i], per_iden_list[i], seq_lens_list[i], hex_color_list[i]])
+            ws.cell(row=i+2, column=10).fill = PatternFill(start_color=hex_color, 
+                                                        end_color=hex_color, 
+                                                        fill_type="solid")
     wb.save(output_filename)
     
 if __name__ == "__main__":
