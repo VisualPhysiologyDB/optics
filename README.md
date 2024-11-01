@@ -3,7 +3,7 @@
 
 # Opsin Phenotype Tool for Inference of Color Sensitivity (OPTICS) 
 
-![](https://github.com/VisualPhysiologyDB/optics/blob/main/examples/optics_on_ex_test_of_optics_2024-10-10_17-47-21/ex_bs_viz_part4.svg?raw=true)
+![](https://github.com/VisualPhysiologyDB/optics/blob/main/examples/optics_on_full_ex_test_of_optics_2024-10-15_15-18-01/ex_bs_viz_part4.svg?raw=true)
 
   _Example Box Plot Output for Bootstrap Predictions of Opsin λmax by OPTICS_
 
@@ -57,39 +57,48 @@
         - We suggest downloading '[ncbi-blast-2.16.0+-win64.exe](https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/ncbi-blast-2.16.0+-win64.exe)' 
       - You DO NOT need to download MAFFT, OPTICS should be able to run MAFFT from the files we provide when downloading this GitHub.
    
-4. **Usage**
+## Usage
 
-    - **MAKE SURE YOU HAVE ALL DEPENDENCIES DOWNLOADED ARE IN THE FOLDER DIRECTORY FOR OPTICS BEFORE RUNNING ANY SCRIPTS!**
+  **MAKE SURE YOU HAVE ALL DEPENDENCIES DOWNLOADED ARE IN THE FOLDER DIRECTORY FOR OPTICS BEFORE RUNNING ANY SCRIPTS!**
+  
+  ### **Parameters**
+     
+  ```
+  Required:
 
-    - Parameters
-      ```
-        -in - FASTA file containing unaligned opsin sequences.
+  -in, --input: Path to the input file containing sequences in FASTA format.
 
-        -rd - Name for job; used to create output folder. (deafult = optics_on_unamed_{date_and_time_label})
+  Optional:
+  
+  -rd, --report_dir: Name of the directory to create for storing output files. Default: optics_on_unamed_{date_and_time_label}
 
-        -out - Name for output file. (deafult = 'optics_predictions.txt')
+  -out, --output: Name of the output file for predictions. Default: optics_predictions.txt
 
-        -m - Select model to use for prediction. Options are 'whole-dataset', 'vertebrate', 'invertebrate', 'wildtype', or 'wildtype-vert'
+  -m, --model: Model to use for prediction. Options: whole-dataset, vertebrate, invertebrate, wildtype, or wildtype-vert. Default: whole-dataset
 
-        -e - Select preferred encoding method used to train model and make predictions. Options are 'one-hot' or 'aa_prop'
+  -e, --encoding_method: Encoding method used to train the model and make predictions. Options: one-hot or aa_prop. Default: aa_prop
 
-        -b - Option to enable/disable Blastp analysis on query sequences. [True/False]
+  -b, --blastp: Enable/disable Blastp analysis on query sequences. Default: True
 
-        -ir - Name for the blastp report output file. (deafult = 'blastp_report.txt')
+  -ir, --iden_report: Name of the output file for the Blastp report. Default: blastp_report.txt
 
-        -r - Select reference sequence used for position numbering for blastp analysis. Options are 'bovine', 'squid', or 'custom'
+  -r, --refseq: Reference sequence used for position numbering in Blastp analysis. Options: bovine, squid, or custom. Default: bovine
 
-        -f - Custom reference sequence file used for blastp analysis - **ONLY NEED TO PROVIDE IF SELECTED 'CUSTOM' FOR REFERENCE SEQUENCE**
+  -f, --reffile: Custom reference sequence file used for Blastp analysis. Required only if -r custom is selected. Default: not_real.txt
 
-        -s - Option to enable/disable bootstrap predictions on query sequences. **NOTE: VISULIZATION ONLY PRODUCED FOR 10 SEQUENCES OR LESS**
+  -s, --bootstrap: Enable/disable bootstrap predictions on query sequences. Default: True
 
-        -bsv - Name for the pdf file output file for visualizing bootstrap predictions. (default = 'bootstrap_viz.pdf')
-       ```     
-     - **Example Command Line Usage vvv**
-       ```bash
-        python optics_predictions.py -in ./examples/optics_ex_short.txt -rd ex_test_of_optics -out ex_predictions.tsv -m wildtype -e aa_prop -b True -ir ex_blastp_report.tsv -r squid -s True -bsv ex_bs_viz
+  -viz, --visualize_bootstrap: Enable/disable visualization of bootstrap predictions. Default: True
 
-## Input
+  -bsv, --bootstrap_viz_file: Name of the output PDF file for visualizing bootstrap predictions. Default: bootstrap_viz.pdf
+
+  ```     
+  ### Example Command Line Usage vvv
+  
+  ```bash
+  python optics_predictions.py -in ./examples/optics_ex_short.txt -rd ex_test_of_optics -out ex_predictions.tsv -m wildtype -e aa_prop -b True -ir ex_blastp_report.tsv -r squid -s True -viz True -bsv ex_bs_viz
+  ```
+### Input
 
 - **Unaligned** FASTA file containing opsin amino-acid sequences.
 - Example FASTA Entry:
@@ -101,7 +110,7 @@
     HFIIPLIVIFFCYGQLVFTVKEAAAQQQESATTQKAEKEVTRMVIIMVIAFLICWLPYAGVAFYIFTHQG 
     SDFGPIFMTIPAFFAKTSAVYNPVIYIMMNKQFRNCMVTTLCCGKNPLGDDEASTTVSKTETSQVAPA   
   ``` 
-## Output
+### Output
 
 - Predictions (TSV): λmax values, model used, and encoding method.
 - BLAST Results (TXT, optional): Comparison of query sequences to reference datasets.
