@@ -269,7 +269,7 @@ def main():
     parser.add_argument("-r", "--refseq", help="Reference sequence used for blastp analysis.", 
                 type = str, choices = ref_seq_choices, default= 'bovine', required=False)
     parser.add_argument("-f", "--reffile", help="Custom reference sequence file used for blastp analysis.", 
-                type = str, default = 'not_real.txt', required=False)
+                type = str, default = '', required=False)
     parser.add_argument("-s", "--bootstrap", help="Option to enable bootstrap predictions on query sequences", 
                     type = str or bool , choices=bool_choices, default = True, required=False)
     parser.add_argument("-viz", "--visualize_bootstrap", help="Option to enable/disable visualization of bootstrap predictions on query sequences", 

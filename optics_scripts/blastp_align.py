@@ -237,10 +237,16 @@ def seq_sim_report(query_file, name, ref_seq_id, opsin_database, opsin_db_fasta,
     # --- Load metadata ---
     metadata_df = pd.read_csv(opsin_db_meta, delimiter="\t", index_col=0)
     closest_match_data = metadata_df.loc[closest_match_id]
-    species = closest_match_data["Species"]
-    opsin_family = closest_match_data["Opsin_Family"]
-    lmax = closest_match_data["Lambda_Max"]
-    accession = closest_match_data["Accession"]
+    try:
+        species = closest_match_data["Species"]
+        opsin_family = closest_match_data["Opsin_Family"]
+        lmax = closest_match_data["Lambda_Max"]
+        accession = closest_match_data["Accession"]
+    except:
+        species = '-'
+        opsin_family = '-'
+        lmax = '-'
+        accession = closest_match_data["Name"]
 
     # Report generation
     with open(ouput_file, 'a+', encoding="utf-8") as f:
