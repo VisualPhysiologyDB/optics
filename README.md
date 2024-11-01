@@ -74,7 +74,7 @@
 
   -out, --output: Name of the output file for predictions. Default: optics_predictions.txt
 
-  -m, --model: Model to use for prediction. Options: whole-dataset, vertebrate, invertebrate, wildtype, or wildtype-vert. Default: whole-dataset
+  -m, --model: Model to use for prediction. Options: whole-dataset, vertebrate, invertebrate, wildtype, wildtype-vert, type-one. Default: whole-dataset
 
   -e, --encoding_method: Encoding method used to train the model and make predictions. Options: one-hot or aa_prop. Default: aa_prop
 
@@ -82,9 +82,9 @@
 
   -ir, --iden_report: Name of the output file for the Blastp report. Default: blastp_report.txt
 
-  -r, --refseq: Reference sequence used for position numbering in Blastp analysis. Options: bovine, squid, or custom. Default: bovine
+  -r, --refseq: Reference sequence used for position numbering in Blastp analysis. Options: bovine, squid, microbe, or custom. Default: bovine
 
-  -f, --reffile: Custom reference sequence file used for Blastp analysis. Required only if -r custom is selected. Default: not_real.txt
+  -f, --reffile: Custom reference sequence file used for Blastp analysis. Required only if -r custom is selected.
 
   -s, --bootstrap: Enable/disable bootstrap predictions on query sequences. Default: True
 
