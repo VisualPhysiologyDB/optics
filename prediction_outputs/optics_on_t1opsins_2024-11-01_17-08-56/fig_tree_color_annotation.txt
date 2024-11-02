@@ -1,0 +1,2 @@
+Name	!color
+sp|Q7NP59|Q7NP59_GLOVI_Gll0198_protein	#8cff00
