@@ -437,14 +437,14 @@ def db_grouped(dat, report_dir=None, threshold=0.2) -> pandas.DataFrame:
     db.fit(cr_mat)
 
     dc_df = pd.DataFrame(cr_mat.index.tolist(), columns=['feature'])
-    dc_df['group'] = db.labels_
+    dc_df['group_num'] = db.labels_
 
     clusters = list(set(db.labels_))
     for cluster in clusters:
         if cluster == -1:
-            dc_df.loc[dc_df['group'] == -1, 'group'] = 'No_gr'
+            dc_df.loc[dc_df['group_num'] == -1, 'group'] = 'No_gr'
         else:
-            dc_df.loc[dc_df['group'] == cluster, 'group'] = 'g' + str(cluster)
+            dc_df.loc[dc_df['group_num'] == cluster, 'group'] = 'g' + str(cluster)
     try:
         dc_df = dc_df[dc_df['group'] != 'No_gr']
     except:

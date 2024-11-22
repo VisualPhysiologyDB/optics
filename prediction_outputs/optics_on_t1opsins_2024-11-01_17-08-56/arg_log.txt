@@ -1,3 +1,0 @@
-Command executed:	optics_predictions.py -in ex_test_2.txt -rd t1opsins -out test.tsv -m type-one -e one_hot -b True -ir ex_blastp_report.txt -r microbe -s False
-Model Used:	type-one
-Encoding Method:	one_hot

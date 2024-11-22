@@ -1,4 +1,0 @@
-TREE_COLORS
-SEPARATOR TAB
-DATA
-sp|Q7NP59|Q7NP59_GLOVI_Gll0198_protein	label_background	#82ff00

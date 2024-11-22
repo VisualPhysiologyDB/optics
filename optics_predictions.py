@@ -58,7 +58,7 @@ def process_sequence(sequence, name, selected_model, identity_report, blastp, re
             "vertebrate": f"{model_dir}/reg_models/vpod_1.2/aa_prop/vert_gbr.pkl",
             "invertebrate": f"{model_dir}/reg_models/vpod_1.2/aa_prop/invert_gbr.pkl",
             "wildtype-vert": f"{model_dir}/reg_models/vpod_1.2/aa_prop/wt_vert_gbr.pkl",
-            "type-one": f"{model_dir}/reg_models/vpod_1.2/aa_prop/t1_gbr.pkl",
+            "type-one": f"{model_dir}/reg_models/vpod_1.2/aa_prop/t1_xgb.pkl",
         }
         
         model_bs_dirs = {
@@ -76,7 +76,7 @@ def process_sequence(sequence, name, selected_model, identity_report, blastp, re
             "vertebrate": f"{model_dir}/reg_models/vpod_1.2/one_hot/vert_xgb.pkl",
             "invertebrate": f"{model_dir}/reg_models/vpod_1.2/one_hot/invert_BayesianRidge.pkl",
             "wildtype-vert": f"{model_dir}/reg_models/vpod_1.2/one_hot/wt_vert_xgb.pkl",
-            "type-one": f"{model_dir}/reg_models/vpod_1.2/one_hot/t1_gbr.pkl",
+            "type-one": f"{model_dir}/reg_models/vpod_1.2/one_hot/t1_xgb.pkl",
 
         }
         
