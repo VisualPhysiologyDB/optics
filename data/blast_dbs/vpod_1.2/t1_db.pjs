@@ -1,0 +1,22 @@
+{
+  "version": "1.2",
+  "dbname": "t1_db",
+  "dbtype": "Protein",
+  "db-version": 5,
+  "description": "C:/Users/safra/Documents/GitHub/optics/data/fasta/vpod_1.2/Karyasuyama_T1_ops.txt",
+  "number-of-letters": 240532,
+  "number-of-sequences": 884,
+  "last-updated": "2024-11-01T13:20:00",
+  "number-of-volumes": 1,
+  "bytes-total": 1328112,
+  "bytes-to-cache": 248653,
+  "files": [
+    "t1_db.pdb",
+    "t1_db.phr",
+    "t1_db.pin",
+    "t1_db.pot",
+    "t1_db.psq",
+    "t1_db.ptf",
+    "t1_db.pto"
+  ]
+}
