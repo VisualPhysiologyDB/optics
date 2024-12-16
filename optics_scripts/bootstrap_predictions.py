@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import random
+from joblib import Parallel, delayed
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
@@ -33,7 +34,6 @@ def calculate_ensemble_CI(model_folder, query, name, predictions_dict):
     std_dev = np.std(predictions_all)
 
     return mean_predictions, ci_lower, ci_upper, predictions_dict, median_predictions, std_dev
-
 
 def plot_prediction_subsets_with_CI(names, predictions, mean_preds, pdf_file, visualize_bootstrap):
     # Customize colors 

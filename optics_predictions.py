@@ -9,7 +9,10 @@ import sys
 import random
 import datetime
 import matplotlib
-from progress.bar import ShadyBar
+from joblib import Parallel, delayed
+import tempfile
+from multiprocessing import Manager
+from tqdm import tqdm
 from optics_scripts.blastp_align import seq_sim_report
 from optics_scripts.bootstrap_predictions import calculate_ensemble_CI, plot_prediction_subsets_with_CI, wavelength_to_rgb
 
@@ -104,16 +107,13 @@ def process_sequence(sequence, name, selected_model, identity_report, blastp, re
     model = model_directories[selected_model]
     
     wrk_dir = os.getcwd().replace('\\','/')
-    random_number = str(random.randint(1, 10000))
-    temp_seq = f'{wrk_dir}/tmp/temp_seq_{random_number}.fasta'
-    with open(temp_seq, "w") as temp_file:  # Key change
+    with tempfile.NamedTemporaryFile(mode="w", dir=f"{wrk_dir}/tmp", suffix=".fasta", delete=False) as temp_seq_file:
+        temp_seq = temp_seq_file.name  # Get the unique filename
         if '>' in sequence:
-            #print(f"here is the sequence: {sequence}")
-            temp_file.write(sequence)
+            temp_seq_file.write(sequence)
         else:
             sequence = ">placeholder_name\n" + sequence
-            #print(f"here is the sequence: {sequence}")
-            temp_file.write(sequence) # Write your data to the file object
+            temp_seq_file.write(sequence)
 
     if blastp == 'no' or blastp == False or blastp == 'False':
         percent_iden = '-'
@@ -121,9 +121,8 @@ def process_sequence(sequence, name, selected_model, identity_report, blastp, re
         percent_iden = seq_sim_report(temp_seq, name, refseq, blast_db, raw_data, metadata, identity_report, reffile)
         #print('Query sequence processed via blastp')
 
-    new_ali = f'{wrk_dir}/tmp/temp_ali_{random_number}.fasta'  
-    # ... (Perform alignment using MAFFT with alignment_data)
-    
+    with tempfile.NamedTemporaryFile(mode="w", dir=f"{wrk_dir}/tmp", suffix=".fasta", delete=False) as temp_ali_file:
+        new_ali = temp_ali_file.name 
     try:
         #print('Trying Linux execution of MAFFT')
         cmd = ['mafft', '--add', temp_seq, '--keeplength', alignment_data]
@@ -147,6 +146,7 @@ def process_sequence(sequence, name, selected_model, identity_report, blastp, re
                 raise Exception(f'MAFFT alignment failed for all three options (Linux, Windows, and Max).\nCheck your FASTA file to make sure it is formatted correctly as that could be a source of error.\n{e.stderr.decode()}')
             
     seq_type = 'aa'
+    
     new_seq_test = read_data(new_ali, seq_type = seq_type, is_main=True, gap_threshold=0.5)
     ref_copy = read_data(alignment_data, seq_type = seq_type, is_main=True, gap_threshold=0.5)
     last_seq = int(ref_copy.shape[0])
@@ -220,32 +220,45 @@ def process_sequences_from_file(file,selected_model, identity_report, blastp, re
     std_dev_list = []
     ci_lowers = []
     ci_uppers = []
-    prediction_dict = {}
+    #prediction_dict = {}
     per_iden_list = []
     seq_lens = []
     i = 0
 
-    bar = ShadyBar('Processing Sequences', max=len(names), charset='ascii')
-    for seq in sequences:
-        seq_lens.append(len(seq))
-        if bootstrap == 'no' or bootstrap == False or bootstrap == 'False' or bootstrap == 'false':    
-            #print(seq)
-            prediction, percent_iden = process_sequence(seq, names[i], selected_model, identity_report, blastp, refseq, reffile, bootstrap, prediction_dict, encoding_method)  # Process each sequence
-            predictions.append(prediction)
-            per_iden_list.append(percent_iden)
+
+    manager = Manager()
+    prediction_dict = manager.dict()  # Use a shared dictionary
+    
+    def process_sequence_wrapper(seq, name):  # Helper function
+        if bootstrap == 'no' or bootstrap == False or bootstrap == 'False' or bootstrap == 'false':
+            prediction, percent_iden = process_sequence(seq, name, selected_model, identity_report, blastp, refseq, reffile, bootstrap, prediction_dict, encoding_method)
+            return len(seq), prediction, percent_iden, None, None, None, None  # Consistent return values
         else:
-            mean_prediction, ci_lower, ci_upper, prediction_dict, prediction, median_prediction, percent_iden, std_dev = process_sequence(seq, names[i], selected_model, identity_report, blastp, refseq, reffile, bootstrap, prediction_dict, encoding_method)  # Process each sequence
+            mean_prediction, ci_lower, ci_upper, updated_prediction_dict, prediction, median_prediction, percent_iden, std_dev = process_sequence(seq, name, selected_model, identity_report, blastp, refseq, reffile, bootstrap, prediction_dict, encoding_method)
+            prediction_dict.update(updated_prediction_dict) # Update the shared dictionary with the returned dictionary
+            return len(seq), prediction, percent_iden, mean_prediction, ci_lower, ci_upper, median_prediction, std_dev
+
+
+    with tqdm_joblib(tqdm(total=len(sequences), desc="Processing Sequences", ascii = True, bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}{postfix}]", dynamic_ncols=True)) as pbar:  # Use tqdm for progress bar
+        results = Parallel(n_jobs=-1)(delayed(process_sequence_wrapper)(seq, names[i]) for i, seq in enumerate(sequences))
+
+    #with Parallel(n_jobs=-1, verbose=100) as parallel:  # verbose controls output
+    #    results = parallel(delayed(process_sequence_wrapper)(seq, names[i]) 
+    #                    for i, seq in enumerate(sequences))
+        
+    # Extract results
+    for result in results:
+        seq_len, prediction, percent_iden, mean_prediction, ci_lower, ci_upper, median_prediction, std_dev = result
+        seq_lens.append(seq_len)
+        predictions.append(prediction)
+        per_iden_list.append(percent_iden)
+        if mean_prediction is not None:  # Handle bootstrap case
             mean_predictions.append(mean_prediction)
-            predictions.append(prediction)
             ci_lowers.append(ci_lower)
             ci_uppers.append(ci_upper)
             median_predictions.append(median_prediction)
-            per_iden_list.append(percent_iden)
             std_dev_list.append(std_dev)
-        bar.next()
-        i+=1
-    #print(predictions)
-    bar.finish()
+
     return(names, mean_predictions, ci_lowers, ci_uppers, prediction_dict, predictions, median_predictions, per_iden_list, std_dev_list, seq_lens)
 
 def main():
@@ -423,5 +436,25 @@ def write_to_excel(names, predictions, per_iden_list, output_filename="output.xl
                                                         fill_type="solid")
     wb.save(output_filename)
     
+    
+import contextlib  
+import joblib  
+@contextlib.contextmanager
+def tqdm_joblib(tqdm_object):
+    """Context manager to patch joblib to report into tqdm progress bar given as argument"""
+    class TqdmBatchCompletionCallback(joblib.parallel.BatchCompletionCallBack):
+        def __call__(self, *args, **kwargs):
+            tqdm_object.update(n=self.batch_size)
+            return super().__call__(*args, **kwargs)
+
+    old_batch_callback = joblib.parallel.BatchCompletionCallBack
+    joblib.parallel.BatchCompletionCallBack = TqdmBatchCompletionCallback
+    try:
+        yield tqdm_object
+    finally:
+        joblib.parallel.BatchCompletionCallBack = old_batch_callback
+        tqdm_object.close()
+        
+        
 if __name__ == "__main__":
     main()

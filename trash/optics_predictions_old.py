@@ -5,11 +5,14 @@ from deepBreaks.preprocessing import read_data
 import pandas as pd
 import argparse
 import os
+import sys
 import random
 import datetime
-from progress.bar import ShadyBar
+import matplotlib
+#from progress.bar import ShadyBar
+from tqdm import tqdm
 from optics_scripts.blastp_align import seq_sim_report
-from optics_scripts.bootstrap_predictions import calculate_ensemble_CI , plot_predictions_with_CI
+from optics_scripts.bootstrap_predictions import calculate_ensemble_CI, calculate_ensemble_CI_parallel, plot_prediction_subsets_with_CI, wavelength_to_rgb
 
 def process_sequence(sequence, name, selected_model, identity_report, blastp, refseq, reffile, bootstrap, prediction_dict = None, encoding_method='one_hot'):
     data_dir = "./data"
@@ -19,6 +22,7 @@ def process_sequence(sequence, name, selected_model, identity_report, blastp, re
     "vertebrate": f"{data_dir}/fasta/vpod_1.2/vert_aligned_VPOD_1.2_het.fasta",
     "invertebrate": f"{data_dir}/fasta/vpod_1.2/inv_only_aligned_VPOD_1.2_het.fasta",
     "wildtype-vert": f"{data_dir}/fasta/vpod_1.2/wt_vert_aligned_VPOD_1.2_het.fasta",
+    "type-one": f"{data_dir}/fasta/vpod_1.2/Karyasuyama_T1_ops_aligned.fasta"
     }   
     model_raw_data = {
     "whole-dataset": f"{data_dir}/fasta/vpod_1.2/wds.txt",
@@ -26,6 +30,8 @@ def process_sequence(sequence, name, selected_model, identity_report, blastp, re
     "vertebrate": f"{data_dir}/fasta/vpod_1.2/vert.txt",
     "invertebrate": f"{data_dir}/fasta/vpod_1.2/inv_only.txt",
     "wildtype-vert": f"{data_dir}/fasta/vpod_1.2/wt_vert.txt",
+    "type-one": f"{data_dir}/fasta/vpod_1.2/Karyasuyama_T1_ops.txt"
+
     }   
     model_metadata = {
     "whole-dataset": f"{data_dir}/fasta/vpod_1.2/wds_meta.tsv",
@@ -33,6 +39,7 @@ def process_sequence(sequence, name, selected_model, identity_report, blastp, re
     "vertebrate": f"{data_dir}/fasta/vpod_1.2/vert_meta.tsv",
     "invertebrate": f"{data_dir}/fasta/vpod_1.2/inv_meta.tsv",
     "wildtype-vert": f"{data_dir}/fasta/vpod_1.2/wt_vert_meta.tsv",
+    "type-one": f"{data_dir}/fasta/vpod_1.2/Karyasuyama_T1_ops_meta.tsv"
     }   
     model_blast_db = {
     "whole-dataset": f"{data_dir}/blast_dbs/vpod_1.2/wds_db",
@@ -40,6 +47,7 @@ def process_sequence(sequence, name, selected_model, identity_report, blastp, re
     "vertebrate": f"{data_dir}/blast_dbs/vpod_1.2/vert_db",
     "invertebrate": f"{data_dir}/blast_dbs/vpod_1.2/invert_db",
     "wildtype-vert": f"{data_dir}/blast_dbs/vpod_1.2/wt_vert_db",
+    "type-one": f"{data_dir}/blast_dbs/vpod_1.2/t1_db",
     }   
 
     model_dir = "./models"
@@ -51,6 +59,7 @@ def process_sequence(sequence, name, selected_model, identity_report, blastp, re
             "vertebrate": f"{model_dir}/reg_models/vpod_1.2/aa_prop/vert_gbr.pkl",
             "invertebrate": f"{model_dir}/reg_models/vpod_1.2/aa_prop/invert_gbr.pkl",
             "wildtype-vert": f"{model_dir}/reg_models/vpod_1.2/aa_prop/wt_vert_gbr.pkl",
+            "type-one": f"{model_dir}/reg_models/vpod_1.2/aa_prop/t1_xgb.pkl",
         }
         
         model_bs_dirs = {
@@ -59,6 +68,7 @@ def process_sequence(sequence, name, selected_model, identity_report, blastp, re
             "vertebrate": f"{model_dir}/bs_models/vpod_1.2/aa_prop/vert_bootstrap",
             "invertebrate": f"{model_dir}/bs_models/vpod_1.2/aa_prop/invert_bootstrap",
             "wildtype-vert": f"{model_dir}/bs_models/vpod_1.2/aa_prop/wt_vert_bootstrap",
+            "type-one": f"{model_dir}/reg_models/vpod_1.2/aa_prop/t1_bootstrap",
         }
     else:
         model_directories = {
@@ -67,6 +77,8 @@ def process_sequence(sequence, name, selected_model, identity_report, blastp, re
             "vertebrate": f"{model_dir}/reg_models/vpod_1.2/one_hot/vert_xgb.pkl",
             "invertebrate": f"{model_dir}/reg_models/vpod_1.2/one_hot/invert_BayesianRidge.pkl",
             "wildtype-vert": f"{model_dir}/reg_models/vpod_1.2/one_hot/wt_vert_xgb.pkl",
+            "type-one": f"{model_dir}/reg_models/vpod_1.2/one_hot/t1_xgb.pkl",
+
         }
         
         model_bs_dirs = {
@@ -75,6 +87,7 @@ def process_sequence(sequence, name, selected_model, identity_report, blastp, re
             "vertebrate": f"{model_dir}/bs_models/vpod_1.2/one_hot/vert_bootstrap",
             "invertebrate": f"{model_dir}/bs_models/vpod_1.2/one_hot/invert_bootstrap",
             "wildtype-vert": f"{model_dir}/bs_models/vpod_1.2/one_hot/wt_vert_bootstrap",
+            "type-one": f"{model_dir}/reg_models/vpod_1.2/one_hot/t1_bootstrap",
         }
 
 
@@ -135,6 +148,7 @@ def process_sequence(sequence, name, selected_model, identity_report, blastp, re
                 raise Exception(f'MAFFT alignment failed for all three options (Linux, Windows, and Max).\nCheck your FASTA file to make sure it is formatted correctly as that could be a source of error.\n{e.stderr.decode()}')
             
     seq_type = 'aa'
+    
     new_seq_test = read_data(new_ali, seq_type = seq_type, is_main=True, gap_threshold=0.5)
     ref_copy = read_data(alignment_data, seq_type = seq_type, is_main=True, gap_threshold=0.5)
     last_seq = int(ref_copy.shape[0])
@@ -147,9 +161,9 @@ def process_sequence(sequence, name, selected_model, identity_report, blastp, re
     except FileNotFoundError:
         raise Exception("File does not exist")
 
-    if bootstrap == 'yes' or bootstrap == True or bootstrap == 'True':
+    if bootstrap == True or bootstrap == 'True'  or bootstrap == 'true':
         # ... (Load the selected model and make a bootstrap prediction)
-        mean_prediction, ci_lower, ci_upper, prediction_dict, median_prediction, std_dev = calculate_ensemble_CI(model_bs_folder, new_seq_test, name, prediction_dict)
+        mean_prediction, ci_lower, ci_upper, prediction_dict, median_prediction, std_dev = calculate_ensemble_CI_parallel(model_bs_folder, new_seq_test, name, prediction_dict)
         #print(f'{mean_prediction}, {ci_lower}, {ci_upper}, {prediction_dict}')
         
         # ... (Load the selected model and make a single prediction)
@@ -210,41 +224,40 @@ def process_sequences_from_file(file,selected_model, identity_report, blastp, re
     ci_uppers = []
     prediction_dict = {}
     per_iden_list = []
+    seq_lens = []
     i = 0
-    if len(names) > 10:
-        print("More than TEN sequences detected for bootstrap prediction protocol.\nDue to the way the bootstrap visuliazation graph is produced we recommend resubmitting with 10 sequences or less.\nTo aviod strange outputs the bootstrap visulization will be disabled.\nThe 95% confidence interval will still be reported with mean, mwdian and upper/lower bounds.\n")
-        visualize = False
-    else:
-        visualize = True
-        
-    bar = ShadyBar('Processing Sequences', max=len(names), charset='ascii')
-    for seq in sequences:
-        if bootstrap == 'no' or bootstrap == False or bootstrap == 'False':    
-            #print(seq)
-            prediction, percent_iden = process_sequence(seq, names[i], selected_model, identity_report, blastp, refseq, reffile, bootstrap, prediction_dict, encoding_method)  # Process each sequence
-            predictions.append(prediction)
-            bar.next()
 
-        else:
-            mean_prediction, ci_lower, ci_upper, prediction_dict, prediction, median_prediction, percent_iden, std_dev = process_sequence(seq, names[i], selected_model, identity_report, blastp, refseq, reffile, bootstrap, prediction_dict, encoding_method)  # Process each sequence
-            mean_predictions.append(mean_prediction)
-            predictions.append(prediction)
-            ci_lowers.append(ci_lower)
-            ci_uppers.append(ci_upper)
-            median_predictions.append(median_prediction)
-            per_iden_list.append(percent_iden)
-            std_dev_list.append(std_dev)
-            bar.next()
-        i+=1
+    #bar = ShadyBar('Processing Sequences', max=len(names), charset='ascii')
+    with tqdm(total=len(sequences), desc="Processing Sequences", ascii = True, bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}{postfix}]", dynamic_ncols=True) as pbar:
+        for seq in sequences:
+            seq_lens.append(len(seq))
+            if bootstrap == 'no' or bootstrap == False or bootstrap == 'False' or bootstrap == 'false':    
+                #print(seq)
+                prediction, percent_iden = process_sequence(seq, names[i], selected_model, identity_report, blastp, refseq, reffile, bootstrap, prediction_dict, encoding_method)  # Process each sequence
+                predictions.append(prediction)
+                per_iden_list.append(percent_iden)
+            else:
+                mean_prediction, ci_lower, ci_upper, prediction_dict, prediction, median_prediction, percent_iden, std_dev = process_sequence(seq, names[i], selected_model, identity_report, blastp, refseq, reffile, bootstrap, prediction_dict, encoding_method)  # Process each sequence
+                mean_predictions.append(mean_prediction)
+                predictions.append(prediction)
+                ci_lowers.append(ci_lower)
+                ci_uppers.append(ci_upper)
+                median_predictions.append(median_prediction)
+                per_iden_list.append(percent_iden)
+                std_dev_list.append(std_dev)
+        #    bar.next()
+            pbar.update(1)
+            i+=1
     #print(predictions)
-    bar.finish()
-    return(names, mean_predictions, ci_lowers, ci_uppers, prediction_dict, predictions, visualize, median_predictions, per_iden_list, std_dev_list)
+    #bar.finish()
+    return(names, mean_predictions, ci_lowers, ci_uppers, prediction_dict, predictions, median_predictions, per_iden_list, std_dev_list, seq_lens)
 
 def main():
     
-    models = ['whole-dataset', 'wildtype', 'vertebrate', 'invertebrate', 'wildtype-vert']
+    models = ['whole-dataset', 'wildtype', 'vertebrate', 'invertebrate', 'wildtype-vert','type-one']
     encoding_methods=['one_hot','aa_prop']
-    ref_seq_choices = ['bovine', 'squid', 'custom']
+    ref_seq_choices = ['bovine', 'squid', 'microbe','custom']
+    bool_choices = ['true', 'True', 'false','False', True, False]
     dt_label = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
     
     parser = argparse.ArgumentParser(description="Process sequences using a selected model")
@@ -256,112 +269,163 @@ def main():
     parser.add_argument("-e", "--encoding_method", help="Select preferred encoding method used to train model and make predictions", 
                     choices=encoding_methods, default='aa_prop', type = str, required=False)
     parser.add_argument("-b", "--blastp", help="Option to enable blastp analsis on query sequences", 
-                    type = str or bool , default = True, required=False)
+                    type = str or bool, choices=bool_choices, default = True, required=False)
     parser.add_argument("-ir","--iden_report", help="Name for the blastp report output file", type=str, default = 'blastp_report.txt', required = False)
     parser.add_argument("-r", "--refseq", help="Reference sequence used for blastp analysis.", 
                 type = str, choices = ref_seq_choices, default= 'bovine', required=False)
     parser.add_argument("-f", "--reffile", help="Custom reference sequence file used for blastp analysis.", 
-                type = str, default = 'not_real.txt', required=False)
+                type = str, default = '', required=False)
     parser.add_argument("-s", "--bootstrap", help="Option to enable bootstrap predictions on query sequences", 
-                    type = str or bool , default = False, required=False)
-    parser.add_argument("-bsv","--bootstrap_viz_file", help="Name for the pdf file output file for visualizing bootstrap predictions", type=str, default = 'bootstrap_viz.pdf', required = False)
+                    type = str or bool , choices=bool_choices, default = True, required=False)
+    parser.add_argument("-viz", "--visualize_bootstrap", help="Option to enable/disable visualization of bootstrap predictions on query sequences", 
+                type = str or bool, choices=bool_choices, default = True, required=False)
+    parser.add_argument("-bsv","--bootstrap_viz_file", help="Name for the pdf file output file for visualizing bootstrap predictions", type=str, default = 'bootstrap_viz', required = False)
 
     # python optics_predictions.py -in ./examples/msp_erg_raw.txt -rd msp_test_of_optics -out msp_predictions.tsv -m whole-dataset -e aa_prop -b True -ir msp_blastp_report.tsv -r squid -s False
-    # python optics_predictions.py -in ./examples/msp_erg_raw.txt -rd msp_test_of_optics -out msp_predictions.tsv -m whole-dataset -e aa_prop -b True -ir msp_blastp_report.tsv -r squid -s True -bsv msp_bs_viz.pdf
+    # python optics_predictions.py -in ./examples/msp_erg_raw.txt -rd msp_test_of_optics -out msp_predictions.tsv -m whole-dataset -e aa_prop -b True -ir msp_blastp_report.tsv -r squid -s True -bsv msp_bs_viz
 
     args = parser.parse_args()
-    
+
+
+    if os.path.isdir('./tmp'):
+        pass
+    else:    
+        os.makedirs(f'./tmp')
+        
+    if os.path.isdir(f'./prediction_outputs'):
+        pass
+    else:    
+        os.makedirs(f'./prediction_outputs')   
+
     if 'optics_on_unamed' in args.report_dir:
         report_dir = args.report_dir
     else:
         report_dir = f'./prediction_outputs/optics_on_{args.report_dir}_{dt_label}'
     os.makedirs(report_dir)
-    if os.path.isdir('./tmp'):
-        pass
-    else:    
-        os.makedirs(f'./tmp')
 
-    blastp_file = f'{report_dir}/{args.iden_report}'
+    if '.txt' in args.iden_report or 'tsv in args.iden_report':
+        blastp_file = f'{report_dir}/{args.iden_report}'
+    else:
+        blastp_file = f'{report_dir}/{args.iden_report}.txt'
+
     bootstrap_file = f'{report_dir}/{args.bootstrap_viz_file}'
+   
     log_file = f'{report_dir}/arg_log.txt'
-
+    
+    if (args.bootstrap == True or args.bootstrap == 'True' or args.bootstrap == 'true') and (args.model == 'type-one'):
+        raise(Exception('Currently No Bootsrap Functionality for Type-one (Microbiral) Opsins! Check Back Soon!'))
+    
     if os.path.isfile(args.input):
-        names, mean_predictions, ci_lowers, ci_uppers, prediction_dict, predictions, visualize, median_predictions, per_iden_list, std_dev_list = process_sequences_from_file(args.input, args.model, blastp_file, args.blastp, args.refseq, args.reffile, args.bootstrap, args.encoding_method)
-        output = f'{report_dir}/{args.output}'
+        names, mean_predictions, ci_lowers, ci_uppers, prediction_dict, predictions, median_predictions, per_iden_list, std_dev_list, seq_lens_list = process_sequences_from_file(args.input, args.model, blastp_file, args.blastp, args.refseq, args.reffile, args.bootstrap, args.encoding_method)
+        if '.tsv' in args.output or '.txt' in args.output:
+            output = f'{report_dir}/{args.output}'
+            sub_output = args.output.replace('.tsv','')
+            excel_output = f'{report_dir}/{sub_output}_for_excel.xlsx'
+        else:
+            output = f'{report_dir}/{args.output}.tsv'
+            excel_output = f'{report_dir}/{args.output}_for_excel.xlsx'
+
         with open(output, 'w') as f:
             i = 0
             while i in range(len(names)):
-                if args.bootstrap == 'no' or args.bootstrap == False or args.bootstrap == 'False':
+                if args.bootstrap == False or args.bootstrap == 'False' or args.bootstrap == 'false':
                     if i == 0:
-                        f.write('Names\tPredictions\t%Identity_Nearest_VPOD_Sequence\n')
-                    f.write(f"{names[i]}:\t{predictions[i]}\t{per_iden_list[i]}\n")
-                    print(f"{names[i]}:\t{predictions[i]}\t{per_iden_list[i]}\n")
+                        f.write('Names\tPredictions\t%Identity_Nearest_VPOD_Sequence\tSequence_Length\n')
+                        colors = [wavelength_to_rgb(pred) for pred in predictions]
+                        hex_color_list = [matplotlib.colors.to_hex(color) for color in colors]
+                        write_to_excel(names, predictions, per_iden_list, excel_output, hex_color_list=hex_color_list, seq_lens_list=seq_lens_list)
+                    f.write(f"{names[i]}\t{predictions[i]}\t{per_iden_list[i]}\t{seq_lens_list[i]}\n")
+                    print(f"{names[i]}\t{predictions[i]}\t{per_iden_list[i]}\t{seq_lens_list[i]}\n")
                     i+=1
+
                 else:
                     if i == 0:
-                        f.write('Names\tSingle_Prediction\tPrediction_Means\tPrediction_Medians\tPrediction_Lower_Bounds\tPrediction_Upper_Bounds\tStd_Deviation\t%Identity_Nearest_VPOD_Sequence\n')
-                        print('Names\tSingle_Prediction\tPrediction_Means\tPrediction_Medians\tPrediction_Lower_Bounds\tPrediction_Upper_Bounds\tStd_Deviation\t%Identity_Nearest_VPOD_Sequence\n')
-                        if visualize == False:
-                            pass
-                        else:
-                            bootstrap_plots = plot_predictions_with_CI(names, prediction_dict, mean_predictions, bootstrap_file)
-                    f.write(f"{names[i]}:\t{predictions[i]}\t{mean_predictions[i]}\t{median_predictions[i]}\t{ci_lowers[i]}\t{ci_uppers[i]}\t{std_dev_list[i]}\t{per_iden_list[i]}\n")
-                    print(f"{names[i]}:\t{predictions[i]}\t{mean_predictions[i]}\t{median_predictions[i]}\t{ci_lowers[i]}\t{ci_uppers[i]}\t{std_dev_list[i]}\t{per_iden_list[i]}\n")
+                        f.write('Names\tSingle_Prediction\tPrediction_Means\tPrediction_Medians\tPrediction_Lower_Bounds\tPrediction_Upper_Bounds\tStd_Deviation\t%Identity_Nearest_VPOD_Sequence\tSequence_Length\tLmax_Hex_Color\n')
+                        print('Names\tSingle_Prediction\tPrediction_Means\tPrediction_Medians\tPrediction_Lower_Bounds\tPrediction_Upper_Bounds\tStd_Deviation\t%Identity_Nearest_VPOD_Sequence\tSequence_Length\n')
+                        
+                        # colors for hex_color_list generated from the mean prediction of the bootstraped predictions during the visulization steps    
+                        hex_color_list = plot_prediction_subsets_with_CI(names, prediction_dict, mean_predictions, 
+                                                                         bootstrap_file, args.visualize_bootstrap)
+                        
+                        write_to_excel(names, predictions, per_iden_list, excel_output, 
+                                        mean_predictions, median_predictions, ci_lowers, 
+                                        ci_uppers, std_dev_list, hex_color_list, seq_lens_list)
+                        
+                    f.write(f"{names[i]}\t{predictions[i]}\t{mean_predictions[i]}\t{median_predictions[i]}\t{ci_lowers[i]}\t{ci_uppers[i]}\t{std_dev_list[i]}\t{per_iden_list[i]}\t{seq_lens_list[i]}\t{hex_color_list[i]}\n")
+                    print(f"{names[i]}\t{predictions[i]}\t{mean_predictions[i]}\t{median_predictions[i]}\t{ci_lowers[i]}\t{ci_uppers[i]}\t{std_dev_list[i]}\t{per_iden_list[i]}\t{seq_lens_list[i]}\n")
                     i+=1
-                    
         with open(log_file, 'w') as f:
-            f.write(f"\nModel Used:\t{args.model}\nEncoding Method:\t{args.encoding_method}\n")
+            command_line_input = ' '.join(sys.argv)
+            f.write(f"Command executed:\t{command_line_input}\n")
+            f.write(f"Model Used:\t{args.model}\nEncoding Method:\t{args.encoding_method}\n")
             print(f"\nModel Used:\t{args.model}\nEncoding Method:\t{args.encoding_method}\n")
+                            
+                        
+        with open(f'{report_dir}/fig_tree_color_annotation.txt', 'w') as g:
+            g.write("Name\t!color\n")  # Header row
+            for name, hex_color in zip(names, hex_color_list):
+                g.write(f"{name}\t{hex_color}\n") 
+        with open(f'{report_dir}/itol_color_annotation.txt', 'w') as g:
+            g.write("TREE_COLORS\nSEPARATOR TAB\nDATA\n")
+            for name, hex_color in zip(names, hex_color_list):
+                g.write(f"{name}\tlabel_background\t{hex_color}\n") 
             
         print('Predictions Complete!')
-        os.remove('./tmp')
+        #os.remove('./tmp')
 
     else:
         raise Exception("No file passed to input for predictions")
+    
+from openpyxl import Workbook
+from openpyxl.styles import PatternFill
 
-def optics_processing(input_file, report_dir, output_file, model, encoding_method, bootstrap, bootstrap_viz_file):
+def write_to_excel(names, predictions, per_iden_list, output_filename="output.xlsx", 
+                  mean_predictions=None, median_predictions=None, ci_lowers=None, 
+                  ci_uppers=None, std_dev_list=None, hex_color_list=None, seq_lens_list=None):
     """
-    Encapsulates the main processing logic of optics, accepting key parameters directly but has no blastp functionality as of now.
-    """
-    dt_label = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+    Writes data to an Excel sheet, including bootstrap statistics and
+    hexadecimal color codes, and colors the cells based on the hex codes.
 
-    report_dir = f'./optics_on_{report_dir}_{dt_label}'
-    os.makedirs(report_dir)
-    os.makedirs(f'./tmp')
-    bootstrap_file = f'{report_dir}/{bootstrap_viz_file}'
+    Args:
+        names: List of names.
+        predictions: List of predictions.
+        per_iden_list: List of percentage identities.
+        output_filename: Name of the output Excel file.
+        mean_predictions: List of mean predictions (optional, for bootstrap).
+        median_predictions: List of median predictions (optional, for bootstrap).
+        ci_lowers: List of lower confidence intervals (optional, for bootstrap).
+        ci_uppers: List of upper confidence intervals (optional, for bootstrap).
+        std_dev_list: List of standard deviations (optional, for bootstrap).
+        hex_color_list: List of hexadecimal color codes.
+        seq_lens_list: List of sequence lengths
+        """
 
-    if os.path.isfile(input_file):
-        blastp = False
-        blastp_file = None
-        refseq = None
-        reffile = None
-        names, mean_predictions, ci_lowers, ci_uppers, prediction_dict, predictions, visualize, median_predictions = process_sequences_from_file(input_file, model, blastp_file, blastp, refseq, reffile, bootstrap, encoding_method)
-        output = f'{report_dir}/{output_file}'
-        with open(output, 'w') as f:
-            i = 0
-            while i in range(len(names)):
-                if bootstrap == 'no' or bootstrap == False or bootstrap == 'False':
-                    if i == 0:
-                        f.write('Names\tPredictions\n')
-                    f.write(f"{names[i]}:\t{predictions[i]}\n")
-                    print(f"{names[i]}:\t{predictions[i]}\n")
-                    i+=1
-                else:
-                    if i == 0:
-                        f.write('Names\tSingle_Prediction\tPrediction_Means\tPrediction_Medians\tPrediction_Lower_Bounds\tPrediction_Upper_Bounds\n')
-                        print('Names\tSingle_Prediction\tPrediction_Means\tPrediction_Medians\tPrediction_Lower_Bounds\tPrediction_Upper_Bounds\n')
-                        if visualize == False:
-                            pass
-                        else:
-                            bootstrap_plots = plot_predictions_with_CI(names, prediction_dict, mean_predictions, bootstrap_file)
-                    f.write(f"{names[i]}:\t{predictions[i]}\t{mean_predictions[i]}\t{median_predictions[i]}\t{ci_lowers[i]}\t{ci_uppers[i]}\n")
-                    print(f"{names[i]}:\t{predictions[i]}\t{mean_predictions[i]}\t{median_predictions[i]}\t{ci_lowers[i]}\t{ci_uppers[i]}\n")
-                    i+=1
-            f.write(f"\nModel Used:\t{model}\nEncoding Method:\t{encoding_method}\n")
-            print(f"\nModel Used:\t{model}\nEncoding Method:\t{encoding_method}\n")
-            print('Predictions Complete!')
+    wb = Workbook()
+    ws = wb.active
+
+    
+    if mean_predictions == None:
+        ws.append(['Names', 'Single_Prediction', '%Identity_Nearest_VPOD_Sequence', 'Sequence_Length','Lmax_Hex_Color'])
+        for i in range(len(names)):
+            # Because openpyxel is picky about hex-codes we need to remove the '#' symbol for it to accept it as a fill color.
+            hex_color = hex_color_list[i].replace('#','') 
+            ws.append([names[i], predictions[i], per_iden_list[i], seq_lens_list[i], hex_color_list[i]])
+            ws.cell(row=i+2, column=5).fill = PatternFill(start_color=hex_color, 
+                                                        end_color=hex_color, 
+                                                        fill_type="solid")
     else:
-        raise Exception("No file passed to input for predictions")
-
+        ws.append(['Names', 'Single_Prediction', 'Prediction_Means', 'Prediction_Medians',
+                    'Prediction_Lower_Bounds', 'Prediction_Upper_Bounds', 'Std_Deviation', 
+                    '%Identity_Nearest_VPOD_Sequence', 'Sequence_Lengths','Lmax_Hex_Color'])
+        for i in range(len(names)):
+            # Because openpyxel is picky about hex-codes we need to remove the '#' symbol for it to accept it as a fill color.
+            hex_color = hex_color_list[i].replace('#','') 
+            ws.append([names[i], predictions[i], mean_predictions[i], median_predictions[i],
+                        ci_lowers[i], ci_uppers[i], std_dev_list[i], per_iden_list[i], seq_lens_list[i], hex_color_list[i]])
+            ws.cell(row=i+2, column=10).fill = PatternFill(start_color=hex_color, 
+                                                        end_color=hex_color, 
+                                                        fill_type="solid")
+    wb.save(output_filename)
+    
 if __name__ == "__main__":
     main()
