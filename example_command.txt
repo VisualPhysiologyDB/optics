@@ -1,18 +1,1 @@
 python optics_predictions.py -in ./examples/optics_ex_short.txt -rd short_ex_test_of_optics -out ex_predictions.tsv -m wildtype -e aa_prop -b True -ir ex_blastp_report.txt -r squid -s True -viz True -bsv ex_bs_viz
-
-
-python optics_predictions.py -in E:\safra\Documents\GitHub\visual-physiology-opsin-db\scripts_n_notebooks\vpod_ML_workflows\subtests\work_in_progress\mine_n_match\mnm_data\mnm_on_mnm_on_longcore_2024-12-04_15-40-56\mined_mnm_on_longcore_seqs.fasta -rd longcore_refined -out longcore_predictions.tsv -m whole-dataset -e aa_prop -b True -ir longcore_blastp_report.txt -r bovine -s True -viz True -bsv longcore_bs_viz
-
-python optics_predictions.py -in E:\safra\Documents\GitHub\visual-physiology-opsin-db\scripts_n_notebooks\vpod_ML_workflows\subtests\work_in_progress\mine_n_match\mnm_data\mnm_on_mnm_on_murphy_2024-12-05_13-03-22\mined_mnm_on_murphy_seqs.fasta -rd murphy -out murphy_predictions.tsv -m whole-dataset -e aa_prop -b True -ir murphy_blastp_report.txt -r bovine -s True -viz True -bsv murphy_bs_viz
-
-python optics_predictions.py -in E:\safra\Documents\GitHub\visual-physiology-opsin-db\scripts_n_notebooks\vpod_ML_workflows\subtests\work_in_progress\mine_n_match\mnm_data\mnm_on_mnm_on_scp_2024-12-05_12-05-17\mined_mnm_on_scp_seqs.fasta -rd scp_refined -out scp_predictions.tsv -m whole-dataset -e aa_prop -b True -ir scp_blastp_report.txt -r bovine -s True -viz True -bsv scp_bs_viz
-
-python optics_predictions.py -in E:\safra\Documents\GitHub\visual-physiology-opsin-db\scripts_n_notebooks\vpod_ML_workflows\vpod_1.2_data_splits_2024-10-19_10-30-09\mut_only.txt -rd vpod_muts_aap -out vpod_mut_predictions.tsv -m wild-type -e aa_prop -b False -s True -viz True -bsv vpod_muts_bs_viz
-
-python optics_predictions.py -in E:\safra\Documents\GitHub\visual-physiology-opsin-db\scripts_n_notebooks\vpod_ML_workflows\vpod_1.2_data_splits_2024-10-19_10-30-09\mut_only.txt -rd vpod_muts_oh -out vpod_mut_predictions.tsv -m wildtype -e one_hot -b False -s True -viz True -bsv vpod_muts_bs_viz
-
-python optics_predictions.py -in ./err_test.txt -rd test -out test.tsv -m wild-type -e aa_prop -b False -s True -viz True -bsv test_bs_viz
-
-
-
-python optics_predictions.py -in E:\safra\Documents\GitHub\visual-physiology-opsin-db\scripts_n_notebooks\vpod_ML_workflows\subtests\work_in_progress\mine_n_match\mnm_data\mnm_on_mnm_on_all_dbs_2024-12-10_23-31-03\mined_mnm_on_all_dbs_seqs_cleaned.fasta -rd all_dbs -out all_dbs_predictions.tsv -m whole-dataset -e aa_prop -b True -ir all_dbs_blastp_report.txt -r bovine -s True -viz True -bsv all_dbs_bs_viz
