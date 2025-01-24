@@ -1,0 +1,3 @@
+Command executed:	optics_predictions.py -in E:\safra\Documents\GitHub\visual-physiology-opsin-db\scripts_n_notebooks\vpod_ML_workflows\subtests\work_in_progress\mine_n_match\data_sources\seqs\acc_db_seqs.fasta -rd acc_seq_dbs -out acc_seq_dbs_predictions.tsv -m whole-dataset -e aa_prop -b True -ir acc_seq_dbs_blastp_report.txt -r bovine -s True -viz False -bsv all_dbs_bs_viz
+Model Used:	whole-dataset
+Encoding Method:	aa_prop

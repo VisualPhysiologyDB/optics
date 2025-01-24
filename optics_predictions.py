@@ -70,7 +70,16 @@ def process_sequence(sequence, name, selected_model, identity_report, blastp, re
             "vertebrate": f"{model_dir}/bs_models/vpod_1.2/aa_prop/vert_bootstrap",
             "invertebrate": f"{model_dir}/bs_models/vpod_1.2/aa_prop/invert_bootstrap",
             "wildtype-vert": f"{model_dir}/bs_models/vpod_1.2/aa_prop/wt_vert_bootstrap",
-            "type-one": f"{model_dir}/reg_models/vpod_1.2/aa_prop/t1_bootstrap",
+            "type-one": f"{model_dir}/bs_models/vpod_1.2/aa_prop/t1_bootstrap",
+        }
+        
+        model_cache_dirs = {
+            "whole-dataset": f"{data_dir}/cached_predictions/bs_models/vpod_1.2/aa_prop/wds_bootstrap",
+            "wildtype": f"{data_dir}/cached_predictions/bs_models/vpod_1.2/aa_prop/wt_bootstrap",
+            "vertebrate": f"{data_dir}/cached_predictions/bs_models/vpod_1.2/aa_prop/vert_bootstrap",
+            "invertebrate": f"{data_dir}/cached_predictions/bs_models/vpod_1.2/aa_prop/invert_bootstrap",
+            "wildtype-vert": f"{data_dir}/cached_predictions/bs_models/vpod_1.2/aa_prop/wt_vert_bootstrap",
+            "type-one": f"{data_dir}/cached_predictions/bs_models/vpod_1.2/aa_prop/t1_bootstrap",
         }
     else:
         model_directories = {
@@ -89,9 +98,17 @@ def process_sequence(sequence, name, selected_model, identity_report, blastp, re
             "vertebrate": f"{model_dir}/bs_models/vpod_1.2/one_hot/vert_bootstrap",
             "invertebrate": f"{model_dir}/bs_models/vpod_1.2/one_hot/invert_bootstrap",
             "wildtype-vert": f"{model_dir}/bs_models/vpod_1.2/one_hot/wt_vert_bootstrap",
-            "type-one": f"{model_dir}/reg_models/vpod_1.2/one_hot/t1_bootstrap",
+            "type-one": f"{model_dir}/bs_models/vpod_1.2/one_hot/t1_bootstrap",
         }
 
+        model_cache_dirs = {
+            "whole-dataset": f"{data_dir}/cached_predictions/bs_models/vpod_1.2/one_hot/wds_bootstrap",
+            "wildtype": f"{data_dir}/cached_predictions/bs_models/vpod_1.2/one_hot/wt_bootstrap",
+            "vertebrate": f"{data_dir}/cached_predictions/bs_models/vpod_1.2/one_hot/vert_bootstrap",
+            "invertebrate": f"{data_dir}/cached_predictions/bs_models/vpod_1.2/one_hot/invert_bootstrap",
+            "wildtype-vert": f"{data_dir}/cached_predictions/bs_models/vpod_1.2/one_hot/wt_vert_bootstrap",
+            "type-one": f"{data_dir}/cached_predictions/bs_models/vpod_1.2/one_hot/t1_bootstrap",
+        }
 
     if sequence == None:
         return ('Error: No sequence given')
