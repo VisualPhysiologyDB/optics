@@ -33,7 +33,7 @@ def calculate_ensemble_CI(model_folder, query, name, predictions_dict):
     median_predictions = np.median(predictions_all)
     std_dev = np.std(predictions_all)
 
-    return mean_predictions, ci_lower, ci_upper, predictions_dict, median_predictions, std_dev
+    return mean_predictions, ci_lower, ci_upper, predictions_dict, median_predictions, std_dev, predictions_all
 
 def plot_prediction_subsets_with_CI(names, predictions, mean_preds, pdf_file, visualize_bootstrap):
     # Customize colors 

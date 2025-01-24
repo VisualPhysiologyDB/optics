@@ -3,10 +3,13 @@ import subprocess
 from deepBreaks.utils import load_obj
 from deepBreaks.preprocessing import read_data
 import pandas as pd
+import json
 import argparse
 import os
 import sys
+import numpy as np
 import random
+import copy
 import datetime
 import matplotlib
 from joblib import Parallel, delayed
@@ -16,8 +19,42 @@ from tqdm import tqdm
 from optics_scripts.blastp_align import seq_sim_report
 from optics_scripts.bootstrap_predictions import calculate_ensemble_CI, plot_prediction_subsets_with_CI, wavelength_to_rgb
 
-def process_sequence(sequence, name, selected_model, identity_report, blastp, refseq, reffile, bootstrap, prediction_dict = None, encoding_method='one_hot'):
-    data_dir = "./data"
+def extract_fasta(file):
+    with open(file, 'r') as f:
+        sequences = []
+        names = []
+        i = 0
+        line_count = 0
+        entry = ""
+        lines = f.readlines()
+        num_lines = len(lines)
+        #print(num_lines)
+
+        for line in lines:
+            if '>' in line:
+                if i == 1:
+                    names.append(line.replace('>','').strip().replace(' ','_'))
+                    sequences.append(entry)
+                    entry = ""
+                    entry += line
+                    #print(sequences)
+                    line_count+=1
+                else:
+                    names.append(line.replace('>','').strip().replace(' ','_'))
+                    entry += line
+                    i+=1
+                    line_count+=1
+            else:
+                entry += line
+                line_count+=1
+                if line_count >= num_lines:
+                     sequences.append(entry)
+    #print(sequences)
+    #print(names)
+    return names,sequences
+
+def process_sequence(sequence=None, name=None, selected_model=None, identity_report=None, blastp=None, refseq=None, reffile=None, bootstrap=None, prediction_dict=None, encoding_method='one_hot', wrk_dir = '', only_blast = False):
+    data_dir = f"./data"
     model_datasets = {
     "whole-dataset": f"{data_dir}/fasta/vpod_1.2/wds_aligned_VPOD_1.2_het.fasta",
     "wildtype": f"{data_dir}/fasta/vpod_1.2/wt_aligned_VPOD_1.2_het.fasta",
@@ -73,14 +110,7 @@ def process_sequence(sequence, name, selected_model, identity_report, blastp, re
             "type-one": f"{model_dir}/bs_models/vpod_1.2/aa_prop/t1_bootstrap",
         }
         
-        model_cache_dirs = {
-            "whole-dataset": f"{data_dir}/cached_predictions/bs_models/vpod_1.2/aa_prop/wds_bootstrap",
-            "wildtype": f"{data_dir}/cached_predictions/bs_models/vpod_1.2/aa_prop/wt_bootstrap",
-            "vertebrate": f"{data_dir}/cached_predictions/bs_models/vpod_1.2/aa_prop/vert_bootstrap",
-            "invertebrate": f"{data_dir}/cached_predictions/bs_models/vpod_1.2/aa_prop/invert_bootstrap",
-            "wildtype-vert": f"{data_dir}/cached_predictions/bs_models/vpod_1.2/aa_prop/wt_vert_bootstrap",
-            "type-one": f"{data_dir}/cached_predictions/bs_models/vpod_1.2/aa_prop/t1_bootstrap",
-        }
+
     else:
         model_directories = {
             "whole-dataset": f"{model_dir}/reg_models/vpod_1.2/one_hot/wds_xgb.pkl",
@@ -101,15 +131,6 @@ def process_sequence(sequence, name, selected_model, identity_report, blastp, re
             "type-one": f"{model_dir}/bs_models/vpod_1.2/one_hot/t1_bootstrap",
         }
 
-        model_cache_dirs = {
-            "whole-dataset": f"{data_dir}/cached_predictions/bs_models/vpod_1.2/one_hot/wds_bootstrap",
-            "wildtype": f"{data_dir}/cached_predictions/bs_models/vpod_1.2/one_hot/wt_bootstrap",
-            "vertebrate": f"{data_dir}/cached_predictions/bs_models/vpod_1.2/one_hot/vert_bootstrap",
-            "invertebrate": f"{data_dir}/cached_predictions/bs_models/vpod_1.2/one_hot/invert_bootstrap",
-            "wildtype-vert": f"{data_dir}/cached_predictions/bs_models/vpod_1.2/one_hot/wt_vert_bootstrap",
-            "type-one": f"{data_dir}/cached_predictions/bs_models/vpod_1.2/one_hot/t1_bootstrap",
-        }
-
     if sequence == None:
         return ('Error: No sequence given')
     #print(sequence)
@@ -123,7 +144,7 @@ def process_sequence(sequence, name, selected_model, identity_report, blastp, re
     model_bs_folder = model_bs_dirs[selected_model]
     model = model_directories[selected_model]
     
-    wrk_dir = os.getcwd().replace('\\','/')
+    #wrk_dir = os.getcwd().replace('\\','/')
     with tempfile.NamedTemporaryFile(mode="w", dir=f"{wrk_dir}/tmp", suffix=".fasta", delete=False) as temp_seq_file:
         temp_seq = temp_seq_file.name  # Get the unique filename
         if '>' in sequence:
@@ -131,6 +152,14 @@ def process_sequence(sequence, name, selected_model, identity_report, blastp, re
         else:
             sequence = ">placeholder_name\n" + sequence
             temp_seq_file.write(sequence)
+    
+    # This is a special case for when a cached sequence is detected
+    if only_blast == True:
+        if blastp == 'no' or blastp == False or blastp == 'False':
+            percent_iden = '-'
+        else:
+            percent_iden = seq_sim_report(temp_seq, name, refseq, blast_db, raw_data, metadata, identity_report, reffile)
+        return percent_iden
 
     if blastp == 'no' or blastp == False or blastp == 'False':
         percent_iden = '-'
@@ -176,16 +205,16 @@ def process_sequence(sequence, name, selected_model, identity_report, blastp, re
     except FileNotFoundError:
         raise Exception("File does not exist")
 
-    if bootstrap == True or bootstrap == 'True'  or bootstrap == 'true':
+    if bootstrap == True:
         # ... (Load the selected model and make a bootstrap prediction)
-        mean_prediction, ci_lower, ci_upper, prediction_dict, median_prediction, std_dev = calculate_ensemble_CI(model_bs_folder, new_seq_test, name, prediction_dict)
+        mean_prediction, ci_lower, ci_upper, prediction_dict, median_prediction, std_dev, predictions_all = calculate_ensemble_CI(model_bs_folder, new_seq_test, name, prediction_dict)
         #print(f'{mean_prediction}, {ci_lower}, {ci_upper}, {prediction_dict}')
         
         # ... (Load the selected model and make a single prediction)
         loaded_mod = load_obj(model)
         prediction = loaded_mod.predict(new_seq_test)
         
-        return (round(float(mean_prediction),1), round(float(ci_lower),1), round(float(ci_upper),1), prediction_dict, round(float(prediction[0]),1), round(float(median_prediction),1), str(percent_iden), round(float(std_dev),1))
+        return (round(float(mean_prediction),1), round(float(ci_lower),1), round(float(ci_upper),1), prediction_dict, round(float(prediction[0]),1), round(float(median_prediction),1), str(percent_iden), round(float(std_dev),1), predictions_all.tolist())
 
     else:
         # ... (Load the selected model and make a prediction)
@@ -195,74 +224,103 @@ def process_sequence(sequence, name, selected_model, identity_report, blastp, re
         return(round(float(prediction[0]),1), str(percent_iden))
  
 
-def process_sequences_from_file(file,selected_model, identity_report, blastp, refseq, reffile, bootstrap, encoding_method):
+def process_sequences_from_file(file, selected_model, identity_report, blastp, refseq, reffile, bootstrap, encoding_method):
+    wrk_dir = os.getcwd().replace('\\','/')
+    cache_dir = f"./data/cached_predictions/"
+    
+    if (bootstrap == True or bootstrap == 'True' or bootstrap == 'true' or bootstrap == 'yes'):
+        bootstrap = True
+        model_type = 'bs_models'
+    else:
+        bootstrap = False
+        model_type = 'reg_models'
+    model_cache_dirs = {
+        "whole-dataset": f"{cache_dir}/{model_type}/vpod_1.2/{encoding_method}/wds_pred_dict.json",
+        "wildtype": f"{cache_dir}/{model_type}/vpod_1.2/{encoding_method}/wt_pred_dict.json",
+        "vertebrate": f"{cache_dir}/{model_type}/vpod_1.2/{encoding_method}/vert_pred_dict.json",
+        "invertebrate": f"{cache_dir}/{model_type}/vpod_1.2/{encoding_method}/invert_pred_dict.json",
+        "wildtype-vert": f"{cache_dir}/{model_type}/vpod_1.2/{encoding_method}/wt_pred_dict.json",
+        "type-one": f"{cache_dir}/{model_type}/vpod_1.2/{encoding_method}/t1_pred_dict.json",
+    }
+
+    cache_file = model_cache_dirs[selected_model]
+    
     if file == None:
         raise Exception('Error: No file given')
     
-    with open(file, 'r') as f:
-        sequences = []
-        names = []
-        i = 0
-        line_count = 0
-        entry = ""
-        lines = f.readlines()
-        num_lines = len(lines)
-        #print(num_lines)
-
-        for line in lines:
-            if '>' in line:
-                if i == 1:
-                    names.append(line.replace('>','').strip().replace(' ','_'))
-                    sequences.append(entry)
-                    entry = ""
-                    entry += line
-                    #print(sequences)
-                    line_count+=1
-                else:
-                    names.append(line.replace('>','').strip().replace(' ','_'))
-                    entry += line
-                    i+=1
-                    line_count+=1
-            else:
-                entry += line
-                line_count+=1
-                if line_count >= num_lines:
-                     sequences.append(entry)
-    #print(sequences)
-    #print(names)
-                     
+    names,sequences = extract_fasta(file)       
     predictions = []
     mean_predictions = []
     median_predictions = []
     std_dev_list = []
     ci_lowers = []
     ci_uppers = []
-    #prediction_dict = {}
     per_iden_list = []
     seq_lens = []
-    i = 0
-
-
+    # Load the existing prediction dictionary to pull from if a sequence has already been predicted by the chosen model
+    # Check to see if an existing prediiction dictionary already exists to save time.
+    # In this dictionary the sequence will be our keys, and the len(seq), prediction, percent_iden, mean_prediction, ci_lower, ci_upper, median_prediction, std_dev will be the corresponding values...
+    if os.path.isfile(cache_file):
+        try:
+            with open(cache_file, 'r') as f:
+                cached_pred_dict = json.load(f)
+        except FileNotFoundError:
+            cached_pred_dict = {}
+    else:
+        cached_pred_dict = {}
+    
     manager = Manager()
-    prediction_dict = manager.dict()  # Use a shared dictionary
+    prediction_dict = manager.dict()  # Use a shared dictionary for prediction outputs
+    mp_cached_pred_dict = manager.dict(cached_pred_dict)  # Initialize a multiprocess available cached dict with cached data
     
     def process_sequence_wrapper(seq, name):  # Helper function
-        if bootstrap == 'no' or bootstrap == False or bootstrap == 'False' or bootstrap == 'false':
-            prediction, percent_iden = process_sequence(seq, name, selected_model, identity_report, blastp, refseq, reffile, bootstrap, prediction_dict, encoding_method)
-            return len(seq), prediction, percent_iden, None, None, None, None  # Consistent return values
+        just_seq = seq.split('\n')[1]
+        if bootstrap == False:
+            if just_seq not in list(mp_cached_pred_dict.keys()):
+                prediction, percent_iden = process_sequence(seq, name, selected_model, identity_report, blastp, refseq, reffile, bootstrap, prediction_dict, encoding_method, wrk_dir)
+                mp_cached_pred_dict[just_seq] = {'len': len(just_seq), 'single_prediction': prediction}
+                return len(just_seq), prediction, percent_iden, None, None, None, None, None  # Consistent return values
+            else:
+                percent_iden = process_sequence(seq, name, selected_model, identity_report, blastp, refseq, reffile, bootstrap, prediction_dict, encoding_method, wrk_dir, only_blast=True)
+                return mp_cached_pred_dict[just_seq]['len'], mp_cached_pred_dict[just_seq]['single_prediction'], percent_iden, None, None, None, None, None  # Consistent return values
+
         else:
-            mean_prediction, ci_lower, ci_upper, updated_prediction_dict, prediction, median_prediction, percent_iden, std_dev = process_sequence(seq, name, selected_model, identity_report, blastp, refseq, reffile, bootstrap, prediction_dict, encoding_method)
-            prediction_dict.update(updated_prediction_dict) # Update the shared dictionary with the returned dictionary
-            return len(seq), prediction, percent_iden, mean_prediction, ci_lower, ci_upper, median_prediction, std_dev
+            if just_seq not in list(mp_cached_pred_dict.keys()):
+                mean_prediction, ci_lower, ci_upper, updated_prediction_dict, prediction, median_prediction, percent_iden, std_dev, predictions_all = process_sequence(seq, name, selected_model, identity_report, blastp, refseq, reffile, bootstrap, prediction_dict, encoding_method, wrk_dir)
+                prediction_dict.update(updated_prediction_dict) # Update the shared dictionary with the returned dictionary
+                mp_cached_pred_dict[just_seq] = {'len': len(just_seq),
+                                            'single_prediction': prediction,
+                                            'mean_prediction' : mean_prediction,
+                                            'ci_lower' : ci_lower,
+                                            'ci_upper' : ci_upper,
+                                            'median_prediction' : median_prediction,
+                                            'std_deviation' : std_dev,
+                                            'all_bs_predictions' : predictions_all
+                                            }
+                # If the seq is in our cache, I need to be able to update the prediction_dict with that info...
+                return len(just_seq), prediction, percent_iden, mean_prediction, ci_lower, ci_upper, median_prediction, std_dev
+            else:
+                percent_iden = process_sequence(seq, name, selected_model, identity_report, blastp, refseq, reffile, bootstrap, prediction_dict, encoding_method, wrk_dir, only_blast=True)
+                prediction_dict[name] = np.array(mp_cached_pred_dict[just_seq]['all_bs_predictions'])
+                return mp_cached_pred_dict[just_seq]['len'], mp_cached_pred_dict[just_seq]['single_prediction'], percent_iden, mp_cached_pred_dict[just_seq]['mean_prediction'], mp_cached_pred_dict[just_seq]['ci_lower'], mp_cached_pred_dict[just_seq]['ci_upper'], mp_cached_pred_dict[just_seq]['median_prediction'], mp_cached_pred_dict[just_seq]['std_deviation']
 
 
-    with tqdm_joblib(tqdm(total=len(sequences), desc="Processing Sequences", ascii = True, bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}{postfix}]", dynamic_ncols=True)) as pbar:  # Use tqdm for progress bar
-        results = Parallel(n_jobs=-1)(delayed(process_sequence_wrapper)(seq, names[i]) for i, seq in enumerate(sequences))
+    try:
+        with tqdm_joblib(tqdm(total=len(sequences), desc="Processing Sequences", ascii = True, bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}{postfix}]", dynamic_ncols=True)) as pbar:  # Use tqdm for progress bar
+            results = Parallel(n_jobs=-1)(delayed(process_sequence_wrapper)(seq, names[i]) for i, seq in enumerate(sequences))
+    except Exception as e:
+        updated_cached_pred_dict = dict(mp_cached_pred_dict)        
+        # Save the taxon dictionary if it doesn't yet exist or if it has been updated since being loaded 
+        if list(updated_cached_pred_dict.keys()) != list(cached_pred_dict.keys()):  
+            #print('Saving Updated Dictionary') 
+            try:
+                with open(cache_file, 'w') as f:
+                    json.dump(updated_cached_pred_dict, f, indent=4)  # indent for pretty formatting
+                    raise Exception(f"Error Occured During the Prediction Process:\n{e}\n")
 
-    #with Parallel(n_jobs=-1, verbose=100) as parallel:  # verbose controls output
-    #    results = parallel(delayed(process_sequence_wrapper)(seq, names[i]) 
-    #                    for i, seq in enumerate(sequences))
-        
+            except FileNotFoundError:
+                raise Exception(f"Error: Cached prediction file can't be saved...\n")
+
     # Extract results
     for result in results:
         seq_len, prediction, percent_iden, mean_prediction, ci_lower, ci_upper, median_prediction, std_dev = result
@@ -275,6 +333,16 @@ def process_sequences_from_file(file,selected_model, identity_report, blastp, re
             ci_uppers.append(ci_upper)
             median_predictions.append(median_prediction)
             std_dev_list.append(std_dev)
+            
+    updated_cached_pred_dict = dict(mp_cached_pred_dict)        
+    # Save the taxon dictionary if it doesn't yet exist or if it has been updated since being loaded 
+    if list(updated_cached_pred_dict.keys()) != list(cached_pred_dict.keys()):  
+        #print('Saving Updated Dictionary') 
+        try:
+            with open(cache_file, 'w') as f:
+                json.dump(updated_cached_pred_dict, f, indent=4)  # indent for pretty formatting
+        except FileNotFoundError:
+            print(f"Error: Cached prediction file can't be saved...\n")
 
     return(names, mean_predictions, ci_lowers, ci_uppers, prediction_dict, predictions, median_predictions, per_iden_list, std_dev_list, seq_lens)
 
@@ -312,7 +380,6 @@ def main():
 
     args = parser.parse_args()
 
-
     if os.path.isdir('./tmp'):
         pass
     else:    
@@ -337,9 +404,6 @@ def main():
     bootstrap_file = f'{report_dir}/{args.bootstrap_viz_file}'
    
     log_file = f'{report_dir}/arg_log.txt'
-    
-    if (args.bootstrap == True or args.bootstrap == 'True' or args.bootstrap == 'true') and (args.model == 'type-one'):
-        raise(Exception('Currently No Bootsrap Functionality for Type-one (Microbiral) Opsins! Check Back Soon!'))
     
     if os.path.isfile(args.input):
         names, mean_predictions, ci_lowers, ci_uppers, prediction_dict, predictions, median_predictions, per_iden_list, std_dev_list, seq_lens_list = process_sequences_from_file(args.input, args.model, blastp_file, args.blastp, args.refseq, args.reffile, args.bootstrap, args.encoding_method)
