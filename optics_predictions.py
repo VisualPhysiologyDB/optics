@@ -311,7 +311,7 @@ def process_sequences_from_file(file, selected_model, identity_report, blastp, r
     except Exception as e:
         updated_cached_pred_dict = dict(mp_cached_pred_dict)        
         # Save the taxon dictionary if it doesn't yet exist or if it has been updated since being loaded 
-        if list(updated_cached_pred_dict.keys()) != list(cached_pred_dict.keys()):  
+        if list(updated_cached_pred_dict.keys()) > list(cached_pred_dict.keys()):  
             #print('Saving Updated Dictionary') 
             try:
                 with open(cache_file, 'w') as f:
@@ -336,7 +336,7 @@ def process_sequences_from_file(file, selected_model, identity_report, blastp, r
             
     updated_cached_pred_dict = dict(mp_cached_pred_dict)        
     # Save the taxon dictionary if it doesn't yet exist or if it has been updated since being loaded 
-    if list(updated_cached_pred_dict.keys()) != list(cached_pred_dict.keys()):  
+    if list(updated_cached_pred_dict.keys()) > list(cached_pred_dict.keys()):  
         #print('Saving Updated Dictionary') 
         try:
             with open(cache_file, 'w') as f:
