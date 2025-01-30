@@ -34,7 +34,7 @@
    ```bash
    conda create --name optics_env python=3.11 
    ```
-   - THEN
+   ### THEN
    ```bash
    conda activate optics_env
    ```
