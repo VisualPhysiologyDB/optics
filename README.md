@@ -34,15 +34,16 @@
    ```bash
    conda create --name optics_env python=3.11 
    ```
+   - THEN
+   ```bash
+   conda activate optics_env
+   ```
    B. Use the 'requirements.txt' file to download base package dependencies for OPTICS
    ```bash
    pip install -r requirements.txt
    ```
-   - THEN
      
-   ```bash
-   conda activate optics_env
-   ```
+
    C. **Download MAFFT and BLAST**
    
      IF working on MAC or LINUX device:
