@@ -100,7 +100,7 @@ Bootstrap Analysis Args (optional):
   ### Example Command Line Usage vvv
   
   ```bash
-  python optics_predictions.py -i ./examples/optics_ex_short.txt -o ex_test_of_optics -p ex_predictions -m wildtype -e aa_prop --blastp --refseq squid --bootstrap --visualize_bootstrap
+  python optics_predictions.py -i ./examples/optics_ex_short.txt -o ex_test_of_optics -p ex_predictions -m wildtype -e aa_prop --blastp -blastp_report blastp_report.txt --refseq squid --bootstrap --visualize_bootstrap --bootstrap_viz_file bootstrap_viz
   ```
 ### Input
 
