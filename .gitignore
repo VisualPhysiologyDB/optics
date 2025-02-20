@@ -4,7 +4,11 @@ optics_scripts/__pycache__/
 tmp/
 *tmp/
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 trash/
+=======
+trash/
+>>>>>>> Stashed changes
 =======
 trash/
 >>>>>>> Stashed changes
