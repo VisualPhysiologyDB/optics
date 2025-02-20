@@ -8,8 +8,9 @@ import argparse
 import os
 import sys
 import numpy as np
-import random
-import copy
+#import random
+#import copy
+import pathlib  # pathlib is generally better than os.path (see below)
 import datetime
 import matplotlib
 from joblib import Parallel, delayed
@@ -54,7 +55,8 @@ def extract_fasta(file):
     return names,sequences
 
 def process_sequence(sequence=None, name=None, selected_model=None, identity_report=None, blastp=None, refseq=None, reffile=None, bootstrap=None, prediction_dict=None, encoding_method='one_hot', wrk_dir = '', only_blast = False):
-    data_dir = f"./data"
+    data_dir = f"{wrk_dir}/data"
+    #print(f'This is the data_dir: {data_dir}')
     model_datasets = {
     "whole-dataset": f"{data_dir}/fasta/vpod_1.2/wds_aligned_VPOD_1.2_het.fasta",
     "wildtype": f"{data_dir}/fasta/vpod_1.2/wt_aligned_VPOD_1.2_het.fasta",
@@ -89,7 +91,7 @@ def process_sequence(sequence=None, name=None, selected_model=None, identity_rep
     "type-one": f"{data_dir}/blast_dbs/vpod_1.2/t1_db",
     }   
 
-    model_dir = "./models"
+    model_dir = f"{wrk_dir}/models"
     #add if statements here for the different encoding methods...
     if encoding_method == 'aa_prop':
         model_directories = {
@@ -147,6 +149,7 @@ def process_sequence(sequence=None, name=None, selected_model=None, identity_rep
     #wrk_dir = os.getcwd().replace('\\','/')
     with tempfile.NamedTemporaryFile(mode="w", dir=f"{wrk_dir}/tmp", suffix=".fasta", delete=False) as temp_seq_file:
         temp_seq = temp_seq_file.name  # Get the unique filename
+        #print(temp_seq)
         if '>' in sequence:
             temp_seq_file.write(sequence)
         else:
@@ -158,13 +161,15 @@ def process_sequence(sequence=None, name=None, selected_model=None, identity_rep
         if blastp == 'no' or blastp == False or blastp == 'False':
             percent_iden = '-'
         else:
-            percent_iden = seq_sim_report(temp_seq, name, refseq, blast_db, raw_data, metadata, identity_report, reffile)
+            percent_iden = seq_sim_report(temp_seq, name, refseq, blast_db, raw_data, metadata, identity_report, reffile, wrk_dir)
+        
+        os.remove(temp_seq)
         return percent_iden
 
     if blastp == 'no' or blastp == False or blastp == 'False':
         percent_iden = '-'
     else:
-        percent_iden = seq_sim_report(temp_seq, name, refseq, blast_db, raw_data, metadata, identity_report, reffile)
+        percent_iden = seq_sim_report(temp_seq, name, refseq, blast_db, raw_data, metadata, identity_report, reffile, wrk_dir)
         #print('Query sequence processed via blastp')
 
     with tempfile.NamedTemporaryFile(mode="w", dir=f"{wrk_dir}/tmp", suffix=".fasta", delete=False) as temp_ali_file:
@@ -224,10 +229,9 @@ def process_sequence(sequence=None, name=None, selected_model=None, identity_rep
         return(round(float(prediction[0]),1), str(percent_iden))
  
 
-def process_sequences_from_file(file, selected_model, identity_report, blastp, refseq, reffile, bootstrap, encoding_method):
-    wrk_dir = os.getcwd().replace('\\','/')
-    cache_dir = f"./data/cached_predictions/"
-    
+def process_sequences_from_file(file, selected_model, identity_report, blastp, refseq, reffile, bootstrap, encoding_method, wrk_dir):
+
+    cache_dir = f"{wrk_dir}/data/cached_predictions"
     if (bootstrap == True or bootstrap == 'True' or bootstrap == 'true' or bootstrap == 'yes'):
         bootstrap = True
         model_type = 'bs_models'
@@ -306,7 +310,9 @@ def process_sequences_from_file(file, selected_model, identity_report, blastp, r
 
 
     try:
-        with tqdm_joblib(tqdm(total=len(sequences), desc="Processing Sequences", ascii = True, bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}{postfix}]", dynamic_ncols=True)) as pbar:  # Use tqdm for progress bar
+        with tqdm_joblib(tqdm(total=len(sequences), desc="Processing Sequences", bar_format="{l_bar}{bar:25}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}{postfix}]", 
+                              dynamic_ncols=True, colour="#CF9FFF",
+                              unit ='seqs',ascii="▓▒░▒▓")) as pbar:  # Use tqdm for progress bar
             results = Parallel(n_jobs=-1)(delayed(process_sequence_wrapper)(seq, names[i]) for i, seq in enumerate(sequences))
     except Exception as e:
         updated_cached_pred_dict = dict(mp_cached_pred_dict)        
@@ -320,6 +326,9 @@ def process_sequences_from_file(file, selected_model, identity_report, blastp, r
 
             except FileNotFoundError:
                 raise Exception(f"Error: Cached prediction file can't be saved...\n")
+        
+        raise Exception(f"Error: {e}...\n")
+
 
     # Extract results
     for result in results:
@@ -346,125 +355,223 @@ def process_sequences_from_file(file, selected_model, identity_report, blastp, r
 
     return(names, mean_predictions, ci_lowers, ci_uppers, prediction_dict, predictions, median_predictions, per_iden_list, std_dev_list, seq_lens)
 
-def main():
-    
-    models = ['whole-dataset', 'wildtype', 'vertebrate', 'invertebrate', 'wildtype-vert','type-one']
-    encoding_methods=['one_hot','aa_prop']
-    ref_seq_choices = ['bovine', 'squid', 'microbe','custom']
-    bool_choices = ['true', 'True', 'false','False', True, False]
+def run_optics_predictions(input_sequence, pred_dir=None, output='optics_predictions.txt',
+                           model="whole-dataset", encoding_method='aa_prop', blastp=True,
+                           iden_report='blastp_report.txt', refseq='bovine', reffile=None,
+                           bootstrap=True, visualize_bootstrap=True, bootstrap_viz_file='bootstrap_viz'):
+    """
+    Processes sequences using a selected model and generates prediction outputs.  This function
+    encapsulates the logic from the original `main` function, making it callable from
+    other scripts or notebooks.
+
+    Args:
+        input_sequence (str): Either a single sequence or a path to a FASTA file.
+        report_dir (str, optional):  Name of folder directory to create.  Defaults to a
+            timestamped directory if None.  If a directory name is provided, a timestamp
+            will be appended to avoid overwrites, and all results put in a 'prediction_outputs' subdirectory.
+        output (str, optional): Name for output file. Defaults to 'optics_predictions.txt'.
+        model (str, optional): Model to use for prediction. Defaults to "whole-dataset".
+        encoding_method (str, optional): Encoding method. Defaults to 'aa_prop'.
+        blastp (bool, optional): Enable blastp analysis. Defaults to True.
+        iden_report (str, optional): Blastp report output file name. Defaults to 'blastp_report.txt'.
+        refseq (str, optional): Reference sequence for blastp. Defaults to 'bovine'.
+        reffile (str, optional): Custom reference sequence file. Defaults to None.
+        bootstrap (bool, optional): Enable bootstrap predictions. Defaults to True.
+        visualize_bootstrap (bool, optional): Enable visualization of bootstrap predictions. Defaults to True.
+        bootstrap_viz_file (str, optional): Output file name for bootstrap visualization. Defaults to 'bootstrap_viz'.
+
+    Returns:
+        tuple: A tuple containing the following lists (in order):
+            - names: List of sequence names.
+            - mean_predictions: List of mean predictions (if bootstrapping).
+            - ci_lowers: List of lower confidence interval bounds (if bootstrapping).
+            - ci_uppers: List of upper confidence interval bounds (if bootstrapping).
+            - prediction_dict: Dictionary of all bootstrap predictions (if bootstrapping).
+            - predictions: List of single predictions (or first prediction from bootstrap).
+            - median_predictions: List of median predictions (if bootstrapping).
+            - per_iden_list: List of percent identities from BLASTp.
+            - std_dev_list: List of standard deviations (if bootstrapping).
+            - seq_lens_list: list of sequence lengths
+
+        Also creates several output files within the specified report directory:
+            - Main results file (TSV or TXT)
+            - Excel file with additional formatting
+            - BLASTp report (if blastp is enabled)
+            - Bootstrap visualization (PDF, if bootstrapping and visualization are enabled)
+            - Argument log file
+            - Color annotation files for FigTree and iTOL
+
+    Raises:
+        Exception: If `input_sequence` is not a file or a valid sequence.  (Improved error handling.)
+    """
     dt_label = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-    
-    parser = argparse.ArgumentParser(description="Process sequences using a selected model")
-    parser.add_argument("-in","--input", help="Either a single sequence or a path to a FASTA file", type=str, required = True)
-    parser.add_argument("-rd","--report_dir", help="Name of folder directory to create", type=str, required = False, default = f'optics_on_unamed_{dt_label}')
-    parser.add_argument("-out","--output", help="Name for output file", type=str, default = 'optics_predictions.txt', required = False)
-    parser.add_argument("-m", "--model", help="Model to use for prediction", 
-                    choices=models, default="whole-dataset", required=False)
-    parser.add_argument("-e", "--encoding_method", help="Select preferred encoding method used to train model and make predictions", 
-                    choices=encoding_methods, default='aa_prop', type = str, required=False)
-    parser.add_argument("-b", "--blastp", help="Option to enable blastp analsis on query sequences", 
-                    type = str or bool, choices=bool_choices, default = True, required=False)
-    parser.add_argument("-ir","--iden_report", help="Name for the blastp report output file", type=str, default = 'blastp_report.txt', required = False)
-    parser.add_argument("-r", "--refseq", help="Reference sequence used for blastp analysis.", 
-                type = str, choices = ref_seq_choices, default= 'bovine', required=False)
-    parser.add_argument("-f", "--reffile", help="Custom reference sequence file used for blastp analysis.", 
-                type = str, default = '', required=False)
-    parser.add_argument("-s", "--bootstrap", help="Option to enable bootstrap predictions on query sequences", 
-                    type = str or bool , choices=bool_choices, default = True, required=False)
-    parser.add_argument("-viz", "--visualize_bootstrap", help="Option to enable/disable visualization of bootstrap predictions on query sequences", 
-                type = str or bool, choices=bool_choices, default = True, required=False)
-    parser.add_argument("-bsv","--bootstrap_viz_file", help="Name for the pdf file output file for visualizing bootstrap predictions", type=str, default = 'bootstrap_viz', required = False)
+    script_path = pathlib.Path(__file__).resolve()  # Get absolute path
+    wrk_dir = str(script_path.parent).replace('\\', '/')
+    #print(f"Script directory (pathlib): {wrk_dir}")
 
-    # python optics_predictions.py -in ./examples/msp_erg_raw.txt -rd msp_test_of_optics -out msp_predictions.tsv -m whole-dataset -e aa_prop -b True -ir msp_blastp_report.tsv -r squid -s False
-    # python optics_predictions.py -in ./examples/msp_erg_raw.txt -rd msp_test_of_optics -out msp_predictions.tsv -m whole-dataset -e aa_prop -b True -ir msp_blastp_report.tsv -r squid -s True -bsv msp_bs_viz
+    # Argument validation (mimicking argparse behavior, but for function inputs)
+    models = ['whole-dataset', 'wildtype', 'vertebrate', 'invertebrate', 'wildtype-vert', 'type-one']
+    encoding_methods = ['one_hot', 'aa_prop']
+    ref_seq_choices = ['bovine', 'squid', 'microbe', 'custom']
+    #bool_choices = ['true', 'True', 'false', 'False', True, False] #not used, we cast directly to bool.
 
-    args = parser.parse_args()
+    if model not in models:
+        raise ValueError(f"Invalid model choice.  Must be one of {models}")
+    if encoding_method not in encoding_methods:
+        raise ValueError(f"Invalid encoding method choice.  Must be one of {encoding_methods}")
+    if refseq not in ref_seq_choices:
+        raise ValueError(f"Invalid refseq choice. Must be one of {ref_seq_choices}")
+    # No need to check bool_choices.  We'll convert directly to boolean.
 
-    if os.path.isdir('./tmp'):
-        pass
-    else:    
-        os.makedirs(f'./tmp')
-        
-    if os.path.isdir(f'./prediction_outputs'):
-        pass
-    else:    
-        os.makedirs(f'./prediction_outputs')   
+    # Directory setup (with added handling for pre-existing directories)
+    if not os.path.isdir(f'{wrk_dir}/tmp'):
+        os.makedirs(f'{wrk_dir}/tmp')
+    if not os.path.isdir('./prediction_outputs'):
+        os.makedirs('./prediction_outputs')
 
-    if 'optics_on_unamed' in args.report_dir:
-        report_dir = args.report_dir
+    if pred_dir is None:
+        report_dir = f'./prediction_outputs/optics_on_unamed_{dt_label}'
     else:
-        report_dir = f'./prediction_outputs/optics_on_{args.report_dir}_{dt_label}'
-    os.makedirs(report_dir)
+        report_dir = f'./prediction_outputs/optics_on_{pred_dir}_{dt_label}'
+    os.makedirs(report_dir, exist_ok=True)  # exist_ok=True prevents errors if dir exists
 
-    if '.txt' in args.iden_report or 'tsv in args.iden_report':
-        blastp_file = f'{report_dir}/{args.iden_report}'
-    else:
-        blastp_file = f'{report_dir}/{args.iden_report}.txt'
 
-    bootstrap_file = f'{report_dir}/{args.bootstrap_viz_file}'
-   
+
+    blastp_file = f'{report_dir}/{iden_report}'
+    if not (blastp_file.endswith('.txt') or blastp_file.endswith('.tsv')):
+           blastp_file += '.txt'
+
+    bootstrap_file = f'{report_dir}/{bootstrap_viz_file}'
     log_file = f'{report_dir}/arg_log.txt'
-    
-    if os.path.isfile(args.input):
-        names, mean_predictions, ci_lowers, ci_uppers, prediction_dict, predictions, median_predictions, per_iden_list, std_dev_list, seq_lens_list = process_sequences_from_file(args.input, args.model, blastp_file, args.blastp, args.refseq, args.reffile, args.bootstrap, args.encoding_method)
-        if '.tsv' in args.output or '.txt' in args.output:
-            output = f'{report_dir}/{args.output}'
-            sub_output = args.output.replace('.tsv','')
-            excel_output = f'{report_dir}/{sub_output}_for_excel.xlsx'
+
+    # Input handling (file or sequence string)
+    if os.path.isfile(input_sequence):
+        names, mean_predictions, ci_lowers, ci_uppers, prediction_dict, predictions, median_predictions, per_iden_list, std_dev_list, seq_lens_list = process_sequences_from_file(input_sequence, model, blastp_file, blastp, refseq, reffile, bootstrap, encoding_method, wrk_dir)
+        
+        # Output file handling (TSV or TXT, Excel)
+        if output.endswith(('.tsv', '.txt')):
+            output_path = f'{report_dir}/{output}'
+            excel_output = f'{report_dir}/{output.replace(".tsv", "").replace(".txt", "")}_for_excel.xlsx'
         else:
-            output = f'{report_dir}/{args.output}.tsv'
-            excel_output = f'{report_dir}/{args.output}_for_excel.xlsx'
+            output_path = f'{report_dir}/{output}.tsv'
+            excel_output = f'{report_dir}/{output}_for_excel.xlsx'
 
-        with open(output, 'w') as f:
-            i = 0
-            while i in range(len(names)):
-                if args.bootstrap == False or args.bootstrap == 'False' or args.bootstrap == 'false':
-                    if i == 0:
-                        f.write('Names\tPredictions\t%Identity_Nearest_VPOD_Sequence\tSequence_Length\n')
-                        colors = [wavelength_to_rgb(pred) for pred in predictions]
-                        hex_color_list = [matplotlib.colors.to_hex(color) for color in colors]
-                        write_to_excel(names, predictions, per_iden_list, excel_output, hex_color_list=hex_color_list, seq_lens_list=seq_lens_list)
-                    f.write(f"{names[i]}\t{predictions[i]}\t{per_iden_list[i]}\t{seq_lens_list[i]}\n")
-                    print(f"{names[i]}\t{predictions[i]}\t{per_iden_list[i]}\t{seq_lens_list[i]}\n")
-                    i+=1
+    else:  # Assume it's a single sequence
+        #  create a temporary file.
+        temp_input_file = os.path.join('./tmp', f'temp_input_{dt_label}.fasta')
+        with open(temp_input_file, "w") as f:
+            f.write(f">temp_seq\n{input_sequence}\n") #write temp file to be consistant with process_sequence_from_file function
+        
+        names, mean_predictions, ci_lowers, ci_uppers, prediction_dict, predictions, median_predictions, per_iden_list, std_dev_list, seq_lens_list = process_sequences_from_file(temp_input_file, model, blastp_file, blastp, refseq, reffile, bootstrap, encoding_method, wrk_dir)
+        output_path = f'{report_dir}/{output}'
+        if not output_path.endswith(('.tsv', '.txt')):
+            output_path += '.tsv'
+        excel_output = output_path.replace('.tsv', '_for_excel.xlsx').replace('.txt', '_for_excel.xlsx')
+        os.remove(temp_input_file) #clean up temp file
 
-                else:
-                    if i == 0:
-                        f.write('Names\tSingle_Prediction\tPrediction_Means\tPrediction_Medians\tPrediction_Lower_Bounds\tPrediction_Upper_Bounds\tStd_Deviation\t%Identity_Nearest_VPOD_Sequence\tSequence_Length\tLmax_Hex_Color\n')
-                        print('Names\tSingle_Prediction\tPrediction_Means\tPrediction_Medians\tPrediction_Lower_Bounds\tPrediction_Upper_Bounds\tStd_Deviation\t%Identity_Nearest_VPOD_Sequence\tSequence_Length\n')
-                        
-                        # colors for hex_color_list generated from the mean prediction of the bootstraped predictions during the visulization steps    
-                        hex_color_list = plot_prediction_subsets_with_CI(names, prediction_dict, mean_predictions, 
-                                                                         bootstrap_file, args.visualize_bootstrap)
-                        
-                        write_to_excel(names, predictions, per_iden_list, excel_output, 
-                                        mean_predictions, median_predictions, ci_lowers, 
-                                        ci_uppers, std_dev_list, hex_color_list, seq_lens_list)
-                        
-                    f.write(f"{names[i]}\t{predictions[i]}\t{mean_predictions[i]}\t{median_predictions[i]}\t{ci_lowers[i]}\t{ci_uppers[i]}\t{std_dev_list[i]}\t{per_iden_list[i]}\t{seq_lens_list[i]}\t{hex_color_list[i]}\n")
-                    print(f"{names[i]}\t{predictions[i]}\t{mean_predictions[i]}\t{median_predictions[i]}\t{ci_lowers[i]}\t{ci_uppers[i]}\t{std_dev_list[i]}\t{per_iden_list[i]}\t{seq_lens_list[i]}\n")
-                    i+=1
-        with open(log_file, 'w') as f:
-            command_line_input = ' '.join(sys.argv)
-            f.write(f"Command executed:\t{command_line_input}\n")
-            f.write(f"Model Used:\t{args.model}\nEncoding Method:\t{args.encoding_method}\n")
-            print(f"\nModel Used:\t{args.model}\nEncoding Method:\t{args.encoding_method}\n")
-                            
-                        
-        with open(f'{report_dir}/fig_tree_color_annotation.txt', 'w') as g:
-            g.write("Name\t!color\n")  # Header row
-            for name, hex_color in zip(names, hex_color_list):
-                g.write(f"{name}\t{hex_color}\n") 
-        with open(f'{report_dir}/itol_color_annotation.txt', 'w') as g:
-            g.write("TREE_COLORS\nSEPARATOR TAB\nDATA\n")
-            for name, hex_color in zip(names, hex_color_list):
-                g.write(f"{name}\tlabel_background\t{hex_color}\n") 
+
+    # Write main results file
+    with open(output_path, 'w') as f:
+        if not bootstrap: #cast to bool to simplify logic
+            colors = [wavelength_to_rgb(pred) for pred in predictions]
+            hex_color_list = [matplotlib.colors.to_hex(color) for color in colors]
+            write_to_excel(names, predictions, per_iden_list, excel_output, hex_color_list=hex_color_list, seq_lens_list=seq_lens_list)
+            # Make Prediction Dataframe
+            pred_df = pd.DataFrame({
+            'Names': names,
+            'Single_Prediction': predictions,
+            '%Identity_Nearest_VPOD_Sequence': per_iden_list,
+            'Sequence_Length': seq_lens_list,
+            'Lmax_Hex_Color': hex_color_list
+            })
+            # Write to file
+            pred_df.to_csv(f, sep='\t', index=False)
+            for i in range(len(names)):
+                print(f"{names[i]}\t{predictions[i]}\t{per_iden_list[i]}\t{seq_lens_list[i]}\n")
+        else:
+            hex_color_list = plot_prediction_subsets_with_CI(names, prediction_dict, mean_predictions,
+                                                            bootstrap_file, visualize_bootstrap)
+            write_to_excel(names, predictions, per_iden_list, excel_output,
+                            mean_predictions, median_predictions, ci_lowers,
+                            ci_uppers, std_dev_list, hex_color_list, seq_lens_list)
+            # Make Prediction Dataframe
+            pred_df = pd.DataFrame({
+            'Names': names,
+            'Single_Prediction': predictions,
+            'Prediction_Means': mean_predictions,
+            'Prediction_Medians': median_predictions,
+            'Prediction_Lower_Bounds': ci_lowers,
+            'Prediction_Upper_Bounds': ci_uppers,
+            'Std_Deviation': std_dev_list,
+            '%Identity_Nearest_VPOD_Sequence': per_iden_list,
+            'Sequence_Length': seq_lens_list,
+            'Lmax_Hex_Color': hex_color_list
+            })
+            # Write to file
+            pred_df.to_csv(f, sep='\t', index=False)
             
-        print('Predictions Complete!')
-        #os.remove('./tmp')
+            print('Names\tSingle_Prediction\tPrediction_Means\tPrediction_Medians\tPrediction_Lower_Bounds\tPrediction_Upper_Bounds\tStd_Deviation\t%Identity_Nearest_VPOD_Sequence\tSequence_Length\n')
+            for i in range(len(names)):
+                print(f"{names[i]}\t{predictions[i]}\t{mean_predictions[i]}\t{median_predictions[i]}\t{ci_lowers[i]}\t{ci_uppers[i]}\t{std_dev_list[i]}\t{per_iden_list[i]}\t{seq_lens_list[i]}\n")
 
-    else:
-        raise Exception("No file passed to input for predictions")
+
+    # Write log file
+    with open(log_file, 'w') as f:
+        #  We don't have sys.argv, so we reconstruct the equivalent.
+        arg_string = (f"input_fasta: {input_sequence}\nreport_dir: {report_dir}\n"
+                      f"output_file: {output}\nmodel: {model}\nencoding_method: {encoding_method}\n"
+                      f"blastp: {blastp}\nblastp_report: {iden_report}\nrefseq: {refseq}\n"
+                      f"custom_ref_file: {reffile}\nbootstrap: {bootstrap}\n"
+                      f"visualize_bootstrap: {visualize_bootstrap}\nbootstrap_viz_file: {bootstrap_viz_file}\n")
+        
+        if blastp == True:
+            bp_cmd = f'--blastp --blastp_report {iden_report} --refseq {refseq} '
+        else:
+            bp_cmd = ''
+        if reffile is not None and refseq == 'custom':
+            rf_cmd = f"--custom_ref_file {reffile} "
+        else:
+            rf_cmd = ''
+            
+        if bootstrap == True:
+            bs_cmd = '--bootstrap '
+        else:
+            bs_cmd = ''
+        if visualize_bootstrap == True:
+            vb_cmd = f'--visualize_bootstrap --bootstrap_viz_file {bootstrap_viz_file}'
+        else:
+            vb_cmd = ''
+    
+        exec_cmd =  (f"python optics_predictions.py " 
+                      f"-i {input_sequence} " 
+                      f"-o {pred_dir} " 
+                      f"-p {output} " 
+                      f"-m {model} " 
+                      f"-e {encoding_method} " 
+                      f"{bp_cmd}" 
+                      f"{rf_cmd}" 
+                      f"{bs_cmd}" 
+                      f"{vb_cmd}\n")
+        f.write(f"Selected Options...\n{arg_string}\n")  # More informative
+        f.write(f"Command executed (reconstructed): {exec_cmd}\n")
+        #f.write(f"Model Used:\t{model}\nEncoding Method:\t{encoding_method}\n")
+        print(f"\nModel Used:\t{model}\nEncoding Method:\t{encoding_method}\n")
+
+    # Write color annotation files
+    with open(f'{report_dir}/fig_tree_color_annotation.txt', 'w') as g:
+        g.write("Name\t!color\n")
+        for name, hex_color in zip(names, hex_color_list):
+            g.write(f"{name}\t{hex_color}\n")
+
+    with open(f'{report_dir}/itol_color_annotation.txt', 'w') as g:
+        g.write("TREE_COLORS\nSEPARATOR TAB\nDATA\n")
+        for name, hex_color in zip(names, hex_color_list):
+            g.write(f"{name}\tlabel_background\t{hex_color}\n")
+
+    print('Predictions Complete!')
+
+    return pred_df, output_path
+
     
 from openpyxl import Workbook
 from openpyxl.styles import PatternFill
@@ -536,6 +643,108 @@ def tqdm_joblib(tqdm_object):
         joblib.parallel.BatchCompletionCallBack = old_batch_callback
         tqdm_object.close()
         
+if __name__ == '__main__':
+    # This part will only execute when the script is run directly (not imported)
+    # It provides a simple way to test the module functionality from the command line,
+    # and also acts as a clear demonstration for users of the module.
+
+    #parser = argparse.ArgumentParser(description="Process sequences using a selected model (Module Version)")
+    #parser.add_argument("-in","--input", help="Either a single sequence or a path to a FASTA file", type=str, required = True)
+    #parser.add_argument("-rd","--report_dir", help="Name of folder directory to create", type=str, required = False)
+    #parser.add_argument("-out","--output", help="Name for output file", type=str, default = 'optics_predictions.txt', required = False)
+    #parser.add_argument("-m", "--model", help="Model to use for prediction", type=str, default="whole-dataset", required=False)
+    #parser.add_argument("-e", "--encoding_method", help="Select preferred encoding method", type = str, default='aa_prop', required=False)
+    #parser.add_argument("-b", "--blastp", help="Option to enable blastp analsis on query sequences", type = bool, default = True, required=False)
+    #parser.add_argument("-ir","--iden_report", help="Name for the blastp report output file", type=str, default = 'blastp_report.txt', required = False)
+    #parser.add_argument("-r", "--refseq", help="Reference sequence used for blastp analysis.", type = str,  default= 'bovine', required=False)
+    #parser.add_argument("-f", "--reffile", help="Custom reference sequence file used for blastp analysis.", type = str, default = '', required=False)
+    #parser.add_argument("-s", "--bootstrap", help="Option to enable bootstrap predictions on query sequences", type = bool, default = True, required=False)
+    #parser.add_argument("-viz", "--visualize_bootstrap", help="Option to enable visualization of bootstrap predictions", type = bool, default = True, required=False)
+    #parser.add_argument("-bsv","--bootstrap_viz_file", help="Name for the pdf file output file for visualizing bootstrap predictions", type=str, default = 'bootstrap_viz', required = False)
+
+    #args = parser.parse_args()
+
+    #run_optics_predictions(args.input, args.report_dir, args.output, args.model, args.encoding_method,
+    #                         args.blastp, args.iden_report, args.refseq, args.reffile,
+    #                         args.bootstrap, args.visualize_bootstrap, args.bootstrap_viz_file)
+    
         
-if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Predict protein properties using OPTICS.")
+
+    # Input sequence or FASTA file
+    parser.add_argument("-i", "--input", 
+                        help="Either a single sequence or a path to a FASTA file", 
+                        type=str, 
+                        required=True)
+
+    # Output directory for all results
+    parser.add_argument("-o", "--output_dir", 
+                        help="Directory to save output files (optional).", 
+                        type=str, 
+                        default=".",  # Current directory if not specified
+                        required=False)
+
+    # Base filename for predictions
+    parser.add_argument("-p", "--prediction_prefix", 
+                        help="Base filename for prediction output (optional).", 
+                        type=str, 
+                        default="optics_predictions", 
+                        required=False)
+
+    # Prediction model
+    parser.add_argument("-m", "--model", 
+                        help="Prediction model to use (optional).", 
+                        type=str, 
+                        default="whole-dataset", 
+                        choices=['whole-dataset', 'wildtype', 'vertebrate', 'invertebrate', 'wildtype-vert', 'type-one'], # Add choices for clarity
+                        required=False)
+
+    # Encoding method
+    parser.add_argument("-e", "--encoding", 
+                        help="Encoding method to use (optional).", 
+                        type=str, 
+                        default="aa_prop",
+                        choices=['one_hot', 'aa_prop'], # Add choices
+                        required=False)
+
+    # BLASTp options
+    blastp_group = parser.add_argument_group("BLASTp analysis (optional)") # Group related args
+
+    blastp_group.add_argument("--blastp", 
+                            help="Enable BLASTp analysis.", 
+                            action="store_true") # More pythonic way to handle booleans
+    blastp_group.add_argument("--blastp_report", 
+                            help="Filename for BLASTp report.", 
+                            type=str, 
+                            default="blastp_report.txt")
+    blastp_group.add_argument("--refseq",  # More descriptive name
+                            help="Reference sequence used for blastp analysis.", 
+                            type=str, 
+                            default="bovine",
+                            choices=['bovine', 'squid', 'microbe', 'custom'])
+    blastp_group.add_argument("--custom_ref_file", # More descriptive name
+                            help="Path to a custom reference sequence file for BLASTp.", 
+                            type=str)  # No default, as it's optional
+
+    # Bootstrap options
+    bootstrap_group = parser.add_argument_group("Bootstrap analysis (optional)")
+
+    bootstrap_group.add_argument("--bootstrap", 
+                                help="Enable bootstrap predictions.", 
+                                action="store_true")
+    bootstrap_group.add_argument("--visualize_bootstrap", 
+                                help="Enable visualization of bootstrap predictions.", 
+                                action="store_true")
+    bootstrap_group.add_argument("--bootstrap_viz_file", 
+                                help="Filename prefix for bootstrap visualization (PDF and SVG).", 
+                                type=str, 
+                                default="bootstrap_viz")
+    
+    args = parser.parse_args()
+
+    prediction_output = f"{args.prediction_prefix}"
+    blastp_report_output = f"{args.blastp_report}" if args.blastp else None
+    bootstrap_viz_output = f"{args.bootstrap_viz_file}" if args.visualize_bootstrap else None
+    run_optics_predictions(args.input, args.output_dir, prediction_output, args.model, args.encoding,
+                        args.blastp, blastp_report_output, args.refseq, args.custom_ref_file,
+                        args.bootstrap, args.visualize_bootstrap, bootstrap_viz_output)

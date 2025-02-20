@@ -28,15 +28,14 @@ def run_blastp(query_file, database):
         closest_match_id = '-'
         print(f'This is the blast result which raised the following error:\n{blast_result}\n')
         print(f'This is the error message from blastp:\n{stderr_data}\n')
+        #raise(Exception(f'Blastp failed to run. Please check your FASTA file to make sure it is formatted correctly\n{stderr_data}\n'))
 
     return closest_match_id, blast_metrics
 
 # --- Alignment ---
-def align_sequences(query_seq, target_seq, reference_seq):
+def align_sequences(query_seq, target_seq, reference_seq, wrk_dir):
     """Aligns query, target, and reference sequences using MAFFT"""
     #get working directory to make temp files
-    wrk_dir = os.getcwd().replace('\\','/')
-    #print(wrk_dir)
     with tempfile.NamedTemporaryFile(mode="w", dir=f"{wrk_dir}/tmp", suffix=".fasta", delete=False) as temp_file:
         temp_seqs = temp_file.name  # Get the unique filename
 
@@ -156,7 +155,7 @@ def analyze_differences(query_seq, closest_match_seq, reference_seq):
         raise Exception
 
 # --- Main script ---
-def seq_sim_report(query_file, name, ref_seq_id, opsin_database, opsin_db_fasta, opsin_db_meta, ouput_file, reffile):
+def seq_sim_report(query_file, name, ref_seq_id, opsin_database, opsin_db_fasta, opsin_db_meta, ouput_file, reffile, wrk_dir):
     # BLAST search
     closest_match_id, blast_metrics = run_blastp(query_file, opsin_database)
     if closest_match_id == '-':
@@ -197,7 +196,7 @@ def seq_sim_report(query_file, name, ref_seq_id, opsin_database, opsin_db_fasta,
     #print(f'This is the reference record:\n{reference_record}')
 
     # Alignment
-    alignment = align_sequences(query_record, closest_match_record, reference_record)
+    alignment = align_sequences(query_record, closest_match_record, reference_record, wrk_dir)
 
     with open(alignment, 'r') as f:
         aligned_sequences = []

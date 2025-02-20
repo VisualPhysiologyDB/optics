@@ -34,15 +34,16 @@
    ```bash
    conda create --name optics_env python=3.11 
    ```
+   ### THEN
+   ```bash
+   conda activate optics_env
+   ```
    B. Use the 'requirements.txt' file to download base package dependencies for OPTICS
    ```bash
    pip install -r requirements.txt
    ```
-   - THEN
      
-   ```bash
-   conda activate optics_env
-   ```
+
    C. **Download MAFFT and BLAST**
    
      IF working on MAC or LINUX device:
@@ -56,7 +57,8 @@
       - Manaully install the Windows compatable [BLAST](https://blast.ncbi.nlm.nih.gov/doc/blast-help/downloadblastdata.html#downloadblastdata) executable on your system PATH; [the download list is here](https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/)
         - We suggest downloading '[ncbi-blast-2.16.0+-win64.exe](https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/ncbi-blast-2.16.0+-win64.exe)' 
       - You DO NOT need to download MAFFT, OPTICS should be able to run MAFFT from the files we provide when downloading this GitHub.
-   
+
+  ```
 ## Usage
 
   **MAKE SURE YOU HAVE ALL DEPENDENCIES DOWNLOADED ARE IN THE FOLDER DIRECTORY FOR OPTICS BEFORE RUNNING ANY SCRIPTS!**
