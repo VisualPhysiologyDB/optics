@@ -17,8 +17,8 @@ scipy==1.14.1
 seaborn==0.13.2
 threadpoolctl==3.5.0
 tzdata==2024.1
-xgboost==2.1.1qdm
-progress==1.6
+xgboost==2.1.1
 openpyxl==3.1.5
 lightgbm>=4.5.0
 tqdm==4.67.1
+progressbar2==4.5.0
