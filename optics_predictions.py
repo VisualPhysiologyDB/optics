@@ -55,6 +55,10 @@ def extract_fasta(file):
     return names,sequences
 
 def process_sequence(sequence=None, name=None, selected_model=None, identity_report=None, blastp=None, refseq=None, reffile=None, bootstrap=None, prediction_dict=None, encoding_method='one_hot', wrk_dir = '', only_blast = False):
+    if wrk_dir == '':
+        script_path = pathlib.Path(__file__).resolve()  # Get absolute path
+        wrk_dir = str(script_path.parent).replace('\\', '/')
+
     data_dir = f"{wrk_dir}/data"
     #print(f'This is the data_dir: {data_dir}')
     model_datasets = {
