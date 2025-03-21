@@ -8,8 +8,6 @@ import argparse
 import os
 import sys
 import numpy as np
-#import random
-#import copy
 import pathlib  # pathlib is generally better than os.path (see below)
 import datetime
 import matplotlib
@@ -62,41 +60,72 @@ def process_sequence(sequence=None, name=None, selected_model=None, identity_rep
     data_dir = f"{wrk_dir}/data"
     #print(f'This is the data_dir: {data_dir}')
     model_datasets = {
-    "whole-dataset": f"{data_dir}/fasta/vpod_1.2/wds_aligned_VPOD_1.2_het.fasta",
-    "wildtype": f"{data_dir}/fasta/vpod_1.2/wt_aligned_VPOD_1.2_het.fasta",
-    "vertebrate": f"{data_dir}/fasta/vpod_1.2/vert_aligned_VPOD_1.2_het.fasta",
-    "invertebrate": f"{data_dir}/fasta/vpod_1.2/inv_only_aligned_VPOD_1.2_het.fasta",
-    "wildtype-vert": f"{data_dir}/fasta/vpod_1.2/wt_vert_aligned_VPOD_1.2_het.fasta",
-    "type-one": f"{data_dir}/fasta/vpod_1.2/Karyasuyama_T1_ops_aligned.fasta"
+        "whole-dataset": f"{data_dir}/fasta/vpod_1.2/wds_aligned_VPOD_1.2_het.fasta",
+        "wildtype": f"{data_dir}/fasta/vpod_1.2/wt_aligned_VPOD_1.2_het.fasta",
+        "vertebrate": f"{data_dir}/fasta/vpod_1.2/vert_aligned_VPOD_1.2_het.fasta",
+        "invertebrate": f"{data_dir}/fasta/vpod_1.2/inv_only_aligned_VPOD_1.2_het.fasta",
+        "wildtype-vert": f"{data_dir}/fasta/vpod_1.2/wt_vert_aligned_VPOD_1.2_het.fasta",
+        "type-one": f"{data_dir}/fasta/vpod_1.2/Karyasuyama_T1_ops_aligned.fasta",
+        "whole-dataset-mnm": f"{data_dir}/fasta/vpod_1.2/wds_mnm_aligned_VPOD_1.2_het.fasta",
+        "wildtype-mnm": f"{data_dir}/fasta/vpod_1.2/wt_mnm_aligned_VPOD_1.2_het.fasta",
+        "vertebrate-mnm": f"{data_dir}/fasta/vpod_1.2/vert_mnm_aligned_VPOD_1.2_het.fasta",
+        "invertebrate-mnm": f"{data_dir}/fasta/vpod_1.2/inv_mnm_aligned_VPOD_1.2_het.fasta",
+        "wildtype-vert-mnm": f"{data_dir}/fasta/vpod_1.2/wt_vert_mnm_aligned_VPOD_1.2_het.fasta",
     }   
     model_raw_data = {
-    "whole-dataset": f"{data_dir}/fasta/vpod_1.2/wds.txt",
-    "wildtype": f"{data_dir}/fasta/vpod_1.2/wt.txt",
-    "vertebrate": f"{data_dir}/fasta/vpod_1.2/vert.txt",
-    "invertebrate": f"{data_dir}/fasta/vpod_1.2/inv_only.txt",
-    "wildtype-vert": f"{data_dir}/fasta/vpod_1.2/wt_vert.txt",
-    "type-one": f"{data_dir}/fasta/vpod_1.2/Karyasuyama_T1_ops.txt"
-
+        "whole-dataset": f"{data_dir}/fasta/vpod_1.2/wds.txt",
+        "wildtype": f"{data_dir}/fasta/vpod_1.2/wt.txt",
+        "vertebrate": f"{data_dir}/fasta/vpod_1.2/vert.txt",
+        "invertebrate": f"{data_dir}/fasta/vpod_1.2/inv_only.txt",
+        "wildtype-vert": f"{data_dir}/fasta/vpod_1.2/wt_vert.txt",
+        "type-one": f"{data_dir}/fasta/vpod_1.2/Karyasuyama_T1_ops.txt",
+        "whole-dataset-mnm": f"{data_dir}/fasta/vpod_1.2/wds_mnm.txt",
+        "wildtype-mnm": f"{data_dir}/fasta/vpod_1.2/wt_mnm.txt",
+        "vertebrate-mnm": f"{data_dir}/fasta/vpod_1.2/vert_mnm.txt",
+        "invertebrate-mnm": f"{data_dir}/fasta/vpod_1.2/inv_mnm.txt",
+        "wildtype-vert-mnm": f"{data_dir}/fasta/vpod_1.2/wt_vert_mnm.txt",
     }   
     model_metadata = {
-    "whole-dataset": f"{data_dir}/fasta/vpod_1.2/wds_meta.tsv",
-    "wildtype": f"{data_dir}/fasta/vpod_1.2/wt_meta.tsv",
-    "vertebrate": f"{data_dir}/fasta/vpod_1.2/vert_meta.tsv",
-    "invertebrate": f"{data_dir}/fasta/vpod_1.2/inv_meta.tsv",
-    "wildtype-vert": f"{data_dir}/fasta/vpod_1.2/wt_vert_meta.tsv",
-    "type-one": f"{data_dir}/fasta/vpod_1.2/Karyasuyama_T1_ops_meta.tsv"
+        "whole-dataset": f"{data_dir}/fasta/vpod_1.2/wds_meta.tsv",
+        "wildtype": f"{data_dir}/fasta/vpod_1.2/wt_meta.tsv",
+        "vertebrate": f"{data_dir}/fasta/vpod_1.2/vert_meta.tsv",
+        "invertebrate": f"{data_dir}/fasta/vpod_1.2/inv_meta.tsv",
+        "wildtype-vert": f"{data_dir}/fasta/vpod_1.2/wt_vert_meta.tsv",
+        "type-one": f"{data_dir}/fasta/vpod_1.2/Karyasuyama_T1_ops_meta.tsv",
+        "whole-dataset-mnm": f"{data_dir}/fasta/vpod_1.2/wds_mnm_meta.csv",
+        "wildtype-mnm": f"{data_dir}/fasta/vpod_1.2/wt_mnm_meta.csv",
+        "vertebrate-mnm": f"{data_dir}/fasta/vpod_1.2/vert_mnm_meta.csv",
+        "invertebrate-mnm": f"{data_dir}/fasta/vpod_1.2/inv_mnm_meta.csv",
+        "wildtype-vert-mnm": f"{data_dir}/fasta/vpod_1.2/wt_vert_mnm_meta.csv",
     }   
     model_blast_db = {
-    "whole-dataset": f"{data_dir}/blast_dbs/vpod_1.2/wds_db",
-    "wildtype": f"{data_dir}/blast_dbs/vpod_1.2/wt_db",
-    "vertebrate": f"{data_dir}/blast_dbs/vpod_1.2/vert_db",
-    "invertebrate": f"{data_dir}/blast_dbs/vpod_1.2/invert_db",
-    "wildtype-vert": f"{data_dir}/blast_dbs/vpod_1.2/wt_vert_db",
-    "type-one": f"{data_dir}/blast_dbs/vpod_1.2/t1_db",
+        "whole-dataset": f"{data_dir}/blast_dbs/vpod_1.2/wds_db",
+        "wildtype": f"{data_dir}/blast_dbs/vpod_1.2/wt_db",
+        "vertebrate": f"{data_dir}/blast_dbs/vpod_1.2/vert_db",
+        "invertebrate": f"{data_dir}/blast_dbs/vpod_1.2/invert_db",
+        "wildtype-vert": f"{data_dir}/blast_dbs/vpod_1.2/wt_vert_db",
+        "type-one": f"{data_dir}/blast_dbs/vpod_1.2/t1_db",
+        "whole-dataset-mnm": f"{data_dir}/blast_dbs/vpod_1.2/wds_mnm_db",
+        "wildtype-mnm": f"{data_dir}/blast_dbs/vpod_1.2/wt_mnm_db",
+        "vertebrate-mnm": f"{data_dir}/blast_dbs/vpod_1.2/vert_mnm_db",
+        "invertebrate-mnm": f"{data_dir}/blast_dbs/vpod_1.2/inv_mnm_db",
+        "wildtype-vert-mnm": f"{data_dir}/blast_dbs/vpod_1.2/wt_vert_mnm_db",
     }   
 
     model_dir = f"{wrk_dir}/models"
-    #add if statements here for the different encoding methods...
+    model_bs_dirs = {
+        "whole-dataset": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/wds_bootstrap",
+        "wildtype": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/wt_bootstrap",
+        "vertebrate": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/vert_bootstrap",
+        "invertebrate": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/invert_bootstrap",
+        "wildtype-vert": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/wt_vert_bootstrap",
+        "type-one": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/t1_bootstrap",
+        "whole-dataset-mnm": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/wds_mnm_bootstrap",
+        "wildtype-mnm": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/wt_mnm_bootstrap",
+        "vertebrate-mnm": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/vert_mnm_bootstrap",
+        "invertebrate-mnm": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/invert_mnm_bootstrap",
+        "wildtype-vert-mnm": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/wt_vert_mnm_bootstrap",
+    }
     if encoding_method == 'aa_prop':
         model_directories = {
             "whole-dataset": f"{model_dir}/reg_models/vpod_1.2/aa_prop/wds_gbr.pkl",
@@ -105,18 +134,13 @@ def process_sequence(sequence=None, name=None, selected_model=None, identity_rep
             "invertebrate": f"{model_dir}/reg_models/vpod_1.2/aa_prop/invert_gbr.pkl",
             "wildtype-vert": f"{model_dir}/reg_models/vpod_1.2/aa_prop/wt_vert_gbr.pkl",
             "type-one": f"{model_dir}/reg_models/vpod_1.2/aa_prop/t1_xgb.pkl",
+            "whole-dataset-mnm": f"{model_dir}/reg_models/vpod_1.2/aa_prop/wds_mnm_xgb.pkl",
+            "wildtype-mnm": f"{model_dir}/reg_models/vpod_1.2/aa_prop/wt_mnm_gbr.pkl",
+            "vertebrate-mnm": f"{model_dir}/reg_models/vpod_1.2/aa_prop/vert_mnm_xgb.pkl",
+            "invertebrate-mnm": f"{model_dir}/reg_models/vpod_1.2/aa_prop/invert_mnm_gbr.pkl",
+            "wildtype-vert-mnm": f"{model_dir}/reg_models/vpod_1.2/aa_prop/wt_vert_mnm_xgb.pkl",
         }
         
-        model_bs_dirs = {
-            "whole-dataset": f"{model_dir}/bs_models/vpod_1.2/aa_prop/wds_bootstrap",
-            "wildtype": f"{model_dir}/bs_models/vpod_1.2/aa_prop/wt_bootstrap",
-            "vertebrate": f"{model_dir}/bs_models/vpod_1.2/aa_prop/vert_bootstrap",
-            "invertebrate": f"{model_dir}/bs_models/vpod_1.2/aa_prop/invert_bootstrap",
-            "wildtype-vert": f"{model_dir}/bs_models/vpod_1.2/aa_prop/wt_vert_bootstrap",
-            "type-one": f"{model_dir}/bs_models/vpod_1.2/aa_prop/t1_bootstrap",
-        }
-        
-
     else:
         model_directories = {
             "whole-dataset": f"{model_dir}/reg_models/vpod_1.2/one_hot/wds_xgb.pkl",
@@ -125,17 +149,13 @@ def process_sequence(sequence=None, name=None, selected_model=None, identity_rep
             "invertebrate": f"{model_dir}/reg_models/vpod_1.2/one_hot/invert_BayesianRidge.pkl",
             "wildtype-vert": f"{model_dir}/reg_models/vpod_1.2/one_hot/wt_vert_xgb.pkl",
             "type-one": f"{model_dir}/reg_models/vpod_1.2/one_hot/t1_xgb.pkl",
-
+            "whole-dataset-mnm": f"{model_dir}/reg_models/vpod_1.2/one_hot/wds_mnm_xgb.pkl",
+            "wildtype-mnm": f"{model_dir}/reg_models/vpod_1.2/one_hot/wt_mnm_gbr.pkl",
+            "vertebrate-mnm": f"{model_dir}/reg_models/vpod_1.2/one_hot/vert_mnm_xgb.pkl",
+            "invertebrate-mnm": f"{model_dir}/reg_models/vpod_1.2/one_hot/invert_mnm_gbr.pkl",
+            "wildtype-vert-mnm": f"{model_dir}/reg_models/vpod_1.2/one_hot/wt_vert_mnm_xgb.pkl",
         }
         
-        model_bs_dirs = {
-            "whole-dataset": f"{model_dir}/bs_models/vpod_1.2/one_hot/wds_bootstrap",
-            "wildtype": f"{model_dir}/bs_models/vpod_1.2/one_hot/wt_bootstrap",
-            "vertebrate": f"{model_dir}/bs_models/vpod_1.2/one_hot/vert_bootstrap",
-            "invertebrate": f"{model_dir}/bs_models/vpod_1.2/one_hot/invert_bootstrap",
-            "wildtype-vert": f"{model_dir}/bs_models/vpod_1.2/one_hot/wt_vert_bootstrap",
-            "type-one": f"{model_dir}/bs_models/vpod_1.2/one_hot/t1_bootstrap",
-        }
 
     if sequence == None:
         return ('Error: No sequence given')
@@ -247,8 +267,13 @@ def process_sequences_from_file(file, selected_model, identity_report, blastp, r
         "wildtype": f"{cache_dir}/{model_type}/vpod_1.2/{encoding_method}/wt_pred_dict.json",
         "vertebrate": f"{cache_dir}/{model_type}/vpod_1.2/{encoding_method}/vert_pred_dict.json",
         "invertebrate": f"{cache_dir}/{model_type}/vpod_1.2/{encoding_method}/invert_pred_dict.json",
-        "wildtype-vert": f"{cache_dir}/{model_type}/vpod_1.2/{encoding_method}/wt_pred_dict.json",
+        "wildtype-vert": f"{cache_dir}/{model_type}/vpod_1.2/{encoding_method}/wt_vert_pred_dict.json",
         "type-one": f"{cache_dir}/{model_type}/vpod_1.2/{encoding_method}/t1_pred_dict.json",
+        "whole-dataset-mnm": f"{cache_dir}/{model_type}/vpod_1.2/{encoding_method}/wds_mnm_pred_dict.json",
+        "wildtype-mnm": f"{cache_dir}/{model_type}/vpod_1.2/{encoding_method}/wt_mnm_pred_dict.json",
+        "vertebrate-mnm": f"{cache_dir}/{model_type}/vpod_1.2/{encoding_method}/vert_mnm_pred_dict.json",
+        "invertebrate-mnm": f"{cache_dir}/{model_type}/vpod_1.2/{encoding_method}/invert_mnm_pred_dict.json",
+        "wildtype-vert-mnm": f"{cache_dir}/{model_type}/vpod_1.2/{encoding_method}/wt_vert_mnm_pred_dict.json",
     }
 
     cache_file = model_cache_dirs[selected_model]
@@ -414,7 +439,7 @@ def run_optics_predictions(input_sequence, pred_dir=None, output='optics_predict
     #print(f"Script directory (pathlib): {wrk_dir}")
 
     # Argument validation (mimicking argparse behavior, but for function inputs)
-    models = ['whole-dataset', 'wildtype', 'vertebrate', 'invertebrate', 'wildtype-vert', 'type-one']
+    models = ['whole-dataset', 'wildtype', 'vertebrate', 'invertebrate', 'wildtype-vert', 'type-one', 'whole-dataset-mnm', 'wildtype-mnm', 'vertebrate-mnm', 'invertebrate-mnm', 'wildtype-vert-mnm']
     encoding_methods = ['one_hot', 'aa_prop']
     ref_seq_choices = ['bovine', 'squid', 'microbe', 'custom']
     #bool_choices = ['true', 'True', 'false', 'False', True, False] #not used, we cast directly to bool.

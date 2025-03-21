@@ -1,0 +1,22 @@
+{
+  "version": "1.2",
+  "dbname": "wt_mnm_db",
+  "dbtype": "Protein",
+  "db-version": 5,
+  "description": "E:/safra/Documents/GitHub/optics/data/fasta/vpod_1.2/wt_mnm.txt",
+  "number-of-letters": 311666,
+  "number-of-sequences": 867,
+  "last-updated": "2025-03-19T16:56:00",
+  "number-of-volumes": 1,
+  "bytes-total": 1393230,
+  "bytes-to-cache": 319618,
+  "files": [
+    "wt_mnm_db.pdb",
+    "wt_mnm_db.phr",
+    "wt_mnm_db.pin",
+    "wt_mnm_db.pot",
+    "wt_mnm_db.psq",
+    "wt_mnm_db.ptf",
+    "wt_mnm_db.pto"
+  ]
+}
