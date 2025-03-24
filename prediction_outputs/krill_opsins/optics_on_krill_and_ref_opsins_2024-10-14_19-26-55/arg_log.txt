@@ -1,3 +1,0 @@
-Command executed:	optics_predictions.py -in opsins.prot.curated.fasta.visual.krill_and_refs.fasta -rd krill_and_ref_opsins -out krill_and_refs_predictions.tsv -m wildtype -e aa_prop -b True -ir krill_and_refs_blastp_report.tsv -r squid -s True -bsv krill_and_refs_bs_viz
-Model Used:	wildtype
-Encoding Method:	aa_prop

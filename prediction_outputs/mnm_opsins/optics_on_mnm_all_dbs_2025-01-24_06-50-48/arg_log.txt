@@ -1,3 +1,0 @@
-Command executed:	optics_predictions.py -in E:\safra\Documents\GitHub\visual-physiology-opsin-db\scripts_n_notebooks\vpod_ML_workflows\subtests\work_in_progress\mine_n_match\mnm_data\mnm_on_mnm_on_all_dbs_2025-01-22_20-33-16\mined_and_acc_seqs.fasta -rd mnm_all_dbs -out mnm_all_dbs_predictions.tsv -m whole-dataset -e aa_prop -b True -ir mnm_all_dbs_blastp_report.txt
-Model Used:	whole-dataset
-Encoding Method:	aa_prop
