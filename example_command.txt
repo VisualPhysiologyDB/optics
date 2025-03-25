@@ -1,4 +1,1 @@
 python optics_predictions.py -i ./examples/optics_ex_short.txt -o ex_test_of_optics -p ex_predictions -m wildtype -e aa_prop --blastp --blastp_report blastp_report.txt --refseq squid --bootstrap --visualize_bootstrap --bootstrap_viz_file bootstrap_viz
-
-
-python optics_predictions.py -i mut_only.txt -o aa_prop_wt_mut_test -p mut_predictions -m wildtype -e aa_prop --blastp --blastp_report blastp_report.txt --refseq bovine --bootstrap
