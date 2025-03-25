@@ -131,7 +131,7 @@ def process_sequence(sequence=None, name=None, selected_model=None, identity_rep
         
         model_bs_dirs = {
             "whole-dataset": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/wds_H1_H2_H3_P2_V_SCT_PKA_bootstrap_100_2025-03-23_22-05-50",
-            "wildtype": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/wt_H1_H3_P1_NCI_PKA_bootstrap_100_2025-03-24_10-19-45",
+            "wildtype": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/wt_H1_H3_P1_NCI_PKA_bootstrap_100_2025-03-21_17-15-16",
             "vertebrate": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/vert_H2_H3_NCI_SCT_PKB_bootstrap_100_2025-03-21_17-47-40",
             "invertebrate": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/inv_H1_H3_bootstrap_100_2025-03-21_17-40-08",
             "wildtype-vert": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/wt_vert_H2_P2_V_MASS_bootstrap_100_2025-03-21_17-25-47",
