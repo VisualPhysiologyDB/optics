@@ -113,25 +113,13 @@ def process_sequence(sequence=None, name=None, selected_model=None, identity_rep
     }   
 
     model_dir = f"{wrk_dir}/models"
-    model_bs_dirs = {
-        "whole-dataset": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/wds_bootstrap",
-        "wildtype": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/wt_bootstrap",
-        "vertebrate": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/vert_bootstrap",
-        "invertebrate": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/invert_bootstrap",
-        "wildtype-vert": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/wt_vert_bootstrap",
-        "type-one": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/t1_bootstrap",
-        "whole-dataset-mnm": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/wds_mnm_bootstrap",
-        "wildtype-mnm": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/wt_mnm_bootstrap",
-        "vertebrate-mnm": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/vert_mnm_bootstrap",
-        "invertebrate-mnm": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/invert_mnm_bootstrap",
-        "wildtype-vert-mnm": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/wt_vert_mnm_bootstrap",
-    }
+
     if encoding_method == 'aa_prop':
         model_directories = {
-            "whole-dataset": f"{model_dir}/reg_models/vpod_1.2/aa_prop/wds_gbr.pkl",
+            "whole-dataset": f"{model_dir}/reg_models/vpod_1.2/aa_prop/wds_xgb.pkl",
             "wildtype": f"{model_dir}/reg_models/vpod_1.2/aa_prop/wt_gbr.pkl",
-            "vertebrate": f"{model_dir}/reg_models/vpod_1.2/aa_prop/vert_gbr.pkl",
-            "invertebrate": f"{model_dir}/reg_models/vpod_1.2/aa_prop/invert_gbr.pkl",
+            "vertebrate": f"{model_dir}/reg_models/vpod_1.2/aa_prop/vert_xgb.pkl",
+            "invertebrate": f"{model_dir}/reg_models/vpod_1.2/aa_prop/inv_gbr.pkl",
             "wildtype-vert": f"{model_dir}/reg_models/vpod_1.2/aa_prop/wt_vert_gbr.pkl",
             "type-one": f"{model_dir}/reg_models/vpod_1.2/aa_prop/t1_xgb.pkl",
             "whole-dataset-mnm": f"{model_dir}/reg_models/vpod_1.2/aa_prop/wds_mnm_xgb.pkl",
@@ -139,6 +127,20 @@ def process_sequence(sequence=None, name=None, selected_model=None, identity_rep
             "vertebrate-mnm": f"{model_dir}/reg_models/vpod_1.2/aa_prop/vert_mnm_xgb.pkl",
             "invertebrate-mnm": f"{model_dir}/reg_models/vpod_1.2/aa_prop/invert_mnm_gbr.pkl",
             "wildtype-vert-mnm": f"{model_dir}/reg_models/vpod_1.2/aa_prop/wt_vert_mnm_xgb.pkl",
+        }
+        
+        model_bs_dirs = {
+            "whole-dataset": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/wds_H1_H2_H3_P2_V_SCT_PKA_bootstrap_100_2025-03-23_22-05-50",
+            "wildtype": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/wt_H1_H3_P1_NCI_PKA_bootstrap_100_2025-03-24_10-19-45",
+            "vertebrate": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/vert_H2_H3_NCI_SCT_PKB_bootstrap_100_2025-03-21_17-47-40",
+            "invertebrate": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/inv_H1_H3_bootstrap_100_2025-03-21_17-40-08",
+            "wildtype-vert": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/wt_vert_H2_P2_V_MASS_bootstrap_100_2025-03-21_17-25-47",
+            "type-one": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/t1_H3_P1_PKB_bootstrap_100_2025-03-24_10-31-03",
+            "whole-dataset-mnm": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/wds_mnm_bootstrap",
+            "wildtype-mnm": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/wt_mnm_bootstrap",
+            "vertebrate-mnm": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/vert_mnm_bootstrap",
+            "invertebrate-mnm": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/invert_mnm_bootstrap",
+            "wildtype-vert-mnm": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/wt_vert_mnm_bootstrap",
         }
         
     else:
@@ -154,6 +156,20 @@ def process_sequence(sequence=None, name=None, selected_model=None, identity_rep
             "vertebrate-mnm": f"{model_dir}/reg_models/vpod_1.2/one_hot/vert_mnm_xgb.pkl",
             "invertebrate-mnm": f"{model_dir}/reg_models/vpod_1.2/one_hot/invert_mnm_gbr.pkl",
             "wildtype-vert-mnm": f"{model_dir}/reg_models/vpod_1.2/one_hot/wt_vert_mnm_xgb.pkl",
+        }
+        
+        model_bs_dirs = {
+            "whole-dataset": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/wds_bootstrap",
+            "wildtype": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/wt_bootstrap",
+            "vertebrate": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/vert_bootstrap",
+            "invertebrate": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/invert_bootstrap",
+            "wildtype-vert": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/wt_vert_bootstrap",
+            "type-one": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/t1_bootstrap",
+            "whole-dataset-mnm": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/wds_mnm_bootstrap",
+            "wildtype-mnm": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/wt_mnm_bootstrap",
+            "vertebrate-mnm": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/vert_mnm_bootstrap",
+            "invertebrate-mnm": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/invert_mnm_bootstrap",
+            "wildtype-vert-mnm": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/wt_vert_mnm_bootstrap",
         }
         
 
@@ -341,7 +357,7 @@ def process_sequences_from_file(file, selected_model, identity_report, blastp, r
     try:
         with tqdm_joblib(tqdm(total=len(sequences), desc="Processing Sequences", bar_format="{l_bar}{bar:25}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}{postfix}]", 
                               dynamic_ncols=True, colour="#CF9FFF",
-                              unit ='seqs',ascii="▓▒░▒▓")) as pbar:  # Use tqdm for progress bar
+                              unit ='seqs',ascii="░▒▓")) as pbar:  # Use tqdm for progress bar
             results = Parallel(n_jobs=-1)(delayed(process_sequence_wrapper)(seq, names[i]) for i, seq in enumerate(sequences))
     except Exception as e:
         updated_cached_pred_dict = dict(mp_cached_pred_dict)        
@@ -674,29 +690,7 @@ def tqdm_joblib(tqdm_object):
         
 if __name__ == '__main__':
     # This part will only execute when the script is run directly (not imported)
-    # It provides a simple way to test the module functionality from the command line,
-    # and also acts as a clear demonstration for users of the module.
-
-    #parser = argparse.ArgumentParser(description="Process sequences using a selected model (Module Version)")
-    #parser.add_argument("-in","--input", help="Either a single sequence or a path to a FASTA file", type=str, required = True)
-    #parser.add_argument("-rd","--report_dir", help="Name of folder directory to create", type=str, required = False)
-    #parser.add_argument("-out","--output", help="Name for output file", type=str, default = 'optics_predictions.txt', required = False)
-    #parser.add_argument("-m", "--model", help="Model to use for prediction", type=str, default="whole-dataset", required=False)
-    #parser.add_argument("-e", "--encoding_method", help="Select preferred encoding method", type = str, default='aa_prop', required=False)
-    #parser.add_argument("-b", "--blastp", help="Option to enable blastp analsis on query sequences", type = bool, default = True, required=False)
-    #parser.add_argument("-ir","--iden_report", help="Name for the blastp report output file", type=str, default = 'blastp_report.txt', required = False)
-    #parser.add_argument("-r", "--refseq", help="Reference sequence used for blastp analysis.", type = str,  default= 'bovine', required=False)
-    #parser.add_argument("-f", "--reffile", help="Custom reference sequence file used for blastp analysis.", type = str, default = '', required=False)
-    #parser.add_argument("-s", "--bootstrap", help="Option to enable bootstrap predictions on query sequences", type = bool, default = True, required=False)
-    #parser.add_argument("-viz", "--visualize_bootstrap", help="Option to enable visualization of bootstrap predictions", type = bool, default = True, required=False)
-    #parser.add_argument("-bsv","--bootstrap_viz_file", help="Name for the pdf file output file for visualizing bootstrap predictions", type=str, default = 'bootstrap_viz', required = False)
-
-    #args = parser.parse_args()
-
-    #run_optics_predictions(args.input, args.report_dir, args.output, args.model, args.encoding_method,
-    #                         args.blastp, args.iden_report, args.refseq, args.reffile,
-    #                         args.bootstrap, args.visualize_bootstrap, args.bootstrap_viz_file)
-    
+    # It provides a simple way to test the module functionality from the command line
         
     parser = argparse.ArgumentParser(description="Predict protein properties using OPTICS.")
 
@@ -725,7 +719,7 @@ if __name__ == '__main__':
                         help="Prediction model to use (optional).", 
                         type=str, 
                         default="whole-dataset", 
-                        choices=['whole-dataset', 'wildtype', 'vertebrate', 'invertebrate', 'wildtype-vert', 'type-one'], # Add choices for clarity
+                        choices=['whole-dataset', 'wildtype', 'vertebrate', 'invertebrate', 'wildtype-vert', 'type-one', 'whole-dataset-mnm', 'wildtype-mnm', 'vertebrate-mnm', 'invertebrate-mnm', 'wildtype-vert-mnm'],
                         required=False)
 
     # Encoding method
@@ -733,7 +727,7 @@ if __name__ == '__main__':
                         help="Encoding method to use (optional).", 
                         type=str, 
                         default="aa_prop",
-                        choices=['one_hot', 'aa_prop'], # Add choices
+                        choices=['one_hot', 'aa_prop'],
                         required=False)
 
     # BLASTp options
@@ -741,17 +735,17 @@ if __name__ == '__main__':
 
     blastp_group.add_argument("--blastp", 
                             help="Enable BLASTp analysis.", 
-                            action="store_true") # More pythonic way to handle booleans
+                            action="store_true")
     blastp_group.add_argument("--blastp_report", 
                             help="Filename for BLASTp report.", 
                             type=str, 
                             default="blastp_report.txt")
-    blastp_group.add_argument("--refseq",  # More descriptive name
+    blastp_group.add_argument("--refseq",
                             help="Reference sequence used for blastp analysis.", 
                             type=str, 
                             default="bovine",
                             choices=['bovine', 'squid', 'microbe', 'custom'])
-    blastp_group.add_argument("--custom_ref_file", # More descriptive name
+    blastp_group.add_argument("--custom_ref_file",
                             help="Path to a custom reference sequence file for BLASTp.", 
                             type=str)  # No default, as it's optional
 

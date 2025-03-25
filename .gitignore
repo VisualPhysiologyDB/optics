@@ -7,3 +7,4 @@ trash/
 /models/reg_models/vpod_1.2/aa_prop/old
 /models/bs_models/vpod_1.2/aa_prop/old
 /prediction_outputs/old
+/data/cached_predictions/bs_models/vpod_1.2/aa_prop/old

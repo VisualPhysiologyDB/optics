@@ -235,7 +235,11 @@ def seq_sim_report(query_file, name, ref_seq_id, opsin_database, opsin_db_fasta,
 
     # Retrieving Phenotype Meta-data for the closest match sequence
     # --- Load metadata ---
-    metadata_df = pd.read_csv(opsin_db_meta, delimiter="\t", index_col=0)
+    if '.tsv' in opsin_db_meta:
+        delimiter = "\t"
+    elif '.csv' in opsin_db_meta:
+        delimiter = ","
+    metadata_df = pd.read_csv(opsin_db_meta, delimiter=delimiter, index_col=0)
     closest_match_data = metadata_df.loc[closest_match_id]
     try:
         species = closest_match_data["Species"]
