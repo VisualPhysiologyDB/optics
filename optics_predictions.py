@@ -18,7 +18,7 @@ from tqdm import tqdm
 from optics_scripts.blastp_align import seq_sim_report
 from optics_scripts.bootstrap_predictions import calculate_ensemble_CI, plot_prediction_subsets_with_CI, wavelength_to_rgb
 
-def extract_fasta(file):
+def extract_fasta_entries(file):
     with open(file, 'r') as f:
         sequences = []
         names = []
@@ -53,6 +53,95 @@ def extract_fasta(file):
     return names,sequences
 
 def process_sequence(sequence=None, name=None, selected_model=None, identity_report=None, blastp=None, refseq=None, reffile=None, bootstrap=None, prediction_dict=None, encoding_method='one_hot', wrk_dir = '', only_blast = False):
+    
+    """Processes a single opsin amino acid sequence for lmax prediction.
+
+    This helper function orchestrates the processing of a single input opsin amino acid sequence.
+    It determines file paths based on the selected model and encoding method,
+    optionally performs a BLASTp search against a curated blastp database, 
+    aligns the sequence to a reference alignment using MAFFT, and predicts 
+    lmax using a pre-trained regression model. It can also perform
+    bootstrap analysis to estimate prediction confidence intervals.
+
+    It handles temporary file creation for sequence input and alignment output,
+    and attempts to run MAFFT using system-installed, Windows, or macOS
+    executables bundled with the application.
+
+    Args:
+        sequence (str, optional): The input amino acid sequence. Can be a
+            raw sequence string or a string containing a full FASTA entry
+            (header starting with '>'). Defaults to None.
+        name (str, optional): The identifier or name for the sequence, used
+            primarily for tracking in reports and dictionaries. Defaults to None.
+        selected_model (str, optional): A key indicating which pre-trained model
+            and associated dataset files (alignment, raw data, metadata, BLAST DB,
+            model files) to use. Valid keys are defined within the function's
+            internal dictionaries (e.g., "whole-dataset", "wildtype", etc.).
+            Defaults to None.
+        identity_report (str, optional): Path to write a detailed BLASTp identity
+            report file by the `seq_sim_report` function. Defaults to None.
+        blastp (bool | str, optional): If True or not 'no'/'False', runs BLASTp
+            via `seq_sim_report` to find the percent identity to the best hit
+            in the selected model's BLAST database. Defaults to None.
+        refseq (str, optional): Reference sequence identifier used by
+            `seq_sim_report` for specific BLAST comparisons if needed.
+            Defaults to None.
+        reffile (str, optional): Path to a file containing reference sequences,
+            used by `seq_sim_report` if needed for BLAST comparison.
+            Defaults to None.
+        bootstrap (bool, optional): If True, performs bootstrap analysis using
+            pre-generated bootstrap models to calculate prediction mean,
+            confidence intervals, median, and standard deviation. Defaults to None.
+        prediction_dict (dict, optional): A dictionary, typically a
+            `multiprocessing.Manager().dict()` passed from a calling function,
+            used to aggregate raw bootstrap predictions across multiple sequence
+            processes when `bootstrap` is True. This function *receives* the
+            updated dict from `calculate_ensemble_CI` and *returns* it.
+            Defaults to None.
+        encoding_method (str, optional): Specifies the sequence encoding method
+            used for model training ('one_hot' or 'aa_prop'). This determines
+            which set of model files and bootstrap directories are used.
+            Defaults to 'one_hot'.
+        wrk_dir (str, optional): The working directory for the analysis. If '',
+            it defaults to the directory containing the script. Used for locating
+            data, models, and temporary files. Defaults to ''.
+        only_blast (bool, optional): If True, performs only the BLASTp step
+            (if `blastp` is enabled) and returns the percent identity. Skips
+            alignment and prediction. Useful for quickly getting identity for
+            cached sequences. Defaults to False.
+
+    Returns:
+        tuple | str:
+            - If `bootstrap` is True: A tuple containing:
+                (mean_prediction (float), ci_lower (float), ci_upper (float),
+                 prediction_dict (dict), single_best_prediction (float),
+                 median_prediction (float), percent_identity (str),
+                 std_deviation (float), all_bootstrap_predictions (list))
+            - If `bootstrap` is False: A tuple containing:
+                (single_best_prediction (float), percent_identity (str))
+            - If `only_blast` is True: The percent identity (str).
+            - If `sequence` or `selected_model` is None: An error message (str).
+
+    Raises:
+        Exception: If MAFFT alignment fails across all attempted execution
+            methods (Linux, Windows, macOS).
+        FileNotFoundError: If temporary files created during the process cannot
+            be deleted (indicates potential filesystem issues).
+        Exception: Can propagate exceptions from called functions like
+            `seq_sim_report`, `read_data`, `load_obj`, `calculate_ensemble_CI`.
+            
+    Requires:
+        - MAFFT executable accessible via system PATH, or bundled versions at
+          '{wrk_dir}/optics_scripts/mafft/mafft-win/mafft.bat' (Windows) or
+          '{wrk_dir}/optics_scripts/mafft/mafft-mac/mafft.bat' (macOS).
+        - Pre-generated data files (FASTA alignments, raw sequences, metadata,
+          BLAST databases) and model files (.pkl regression models, bootstrap
+          model directories) organized as expected relative to `wrk_dir`.
+        - External Python libraries: pathlib, tempfile, subprocess, os, numpy.
+        - Helper functions/modules: `read_data`, `load_obj`, `seq_sim_report`,
+          `calculate_ensemble_CI` (assumed to be defined elsewhere).
+    """
+    
     if wrk_dir == '':
         script_path = pathlib.Path(__file__).resolve()  # Get absolute path
         wrk_dir = str(script_path.parent).replace('\\', '/')
@@ -125,7 +214,7 @@ def process_sequence(sequence=None, name=None, selected_model=None, identity_rep
             "whole-dataset-mnm": f"{model_dir}/reg_models/vpod_1.2/aa_prop/wds_mnm_xgb.pkl",
             "wildtype-mnm": f"{model_dir}/reg_models/vpod_1.2/aa_prop/wt_mnm_gbr.pkl",
             "vertebrate-mnm": f"{model_dir}/reg_models/vpod_1.2/aa_prop/vert_mnm_xgb.pkl",
-            "invertebrate-mnm": f"{model_dir}/reg_models/vpod_1.2/aa_prop/invert_mnm_gbr.pkl",
+            "invertebrate-mnm": f"{model_dir}/reg_models/vpod_1.2/aa_prop/inv_mnm_gbr.pkl",
             "wildtype-vert-mnm": f"{model_dir}/reg_models/vpod_1.2/aa_prop/wt_vert_mnm_xgb.pkl",
         }
         
@@ -136,11 +225,11 @@ def process_sequence(sequence=None, name=None, selected_model=None, identity_rep
             "invertebrate": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/inv_H1_H3_bootstrap_100_2025-03-21_17-40-08",
             "wildtype-vert": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/wt_vert_H2_P2_V_MASS_bootstrap_100_2025-03-21_17-25-47",
             "type-one": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/t1_H3_P1_PKB_bootstrap_100_2025-03-24_10-31-03",
-            "whole-dataset-mnm": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/wds_mnm_bootstrap",
-            "wildtype-mnm": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/wt_mnm_bootstrap",
-            "vertebrate-mnm": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/vert_mnm_bootstrap",
-            "invertebrate-mnm": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/invert_mnm_bootstrap",
-            "wildtype-vert-mnm": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/wt_vert_mnm_bootstrap",
+            "whole-dataset-mnm": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/wds_mnm_H2_H3_NCI_MASS_bootstrap_100_2025-04-15_09-35-46",
+            "wildtype-mnm": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/wt_mnm_H1_H2_H3_NCI_MASS_PKA_bootstrap_100_2025-04-15_10-17-06",
+            "vertebrate-mnm": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/vert_mnm_H3_P2_SCT_PKA_PKB_bootstrap_100_2025-04-15_11-00-24",
+            "invertebrate-mnm": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/inv_mnm_H1_P1_SCT_bootstrap_100_2025-04-15_10-52-20",
+            "wildtype-vert-mnm": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/wt_vert_mnm_H2_H3_PKB_bootstrap_100_2025-04-15_10-40-35",
         }
         
     else:
@@ -297,7 +386,7 @@ def process_sequences_from_file(file, selected_model, identity_report, blastp, r
     if file == None:
         raise Exception('Error: No file given')
     
-    names,sequences = extract_fasta(file)       
+    names,sequences = extract_fasta_entries(file)       
     predictions = []
     mean_predictions = []
     median_predictions = []
