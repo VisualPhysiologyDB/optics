@@ -72,11 +72,11 @@ Required Args:
 
 General Optional Args:
 
--o, --output_dir: Directory to save output files (optional). Default: .
+-o, --output_dir: Directory to save output files (optional). Default: '.'
 
 -p, --prediction_prefix: Base filename for prediction output (optional). Default: optics_predictions
 
--m, --model: Prediction model to use (optional). Options: whole-dataset, wildtype, vertebrate, invertebrate, wildtype-vert, type-one. Default: whole-dataset
+-m, --model: Prediction model to use (optional). Options: whole-dataset, wildtype, vertebrate, invertebrate, wildtype-vert, type-one, whole-dataset-mnm, wildtype-mnm, vertebrate-mnm, invertebrate-mnm, wildtype-vert-mnm. **Default: whole-dataset** 
 
 -e, --encoding: Encoding method to use (optional). Options: one_hot, aa_prop. Default: aa_prop
 
