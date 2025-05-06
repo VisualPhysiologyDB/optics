@@ -5,8 +5,6 @@ import os
 from Bio import SeqIO
 from Bio.Seq import Seq
 import tempfile
-#from Bio.SeqRecord import SeqRecord
-#import random
 import pandas as pd
 # --- BLAST search ---
 def run_blastp(query_file, database):

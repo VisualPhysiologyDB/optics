@@ -15,42 +15,27 @@ from joblib import Parallel, delayed
 import tempfile
 from multiprocessing import Manager
 from tqdm import tqdm
+from optics_scripts.utils import extract_fasta_entries, write_to_excel
 from optics_scripts.blastp_align import seq_sim_report
 from optics_scripts.bootstrap_predictions import calculate_ensemble_CI, plot_prediction_subsets_with_CI, wavelength_to_rgb
 
-def extract_fasta_entries(file):
-    with open(file, 'r') as f:
-        sequences = []
-        names = []
-        i = 0
-        line_count = 0
-        entry = ""
-        lines = f.readlines()
-        num_lines = len(lines)
-        #print(num_lines)
+import contextlib  
+import joblib  
+@contextlib.contextmanager
+def tqdm_joblib(tqdm_object):
+    """Context manager to patch joblib to report into tqdm progress bar given as argument"""
+    class TqdmBatchCompletionCallback(joblib.parallel.BatchCompletionCallBack):
+        def __call__(self, *args, **kwargs):
+            tqdm_object.update(n=self.batch_size)
+            return super().__call__(*args, **kwargs)
 
-        for line in lines:
-            if '>' in line:
-                if i == 1:
-                    names.append(line.replace('>','').strip().replace(' ','_'))
-                    sequences.append(entry)
-                    entry = ""
-                    entry += line
-                    #print(sequences)
-                    line_count+=1
-                else:
-                    names.append(line.replace('>','').strip().replace(' ','_'))
-                    entry += line
-                    i+=1
-                    line_count+=1
-            else:
-                entry += line
-                line_count+=1
-                if line_count >= num_lines:
-                     sequences.append(entry)
-    #print(sequences)
-    #print(names)
-    return names,sequences
+    old_batch_callback = joblib.parallel.BatchCompletionCallBack
+    joblib.parallel.BatchCompletionCallBack = TqdmBatchCompletionCallback
+    try:
+        yield tqdm_object
+    finally:
+        joblib.parallel.BatchCompletionCallBack = old_batch_callback
+        tqdm_object.close()
 
 def process_sequence(sequence=None, name=None, selected_model=None, identity_report=None, blastp=None, refseq=None, reffile=None, bootstrap=None, prediction_dict=None, encoding_method='one_hot', wrk_dir = '', only_blast = False):
     
@@ -160,6 +145,8 @@ def process_sequence(sequence=None, name=None, selected_model=None, identity_rep
         "vertebrate-mnm": f"{data_dir}/fasta/vpod_1.2/vert_mnm_aligned_VPOD_1.2_het.fasta",
         "invertebrate-mnm": f"{data_dir}/fasta/vpod_1.2/inv_mnm_aligned_VPOD_1.2_het.fasta",
         "wildtype-vert-mnm": f"{data_dir}/fasta/vpod_1.2/wt_vert_mnm_aligned_VPOD_1.2_het.fasta",
+        "wildtype-mut": f"{data_dir}/fasta/vpod_1.2/wt_mut_added_aligned_VPOD_1.2_het.fasta",
+
     }   
     model_raw_data = {
         "whole-dataset": f"{data_dir}/fasta/vpod_1.2/wds.txt",
@@ -173,6 +160,7 @@ def process_sequence(sequence=None, name=None, selected_model=None, identity_rep
         "vertebrate-mnm": f"{data_dir}/fasta/vpod_1.2/vert_mnm.txt",
         "invertebrate-mnm": f"{data_dir}/fasta/vpod_1.2/inv_mnm.txt",
         "wildtype-vert-mnm": f"{data_dir}/fasta/vpod_1.2/wt_vert_mnm.txt",
+        "wildtype-mut": f"{data_dir}/fasta/vpod_1.2/wt_mut_added.txt",
     }   
     model_metadata = {
         "whole-dataset": f"{data_dir}/fasta/vpod_1.2/wds_meta.tsv",
@@ -186,6 +174,7 @@ def process_sequence(sequence=None, name=None, selected_model=None, identity_rep
         "vertebrate-mnm": f"{data_dir}/fasta/vpod_1.2/vert_mnm_meta.csv",
         "invertebrate-mnm": f"{data_dir}/fasta/vpod_1.2/inv_mnm_meta.csv",
         "wildtype-vert-mnm": f"{data_dir}/fasta/vpod_1.2/wt_vert_mnm_meta.csv",
+        "wildtype-mut": f"{data_dir}/fasta/vpod_1.2/wt_meta.tsv",
     }   
     model_blast_db = {
         "whole-dataset": f"{data_dir}/blast_dbs/vpod_1.2/wds_db",
@@ -199,6 +188,7 @@ def process_sequence(sequence=None, name=None, selected_model=None, identity_rep
         "vertebrate-mnm": f"{data_dir}/blast_dbs/vpod_1.2/vert_mnm_db",
         "invertebrate-mnm": f"{data_dir}/blast_dbs/vpod_1.2/inv_mnm_db",
         "wildtype-vert-mnm": f"{data_dir}/blast_dbs/vpod_1.2/wt_vert_mnm_db",
+        "wildtype-mut": f"{data_dir}/blast_dbs/vpod_1.2/wt_db",
     }   
 
     model_dir = f"{wrk_dir}/models"
@@ -216,6 +206,7 @@ def process_sequence(sequence=None, name=None, selected_model=None, identity_rep
             "vertebrate-mnm": f"{model_dir}/reg_models/vpod_1.2/aa_prop/vert_mnm_xgb.pkl",
             "invertebrate-mnm": f"{model_dir}/reg_models/vpod_1.2/aa_prop/inv_mnm_gbr.pkl",
             "wildtype-vert-mnm": f"{model_dir}/reg_models/vpod_1.2/aa_prop/wt_vert_mnm_xgb.pkl",
+            "wildtype-mut": f"{model_dir}/reg_models/vpod_1.2/aa_prop/wt_mut_gbr.pkl",
         }
         
         model_bs_dirs = {
@@ -230,6 +221,7 @@ def process_sequence(sequence=None, name=None, selected_model=None, identity_rep
             "vertebrate-mnm": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/vert_mnm_H3_P2_SCT_PKA_PKB_bootstrap_100_2025-04-15_11-00-24",
             "invertebrate-mnm": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/inv_mnm_H1_P1_SCT_bootstrap_100_2025-04-15_10-52-20",
             "wildtype-vert-mnm": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/wt_vert_mnm_H2_H3_PKB_bootstrap_100_2025-04-15_10-40-35",
+            "wildtype-mut": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/wt_mut_H1_H2_H3_SCT_bootstrap_100_2025-04-25_17-14-36",
         }
         
     else:
@@ -332,7 +324,10 @@ def process_sequence(sequence=None, name=None, selected_model=None, identity_rep
     last_seq = int(ref_copy.shape[0])
     new_seq_test = new_seq_test.iloc[last_seq:].copy()
     #print(new_seq_test)
-
+     # ... (Load the selected model and make a prediction)
+    loaded_mod = load_obj(model)
+    prediction = loaded_mod.predict(new_seq_test)
+    
     try:
         os.remove(new_ali)
         os.remove(temp_seq)
@@ -344,17 +339,9 @@ def process_sequence(sequence=None, name=None, selected_model=None, identity_rep
         mean_prediction, ci_lower, ci_upper, prediction_dict, median_prediction, std_dev, predictions_all = calculate_ensemble_CI(model_bs_folder, new_seq_test, name, prediction_dict)
         #print(f'{mean_prediction}, {ci_lower}, {ci_upper}, {prediction_dict}')
         
-        # ... (Load the selected model and make a single prediction)
-        loaded_mod = load_obj(model)
-        prediction = loaded_mod.predict(new_seq_test)
-        
         return (round(float(mean_prediction),1), round(float(ci_lower),1), round(float(ci_upper),1), prediction_dict, round(float(prediction[0]),1), round(float(median_prediction),1), str(percent_iden), round(float(std_dev),1), predictions_all.tolist())
 
     else:
-        # ... (Load the selected model and make a prediction)
-        loaded_mod = load_obj(model)
-        prediction = loaded_mod.predict(new_seq_test)
-        
         return(round(float(prediction[0]),1), str(percent_iden))
  
 
@@ -379,6 +366,7 @@ def process_sequences_from_file(file, selected_model, identity_report, blastp, r
         "vertebrate-mnm": f"{cache_dir}/{model_type}/vpod_1.2/{encoding_method}/vert_mnm_pred_dict.json",
         "invertebrate-mnm": f"{cache_dir}/{model_type}/vpod_1.2/{encoding_method}/invert_mnm_pred_dict.json",
         "wildtype-vert-mnm": f"{cache_dir}/{model_type}/vpod_1.2/{encoding_method}/wt_vert_mnm_pred_dict.json",
+        "wildtype-mut": f"{cache_dir}/{model_type}/vpod_1.2/{encoding_method}/wt_mut_pred_dict.json",
     }
 
     cache_file = model_cache_dirs[selected_model]
@@ -544,7 +532,7 @@ def run_optics_predictions(input_sequence, pred_dir=None, output='optics_predict
     #print(f"Script directory (pathlib): {wrk_dir}")
 
     # Argument validation (mimicking argparse behavior, but for function inputs)
-    models = ['whole-dataset', 'wildtype', 'vertebrate', 'invertebrate', 'wildtype-vert', 'type-one', 'whole-dataset-mnm', 'wildtype-mnm', 'vertebrate-mnm', 'invertebrate-mnm', 'wildtype-vert-mnm']
+    models = ['whole-dataset', 'wildtype', 'vertebrate', 'invertebrate', 'wildtype-vert', 'type-one', 'whole-dataset-mnm', 'wildtype-mnm', 'vertebrate-mnm', 'invertebrate-mnm', 'wildtype-vert-mnm', 'wildtype-mut']
     encoding_methods = ['one_hot', 'aa_prop']
     ref_seq_choices = ['bovine', 'squid', 'microbe', 'custom']
     #bool_choices = ['true', 'True', 'false', 'False', True, False] #not used, we cast directly to bool.
@@ -705,77 +693,6 @@ def run_optics_predictions(input_sequence, pred_dir=None, output='optics_predict
     print('Predictions Complete!')
 
     return pred_df, output_path
-
-    
-from openpyxl import Workbook
-from openpyxl.styles import PatternFill
-
-def write_to_excel(names, predictions, per_iden_list, output_filename="output.xlsx", 
-                  mean_predictions=None, median_predictions=None, ci_lowers=None, 
-                  ci_uppers=None, std_dev_list=None, hex_color_list=None, seq_lens_list=None):
-    """
-    Writes data to an Excel sheet, including bootstrap statistics and
-    hexadecimal color codes, and colors the cells based on the hex codes.
-
-    Args:
-        names: List of names.
-        predictions: List of predictions.
-        per_iden_list: List of percentage identities.
-        output_filename: Name of the output Excel file.
-        mean_predictions: List of mean predictions (optional, for bootstrap).
-        median_predictions: List of median predictions (optional, for bootstrap).
-        ci_lowers: List of lower confidence intervals (optional, for bootstrap).
-        ci_uppers: List of upper confidence intervals (optional, for bootstrap).
-        std_dev_list: List of standard deviations (optional, for bootstrap).
-        hex_color_list: List of hexadecimal color codes.
-        seq_lens_list: List of sequence lengths
-        """
-
-    wb = Workbook()
-    ws = wb.active
-
-    
-    if mean_predictions == None:
-        ws.append(['Names', 'Single_Prediction', '%Identity_Nearest_VPOD_Sequence', 'Sequence_Length','Lmax_Hex_Color'])
-        for i in range(len(names)):
-            # Because openpyxel is picky about hex-codes we need to remove the '#' symbol for it to accept it as a fill color.
-            hex_color = hex_color_list[i].replace('#','') 
-            ws.append([names[i], predictions[i], per_iden_list[i], seq_lens_list[i], hex_color_list[i]])
-            ws.cell(row=i+2, column=5).fill = PatternFill(start_color=hex_color, 
-                                                        end_color=hex_color, 
-                                                        fill_type="solid")
-    else:
-        ws.append(['Names', 'Single_Prediction', 'Prediction_Means', 'Prediction_Medians',
-                    'Prediction_Lower_Bounds', 'Prediction_Upper_Bounds', 'Std_Deviation', 
-                    '%Identity_Nearest_VPOD_Sequence', 'Sequence_Lengths','Lmax_Hex_Color'])
-        for i in range(len(names)):
-            # Because openpyxel is picky about hex-codes we need to remove the '#' symbol for it to accept it as a fill color.
-            hex_color = hex_color_list[i].replace('#','') 
-            ws.append([names[i], predictions[i], mean_predictions[i], median_predictions[i],
-                        ci_lowers[i], ci_uppers[i], std_dev_list[i], per_iden_list[i], seq_lens_list[i], hex_color_list[i]])
-            ws.cell(row=i+2, column=10).fill = PatternFill(start_color=hex_color, 
-                                                        end_color=hex_color, 
-                                                        fill_type="solid")
-    wb.save(output_filename)
-    
-    
-import contextlib  
-import joblib  
-@contextlib.contextmanager
-def tqdm_joblib(tqdm_object):
-    """Context manager to patch joblib to report into tqdm progress bar given as argument"""
-    class TqdmBatchCompletionCallback(joblib.parallel.BatchCompletionCallBack):
-        def __call__(self, *args, **kwargs):
-            tqdm_object.update(n=self.batch_size)
-            return super().__call__(*args, **kwargs)
-
-    old_batch_callback = joblib.parallel.BatchCompletionCallBack
-    joblib.parallel.BatchCompletionCallBack = TqdmBatchCompletionCallback
-    try:
-        yield tqdm_object
-    finally:
-        joblib.parallel.BatchCompletionCallBack = old_batch_callback
-        tqdm_object.close()
         
 if __name__ == '__main__':
     # This part will only execute when the script is run directly (not imported)
@@ -808,7 +725,7 @@ if __name__ == '__main__':
                         help="Prediction model to use (optional).", 
                         type=str, 
                         default="whole-dataset", 
-                        choices=['whole-dataset', 'wildtype', 'vertebrate', 'invertebrate', 'wildtype-vert', 'type-one', 'whole-dataset-mnm', 'wildtype-mnm', 'vertebrate-mnm', 'invertebrate-mnm', 'wildtype-vert-mnm'],
+                        choices=['whole-dataset', 'wildtype', 'vertebrate', 'invertebrate', 'wildtype-vert', 'type-one', 'whole-dataset-mnm', 'wildtype-mnm', 'vertebrate-mnm', 'invertebrate-mnm', 'wildtype-vert-mnm', 'wildtype-mut'],
                         required=False)
 
     # Encoding method
