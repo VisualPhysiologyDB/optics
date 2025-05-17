@@ -1,0 +1,22 @@
+{
+  "version": "1.2",
+  "dbname": "inv_mnm_db",
+  "dbtype": "Protein",
+  "db-version": 5,
+  "description": "E:/safra/Documents/GitHub/optics/data/fasta/vpod_1.2/inv_mnm.txt",
+  "number-of-letters": 112938,
+  "number-of-sequences": 302,
+  "last-updated": "2025-03-19T16:57:00",
+  "number-of-volumes": 1,
+  "bytes-total": 1141244,
+  "bytes-to-cache": 115805,
+  "files": [
+    "inv_mnm_db.pdb",
+    "inv_mnm_db.phr",
+    "inv_mnm_db.pin",
+    "inv_mnm_db.pot",
+    "inv_mnm_db.psq",
+    "inv_mnm_db.ptf",
+    "inv_mnm_db.pto"
+  ]
+}

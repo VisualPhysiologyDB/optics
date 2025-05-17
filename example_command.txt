@@ -1,1 +1,1 @@
-python optics_predictions.py -in ./examples/optics_ex_short.txt -rd short_ex_test_of_optics -out ex_predictions.tsv -m wildtype -e aa_prop -b True -ir ex_blastp_report.txt -r squid -s True -viz True -bsv ex_bs_viz
+python optics_predictions.py -i ./examples/optics_ex_short.txt -o ex_test_of_optics -p ex_predictions -m wildtype -e aa_prop --blastp --blastp_report blastp_report.txt --refseq squid --bootstrap --visualize_bootstrap --bootstrap_viz_file bootstrap_viz

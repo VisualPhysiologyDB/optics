@@ -4,8 +4,7 @@ import subprocess
 import os
 from Bio import SeqIO
 from Bio.Seq import Seq
-#from Bio.SeqRecord import SeqRecord
-import random
+import tempfile
 import pandas as pd
 # --- BLAST search ---
 def run_blastp(query_file, database):
@@ -27,26 +26,25 @@ def run_blastp(query_file, database):
         closest_match_id = '-'
         print(f'This is the blast result which raised the following error:\n{blast_result}\n')
         print(f'This is the error message from blastp:\n{stderr_data}\n')
+        #raise(Exception(f'Blastp failed to run. Please check your FASTA file to make sure it is formatted correctly\n{stderr_data}\n'))
 
     return closest_match_id, blast_metrics
 
 # --- Alignment ---
-def align_sequences(query_seq, target_seq, reference_seq):
+def align_sequences(query_seq, target_seq, reference_seq, wrk_dir):
     """Aligns query, target, and reference sequences using MAFFT"""
     #get working directory to make temp files
-    wrk_dir = os.getcwd().replace('\\','/')
-    #print(wrk_dir)
-    random_number = str(random.randint(1, 10000))
-    temp_seqs = f'{wrk_dir}/tmp/blastp_temp_seqs_{random_number}.fasta'  
-    with open(temp_seqs, "w") as temp_file:  # Key change
+    with tempfile.NamedTemporaryFile(mode="w", dir=f"{wrk_dir}/tmp", suffix=".fasta", delete=False) as temp_file:
+        temp_seqs = temp_file.name  # Get the unique filename
+
         temp_file.write(f'{reference_seq}\n')
         temp_file.write(f'{query_seq}\n')
         temp_file.write(f'{target_seq}\n')
     #with open(temp_seqs, "r") as temp_file:
         #for lines in temp_file:
             #print(lines)
-    new_ali = f'{wrk_dir}/tmp/blastp_temp_ali_{random_number}.fasta'  
-    # ... (Perform alignment using MAFFT with alignment_data)
+    with tempfile.NamedTemporaryFile(mode="w", dir=f"{wrk_dir}/tmp", suffix=".fasta", delete=False) as temp_ali_file:
+        new_ali = temp_ali_file.name 
     try:
         mafft_exe ='mafft' #change to your own directory for mafft.bat or mafft execution file
         cmd = [mafft_exe,'--auto',temp_seqs]
@@ -155,7 +153,7 @@ def analyze_differences(query_seq, closest_match_seq, reference_seq):
         raise Exception
 
 # --- Main script ---
-def seq_sim_report(query_file, name, ref_seq_id, opsin_database, opsin_db_fasta, opsin_db_meta, ouput_file, reffile):
+def seq_sim_report(query_file, name, ref_seq_id, opsin_database, opsin_db_fasta, opsin_db_meta, ouput_file, reffile, wrk_dir):
     # BLAST search
     closest_match_id, blast_metrics = run_blastp(query_file, opsin_database)
     if closest_match_id == '-':
@@ -196,7 +194,7 @@ def seq_sim_report(query_file, name, ref_seq_id, opsin_database, opsin_db_fasta,
     #print(f'This is the reference record:\n{reference_record}')
 
     # Alignment
-    alignment = align_sequences(query_record, closest_match_record, reference_record)
+    alignment = align_sequences(query_record, closest_match_record, reference_record, wrk_dir)
 
     with open(alignment, 'r') as f:
         aligned_sequences = []
@@ -235,7 +233,11 @@ def seq_sim_report(query_file, name, ref_seq_id, opsin_database, opsin_db_fasta,
 
     # Retrieving Phenotype Meta-data for the closest match sequence
     # --- Load metadata ---
-    metadata_df = pd.read_csv(opsin_db_meta, delimiter="\t", index_col=0)
+    if '.tsv' in opsin_db_meta:
+        delimiter = "\t"
+    elif '.csv' in opsin_db_meta:
+        delimiter = ","
+    metadata_df = pd.read_csv(opsin_db_meta, delimiter=delimiter, index_col=0)
     closest_match_data = metadata_df.loc[closest_match_id]
     try:
         species = closest_match_data["Species"]

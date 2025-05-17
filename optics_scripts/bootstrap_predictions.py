@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import random
+from joblib import Parallel, delayed
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
@@ -32,10 +33,9 @@ def calculate_ensemble_CI(model_folder, query, name, predictions_dict):
     median_predictions = np.median(predictions_all)
     std_dev = np.std(predictions_all)
 
-    return mean_predictions, ci_lower, ci_upper, predictions_dict, median_predictions, std_dev
+    return mean_predictions, ci_lower, ci_upper, predictions_dict, median_predictions, std_dev, predictions_all
 
-
-def plot_prediction_subsets_with_CI(names, predictions, mean_preds, pdf_file, visualize_bootstrap):
+def plot_prediction_subsets_with_CI(names, predictions, mean_preds, pdf_file, visualize_bootstrap, save_as='svg'):
     # Customize colors 
     colors = [wavelength_to_rgb(pred) for pred in mean_preds]
     color_specs = [matplotlib.colors.to_hex(color) for color in colors]
@@ -50,9 +50,8 @@ def plot_prediction_subsets_with_CI(names, predictions, mean_preds, pdf_file, vi
         for plot_idx in range(num_plots):
             plt.rcParams["figure.autolayout"] = True
             plt.rcParams["figure.figsize"] = [11.00, 5.00]
-            plt.rcParams["figure.autolayout"] = True
-            plt.rcParams["figure.figsize"] = [11.00, 5.00]
-            
+            plt.rcParams['font.family'] = 'Century Gothic'
+
             start_idx = plot_idx * 5
             end_idx = min(start_idx + 5, len(names))
             subset_names = names[start_idx:end_idx]
@@ -90,27 +89,22 @@ def plot_prediction_subsets_with_CI(names, predictions, mean_preds, pdf_file, vi
 
             for i, seq_name in enumerate(concat_names):
                 median_y = bplot['medians'][i].get_ydata()[0]
-                y_pos = median_y + 0.71
+                y_pos = median_y + 0.68
                 x_pos = bplot['medians'][i].get_xdata()[1]
-                plt.text(x_pos, y_pos, seq_name, ha='center', va='top', color='black', fontsize=10, zorder=3)
-
-            # plotting code for labels, legend, grid, etc.
-            #medians = bplot['medians']
-            #median_values = [line.get_xydata()[1][0] for line in medians]  # Using list comprehension
+                plt.text(x_pos, y_pos, seq_name, ha='center', va='top', color='black', fontsize=12, zorder=3)
 
             preds_handle = mpatches.Patch(facecolor='white', edgecolor='black', label='IQR')
             ci_handle = plt.Line2D([], [], color='black', label='95% Confidence Interval')
             
-            plt.xlabel("Predicted λmax (nm)")
-            plt.ylabel("Opsin Sequences")
-            #plt.yticks(range(1, len(names) + 1), seq_id, rotation = 45)  # Set protein names as y-ticks
+            plt.xlabel("Predicted λmax (nm)", fontsize=15)
+            plt.ylabel("Opsin Sequences", fontsize=15)
+            plt.xticks(fontsize=15)
             plt.yticks([])
             plt.legend(handles=[preds_handle, ci_handle])
-            #plt.legend(labels=['IQR', 'Confidence Interval']) 
             plt.grid(True, axis='x')  # Grid only on x-axis        
             # Save each plot with a unique filename
-            plt.savefig(f'{pdf_file}_part{plot_idx + 1}.pdf', format='pdf', dpi=300)
-            plt.savefig(f'{pdf_file}_part{plot_idx + 1}.svg', format='svg')
+            plt.savefig(f'{pdf_file}_part{plot_idx + 1}.{save_as}', format=save_as, dpi=400)
+            # Clear the current figure
             plt.close()
         
     #print('\nBootstrap plots done!\n')

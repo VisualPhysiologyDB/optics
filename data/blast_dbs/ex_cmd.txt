@@ -1,2 +1,0 @@
-makeblastdb -in C:/Users/safra/Documents/GitHub/optics/data/fasta/vpod_1.2/wds.txt -dbtype prot -out wds_db
-

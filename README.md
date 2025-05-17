@@ -57,7 +57,8 @@
       - Manaully install the Windows compatable [BLAST](https://blast.ncbi.nlm.nih.gov/doc/blast-help/downloadblastdata.html#downloadblastdata) executable on your system PATH; [the download list is here](https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/)
         - We suggest downloading '[ncbi-blast-2.16.0+-win64.exe](https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/ncbi-blast-2.16.0+-win64.exe)' 
       - You DO NOT need to download MAFFT, OPTICS should be able to run MAFFT from the files we provide when downloading this GitHub.
-   
+
+  
 ## Usage
 
   **MAKE SURE YOU HAVE ALL DEPENDENCIES DOWNLOADED ARE IN THE FOLDER DIRECTORY FOR OPTICS BEFORE RUNNING ANY SCRIPTS!**
@@ -65,46 +66,50 @@
   ### **Parameters**
      
   ```
-  Required:
+Required Args:
 
-  -in, --input: Path to the input file containing sequences in FASTA format.
+-i, --input: Either a single sequence or a path to a FASTA file.
 
-  Optional:
-  
-  -rd, --report_dir: Name of the directory to create for storing output files. Default: optics_on_unamed_{date_and_time_label}
+General Optional Args:
 
-  -out, --output: Name of the output file for predictions. Default: optics_predictions.txt
+-o, --output_dir: Directory to save output files (optional). Default: '.'
 
-  -m, --model: Model to use for prediction. Options: whole-dataset, vertebrate, invertebrate, wildtype, wildtype-vert, type-one. Default: whole-dataset
+-p, --prediction_prefix: Base filename for prediction output (optional). Default: optics_predictions
 
-  -e, --encoding_method: Encoding method used to train the model and make predictions. Options: one-hot or aa_prop. Default: aa_prop
+-m, --model: Prediction model to use (optional). Options: whole-dataset, wildtype, vertebrate, invertebrate, wildtype-vert, type-one, whole-dataset-mnm, wildtype-mnm, vertebrate-mnm, invertebrate-mnm, wildtype-vert-mnm. **Default: whole-dataset** 
 
-  -b, --blastp: Enable/disable Blastp analysis on query sequences. Default: True
+-e, --encoding: Encoding method to use (optional). Options: one_hot, aa_prop. Default: aa_prop
 
-  -ir, --iden_report: Name of the output file for the Blastp report. Default: blastp_report.txt
+BLASTp Analysis Args (optional):
 
-  -r, --refseq: Reference sequence used for position numbering in Blastp analysis. Options: bovine, squid, microbe, or custom. Default: bovine
+--blastp: Enable BLASTp analysis.
 
-  -f, --reffile: Custom reference sequence file used for Blastp analysis. Required only if -r custom is selected.
+--blastp_report: Filename for BLASTp report. Default: blastp_report.txt
 
-  -s, --bootstrap: Enable/disable bootstrap predictions on query sequences. Default: True
+--refseq: Reference sequence used for blastp analysis. Options: bovine, squid, microbe, custom. Default: bovine
 
-  -viz, --visualize_bootstrap: Enable/disable visualization of bootstrap predictions. Default: True
+--custom_ref_file: Path to a custom reference sequence file for BLASTp.  Required if --refseq custom is selected.
 
-  -bsv, --bootstrap_viz_file: Name of the output PDF file for visualizing bootstrap predictions. Default: bootstrap_viz.pdf
+Bootstrap Analysis Args (optional):
+
+--bootstrap: Enable bootstrap predictions.
+
+--visualize_bootstrap: Enable visualization of bootstrap predictions.
+
+--bootstrap_viz_file: Filename prefix for bootstrap visualization (PDF and SVG). Default: bootstrap_viz
 
   ```     
   ### Example Command Line Usage vvv
   
   ```bash
-  python optics_predictions.py -in ./examples/optics_ex_short.txt -rd ex_test_of_optics -out ex_predictions.tsv -m wildtype -e aa_prop -b True -ir ex_blastp_report.tsv -r squid -s True -viz True -bsv ex_bs_viz
+  python optics_predictions.py -i ./examples/optics_ex_short.txt -o ex_test_of_optics -p ex_predictions -m wildtype -e aa_prop --blastp -blastp_report blastp_report.txt --refseq squid --bootstrap --visualize_bootstrap --bootstrap_viz_file bootstrap_viz
   ```
 ### Input
 
 - **Unaligned** FASTA file containing opsin amino-acid sequences.
 - Example FASTA Entry:
   ```
-    >NP_001014890.1_rhodopsin_Bos taurus
+    >NP_001014890.1_rhodopsin_Bos_taurus
     MNGTEGPNFYVPFSNKTGVVRSPFEAPQYYLAEPWQFSMLAAYMFLLIMLGFPINFLTLYVTVQHKKLRT 
     PLNYILLNLAVADLFMVFGGFTTTLYTSLHGYFVFGPTGCNLEGFFATLGGEIALWSLVVLAIERYVVVC 
     KPMSNFRFGENHAIMGVAFTWVMALACAAPPLVGWSRYIPEGMQCSCGIDYYTPHEETNNESFVIYMFVV 
