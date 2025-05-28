@@ -477,7 +477,7 @@ def process_sequences_from_file(file, selected_model, identity_report, blastp, r
 
     return(names, mean_predictions, ci_lowers, ci_uppers, prediction_dict, predictions, median_predictions, per_iden_list, std_dev_list, seq_lens)
 
-def run_optics_predictions(input_sequence, pred_dir=None, output='optics_predictions.txt',
+def run_optics_predictions(input_sequence, pred_dir=None, output='optics_predictions',
                            model="whole-dataset", encoding_method='aa_prop', blastp=True,
                            iden_report='blastp_report.txt', refseq='bovine', reffile=None,
                            bootstrap=True, visualize_bootstrap=True, bootstrap_viz_file='bootstrap_viz'):
@@ -548,19 +548,25 @@ def run_optics_predictions(input_sequence, pred_dir=None, output='optics_predict
     # Directory setup (with added handling for pre-existing directories)
     if not os.path.isdir(f'{wrk_dir}/tmp'):
         os.makedirs(f'{wrk_dir}/tmp')
-    if not os.path.isdir('./prediction_outputs'):
-        os.makedirs('./prediction_outputs')
-
+    
+    if not pred_dir is None:
+        if not os.path.isdir(pred_dir):
+            os.makedirs(pred_dir)
+    else:
+        if not os.path.isdir('./prediction_outputs'):
+            os.makedirs('./prediction_outputs') 
+    
+    output = output.replace('.tsv', '').replace('.txt', '').replace('.csv', '')
     if pred_dir is None:
         report_dir = f'./prediction_outputs/optics_on_unamed_{dt_label}'
     else:
-        report_dir = f'./prediction_outputs/optics_on_{pred_dir}_{dt_label}'
+        report_dir = f'{pred_dir}/optics_on_{output}_{dt_label}'
     os.makedirs(report_dir, exist_ok=True)  # exist_ok=True prevents errors if dir exists
 
 
 
     blastp_file = f'{report_dir}/{iden_report}'
-    if not (blastp_file.endswith('.txt') or blastp_file.endswith('.tsv')):
+    if not (blastp_file.endswith(('.txt','.tsv','.csv'))):
            blastp_file += '.txt'
 
     bootstrap_file = f'{report_dir}/{bootstrap_viz_file}'
@@ -571,12 +577,10 @@ def run_optics_predictions(input_sequence, pred_dir=None, output='optics_predict
         names, mean_predictions, ci_lowers, ci_uppers, prediction_dict, predictions, median_predictions, per_iden_list, std_dev_list, seq_lens_list = process_sequences_from_file(input_sequence, model, blastp_file, blastp, refseq, reffile, bootstrap, encoding_method, wrk_dir)
         
         # Output file handling (TSV or TXT, Excel)
-        if output.endswith(('.tsv', '.txt')):
-            output_path = f'{report_dir}/{output}'
-            excel_output = f'{report_dir}/{output.replace(".tsv", "").replace(".txt", "")}_for_excel.xlsx'
-        else:
-            output_path = f'{report_dir}/{output}.tsv'
-            excel_output = f'{report_dir}/{output}_for_excel.xlsx'
+        if 'predictions' not in {output}:
+            output += '_predictions'
+        output_path = f'{report_dir}/{output}.tsv'
+        excel_output = f'{report_dir}/{output}_for_excel.xlsx'
 
     else:  # Assume it's a single sequence
         #  create a temporary file.
@@ -708,16 +712,16 @@ if __name__ == '__main__':
 
     # Output directory for all results
     parser.add_argument("-o", "--output_dir", 
-                        help="Directory to save output files (optional).", 
+                        help="Desired directory to save output folder/files (optional).", 
                         type=str, 
-                        default=".",  # Current directory if not specified
+                        default=None,
                         required=False)
 
-    # Base filename for predictions
+    # Base filename for prediction folder and all subsequent results
     parser.add_argument("-p", "--prediction_prefix", 
-                        help="Base filename for prediction output (optional).", 
+                        help="Base filename for prediction outputs (optional).", 
                         type=str, 
-                        default="optics_predictions", 
+                        default="unnamed", 
                         required=False)
 
     # Prediction model
@@ -771,9 +775,9 @@ if __name__ == '__main__':
     
     args = parser.parse_args()
 
-    prediction_output = f"{args.prediction_prefix}"
     blastp_report_output = f"{args.blastp_report}" if args.blastp else None
     bootstrap_viz_output = f"{args.bootstrap_viz_file}" if args.visualize_bootstrap else None
-    run_optics_predictions(args.input, args.output_dir, prediction_output, args.model, args.encoding,
+    run_optics_predictions(args.input, args.output_dir,
+                        args.prediction_prefix, args.model, args.encoding,
                         args.blastp, blastp_report_output, args.refseq, args.custom_ref_file,
                         args.bootstrap, args.visualize_bootstrap, bootstrap_viz_output)

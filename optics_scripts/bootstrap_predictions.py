@@ -89,7 +89,7 @@ def plot_prediction_subsets_with_CI(names, predictions, mean_preds, pdf_file, vi
 
             for i, seq_name in enumerate(concat_names):
                 median_y = bplot['medians'][i].get_ydata()[0]
-                y_pos = median_y + 0.68
+                y_pos = median_y + 0.70
                 x_pos = bplot['medians'][i].get_xdata()[1]
                 plt.text(x_pos, y_pos, seq_name, ha='center', va='top', color='black', fontsize=12, zorder=3)
 
