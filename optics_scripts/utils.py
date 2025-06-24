@@ -2,7 +2,7 @@ def extract_fasta_entries(file):
     with open(file, 'r') as f:
         sequences = []
         names = []
-        i = 0
+        first_entry = True
         line_count = 0
         entry = ""
         lines = f.readlines()
@@ -11,20 +11,26 @@ def extract_fasta_entries(file):
 
         for line in lines:
             if '>' in line:
-                if i == 1:
-                    names.append(line.replace('>','').strip().replace(' ','_'))
+                if first_entry == False:
+                    # Append completed entry
                     sequences.append(entry)
+                    # Append name of new entry
+                    names.append(line.replace('>','').strip().replace(' ','_').replace('\n',''))
+                    # Restart with new entry
                     entry = ""
                     entry += line
                     #print(sequences)
                     line_count+=1
                 else:
-                    names.append(line.replace('>','').strip().replace(' ','_'))
+                    # First entry - must declare entry outside the loop, so this is just a neccessary artifact
+                    names.append(line.replace('>','').strip().replace(' ','_').replace('\n',''))
+                    #print(names)
                     entry += line
-                    i+=1
+                    first_entry = False
                     line_count+=1
             else:
-                entry += line
+                # This should be adding the new lines of aa data 
+                entry += line.strip().replace('\n','')
                 line_count+=1
                 if line_count >= num_lines:
                      sequences.append(entry)

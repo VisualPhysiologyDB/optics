@@ -229,7 +229,7 @@ class OpticsGUI(tk.Tk):
 
     def browse_input_file(self):
         filename = filedialog.askopenfilename(title="Select Input FASTA File or Sequence File",
-                                               filetypes=(("FASTA files", "*.fasta *.fa *.fna *.faa"),
+                                               filetypes=(("FASTA files", "*.fasta *.fa *.fna *.faa *.fas"),
                                                           ("Text files", "*.txt"), 
                                                           ("All files", "*.*")))
         if filename:
@@ -242,7 +242,7 @@ class OpticsGUI(tk.Tk):
 
     def browse_custom_ref_file(self):
         filename = filedialog.askopenfilename(title="Select Custom Reference File",
-                                               filetypes=(("FASTA files", "*.fasta *.fa *.fna *.faa"),
+                                               filetypes=(("FASTA files", "*.fasta *.fa *.fna *.faa *.fas"),
                                                           ("All files", "*.*")))
         if filename:
             self.custom_ref_file_var.set(filename)

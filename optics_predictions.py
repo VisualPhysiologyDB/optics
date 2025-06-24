@@ -319,14 +319,45 @@ def process_sequence(sequence=None, name=None, selected_model=None, identity_rep
             
     seq_type = 'aa'
     
-    new_seq_test = read_data(new_ali, seq_type = seq_type, is_main=True, gap_threshold=0.5)
-    ref_copy = read_data(alignment_data, seq_type = seq_type, is_main=True, gap_threshold=0.5)
-    last_seq = int(ref_copy.shape[0])
-    new_seq_test = new_seq_test.iloc[last_seq:].copy()
-    #print(new_seq_test)
-     # ... (Load the selected model and make a prediction)
-    loaded_mod = load_obj(model)
-    prediction = loaded_mod.predict(new_seq_test)
+    try:
+        new_seq_test = read_data(new_ali, seq_type = seq_type, is_main=True, gap_threshold=0.5)
+        ref_copy = read_data(alignment_data, seq_type = seq_type, is_main=True, gap_threshold=0.5)
+        last_seq = int(ref_copy.shape[0])
+        new_seq_test = new_seq_test.iloc[last_seq:].copy()
+        #print(new_seq_test)
+        # ... (Load the selected model and make a prediction)
+        loaded_mod = load_obj(model)
+        prediction = loaded_mod.predict(new_seq_test)
+    except:
+        # Sometimes you need that extra 0.001-0.010 leg-space to make sure the model can still run predictions
+        try:
+            new_seq_test = read_data(new_ali, seq_type = seq_type, is_main=True, gap_threshold=0.501)
+            ref_copy = read_data(alignment_data, seq_type = seq_type, is_main=True, gap_threshold=0.501)
+            last_seq = int(ref_copy.shape[0])
+            new_seq_test = new_seq_test.iloc[last_seq:].copy()
+            #print(new_seq_test)
+            # ... (Load the selected model and make a prediction)
+            loaded_mod = load_obj(model)
+            prediction = loaded_mod.predict(new_seq_test)
+        except:
+            try:
+                new_seq_test = read_data(new_ali, seq_type = seq_type, is_main=True, gap_threshold=0.505)
+                ref_copy = read_data(alignment_data, seq_type = seq_type, is_main=True, gap_threshold=0.505)
+                last_seq = int(ref_copy.shape[0])
+                new_seq_test = new_seq_test.iloc[last_seq:].copy()
+                #print(new_seq_test)
+                # ... (Load the selected model and make a prediction)
+                loaded_mod = load_obj(model)
+                prediction = loaded_mod.predict(new_seq_test)
+            except:
+                new_seq_test = read_data(new_ali, seq_type = seq_type, is_main=True, gap_threshold=0.51)
+                ref_copy = read_data(alignment_data, seq_type = seq_type, is_main=True, gap_threshold=0.51)
+                last_seq = int(ref_copy.shape[0])
+                new_seq_test = new_seq_test.iloc[last_seq:].copy()
+                #print(new_seq_test)
+                # ... (Load the selected model and make a prediction)
+                loaded_mod = load_obj(model)
+                prediction = loaded_mod.predict(new_seq_test)
     
     try:
         os.remove(new_ali)
@@ -400,7 +431,8 @@ def process_sequences_from_file(file, selected_model, identity_report, blastp, r
     mp_cached_pred_dict = manager.dict(cached_pred_dict)  # Initialize a multiprocess available cached dict with cached data
     
     def process_sequence_wrapper(seq, name):  # Helper function
-        just_seq = seq.split('\n')[1]
+        just_seq = seq.split('\n', 1)[1]
+        just_seq = just_seq.replace('\n', '')
         if bootstrap == False:
             if just_seq not in list(mp_cached_pred_dict.keys()):
                 prediction, percent_iden = process_sequence(seq, name, selected_model, identity_report, blastp, refseq, reffile, bootstrap, prediction_dict, encoding_method, wrk_dir)
