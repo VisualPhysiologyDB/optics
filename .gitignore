@@ -5,3 +5,6 @@ tmp/
 *tmp/
 /prediction_outputs
 /data/cached_predictions
+/analyses
+/optics_scripts/mafft
+/optics_scripts/mafft
