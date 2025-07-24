@@ -1,7 +1,7 @@
 **Code**: [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0) **Data**: [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)  **VPOD_v1.2 DOI**: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.12213246.svg)](https://doi.org/10.5281/zenodo.12213246)
 
 
-# Opsin Phenotype Tool for Inference of Color Sensitivity (OPTICS) [v1.1]
+# Opsin Phenotype Tool for Inference of Color Sensitivity (OPTICS) [v1.3]
 
 ![](https://github.com/VisualPhysiologyDB/optics/blob/main/examples/optics_on_full_ex_test_of_optics_2024-10-15_15-18-01/ex_bs_viz_part4.svg?raw=true)
 
@@ -12,6 +12,7 @@
 
 - **OPTICS** is an open-source tool that predicts the Opsin Phenotype (λmax) from unaligned opsin amino-acid sequences. 
 - **OPTICS** leverages machine learning models trained on the Visual Physiology Opsin Database (VPOD).
+- **OPTICS** can be downloaded and used as a command-line or GUI tool.
 - **OPTICS** is also avaliable as an online tool [**here**](http://galaxy-dev.cnsi.ucsb.edu:8080/?tool_id=optics_1&version=latest), hosted on our [**Galaxy Project**](https://usegalaxy.org/) server.
 
 ## Key Features
@@ -110,6 +111,13 @@ Bootstrap Analysis Args (optional):
   ```bash
   python optics_predictions.py -i ./examples/optics_ex_short.txt -o ex_test_of_optics -p ex_predictions -m wildtype -e aa_prop --blastp -blastp_report blastp_report.txt --refseq squid --bootstrap --visualize_bootstrap --bootstrap_viz_file bootstrap_viz --save_viz_as SVG
   ```
+
+  ### Example GUI Usage vvv
+  
+  ```bash
+  python run_optics_gui.py
+  ```
+
 ### Input
 
 - **Unaligned** FASTA file containing opsin amino-acid sequences.
@@ -163,9 +171,9 @@ Contact information for author questions or feedback.
 
 - Want to use OPTICS without the hassle of the setup? -> [CLICK HERE](http://galaxy-dev.cnsi.ucsb.edu:8080/?tool_id=optics_1&version=latest) to visit our Galaxy Project server and use our tool!
 
-- *OPTICS v1.1 uses VPOD_v1.3 for training.*
+- *OPTICS v1.3 uses VPOD_v1.3 for training.*
 
-- **[Here](https://tinyurl.com/u7hn9adm)** is a link to a bibliography of the publications used to build VPOD_v1.2 (Full version not yet released)
+- **[Here](https://tinyurl.com/u7hn9adm)** is a link to a bibliography of the publications used to build VPOD_v1.2 (VPOD_v1.3 version not yet released)
   
 - If you know of publications for training opsin ML models not included in the VPOD_v1.2 database, please send them to us through **[this form](https://tinyurl.com/29afaxyr)**
   
