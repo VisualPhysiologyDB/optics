@@ -68,41 +68,47 @@
   ```
 Required Args:
 
--i, --input: Either a single sequence or a path to a FASTA file.
+  -i, --input: Either a single sequence or a path to a FASTA file.
 
 General Optional Args:
 
--o, --output_dir: Desired directory to save output folder/files (optional). Default: './prediction_outputs'
+  -o, --output_dir: Desired directory to save output folder/files (optional). Default: './prediction_outputs'
 
--p, --prediction_prefix: Base filename for prediction outputs (optional). Default: 'unnamed'
+  -p, --prediction_prefix: Base filename for prediction outputs (optional). Default: 'unnamed'
 
--m, --model: Prediction model to use (optional). Options: whole-dataset, wildtype, vertebrate, invertebrate, wildtype-vert, type-one, whole-dataset-mnm, wildtype-mnm, vertebrate-mnm, invertebrate-mnm, wildtype-vert-mnm. **Default: whole-dataset** 
+  -v, --model_version: Version of models to use (optional). Based on the version of VPOD used to train models. Options/Default: vpod_1.3 (More version coming later)
 
--e, --encoding: Encoding method to use (optional). Options: one_hot, aa_prop. Default: aa_prop
+  -m, --model: Prediction model to use (optional). Options: whole-dataset, wildtype, vertebrate, invertebrate, wildtype-vert, type-one, whole-dataset-mnm, wildtype-mnm, vertebrate-mnm, invertebrate-mnm, wildtype-vert-mnm. **Default: whole-dataset** 
+
+  -e, --encoding: Encoding method to use (optional). Options: one_hot, aa_prop. Default: aa_prop
 
 BLASTp Analysis Args (optional):
 
---blastp: Enable BLASTp analysis.
+  --blastp: Enable BLASTp analysis.
 
---blastp_report: Filename for BLASTp report. Default: blastp_report.txt
+  --blastp_report: Filename for BLASTp report. Default: blastp_report.txt
 
---refseq: Reference sequence used for blastp analysis. Options: bovine, squid, microbe, custom. Default: bovine
+  --refseq: Reference sequence used for blastp analysis. Options: bovine, squid, microbe, custom. Default: bovine
 
---custom_ref_file: Path to a custom reference sequence file for BLASTp.  Required if --refseq custom is selected.
+  --custom_ref_file: Path to a custom reference sequence file for BLASTp.  Required if --refseq custom is selected.
 
 Bootstrap Analysis Args (optional):
 
---bootstrap: Enable bootstrap predictions.
+  --bootstrap: Enable bootstrap predictions.
 
---visualize_bootstrap: Enable visualization of bootstrap predictions.
+  --visualize_bootstrap: Enable visualization of bootstrap predictions.
 
---bootstrap_viz_file: Filename prefix for bootstrap visualization (PDF and SVG). Default: bootstrap_viz
+  --bootstrap_viz_file: Filename prefix for bootstrap visualization. Default: bootstrap_viz
+
+  --save_viz_as: File type for bootstrap visualizations. Options: SVG, PNG, or PDF Default: SVG
+  
+  --full_spectrum_xaxis: Enables visualization of predictions on a full spectrum x-axis (300-650nm). Otherwise, x-axis is scaled with predictions.
 
   ```     
   ### Example Command Line Usage vvv
   
   ```bash
-  python optics_predictions.py -i ./examples/optics_ex_short.txt -o ex_test_of_optics -p ex_predictions -m wildtype -e aa_prop --blastp -blastp_report blastp_report.txt --refseq squid --bootstrap --visualize_bootstrap --bootstrap_viz_file bootstrap_viz
+  python optics_predictions.py -i ./examples/optics_ex_short.txt -o ex_test_of_optics -p ex_predictions -m wildtype -e aa_prop --blastp -blastp_report blastp_report.txt --refseq squid --bootstrap --visualize_bootstrap --bootstrap_viz_file bootstrap_viz --save_viz_as SVG
   ```
 ### Input
 
