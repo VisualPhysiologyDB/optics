@@ -1,10 +1,12 @@
 __pycache__/
+*__pycache__/
 *optics_scripts/__pycache__/
 optics_scripts/__pycache__/
 tmp/
 *tmp/
 /prediction_outputs
 /data/cached_predictions
+*.pyc
+/deepBreaks/__pycache__
 /analyses
-/optics_scripts/mafft
 /optics_scripts/mafft

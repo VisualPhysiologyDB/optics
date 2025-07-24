@@ -1,4 +1,3 @@
-# prediction_functions.py
 import subprocess 
 from deepBreaks.utils import load_obj
 from deepBreaks.preprocessing import read_data
@@ -37,7 +36,7 @@ def tqdm_joblib(tqdm_object):
         joblib.parallel.BatchCompletionCallBack = old_batch_callback
         tqdm_object.close()
 
-def process_sequence(sequence=None, name=None, selected_model=None, identity_report=None, blastp=None, refseq=None, reffile=None, bootstrap=None, prediction_dict=None, encoding_method='one_hot', wrk_dir = '', only_blast = False):
+def process_sequence(sequence=None, name=None, selected_model=None, identity_report=None, blastp=None, refseq=None, reffile=None, bootstrap=None, prediction_dict=None, encoding_method='one_hot', wrk_dir='', only_blast=False, model_version='vpod_1.3'):
     
     """Processes a single opsin amino acid sequence for lmax prediction.
 
@@ -134,123 +133,123 @@ def process_sequence(sequence=None, name=None, selected_model=None, identity_rep
     data_dir = f"{wrk_dir}/data"
     #print(f'This is the data_dir: {data_dir}')
     model_datasets = {
-        "whole-dataset": f"{data_dir}/fasta/vpod_1.2/wds_aligned_VPOD_1.2_het.fasta",
-        "wildtype": f"{data_dir}/fasta/vpod_1.2/wt_aligned_VPOD_1.2_het.fasta",
-        "vertebrate": f"{data_dir}/fasta/vpod_1.2/vert_aligned_VPOD_1.2_het.fasta",
-        "invertebrate": f"{data_dir}/fasta/vpod_1.2/inv_only_aligned_VPOD_1.2_het.fasta",
-        "wildtype-vert": f"{data_dir}/fasta/vpod_1.2/wt_vert_aligned_VPOD_1.2_het.fasta",
-        "type-one": f"{data_dir}/fasta/vpod_1.2/Karyasuyama_T1_ops_aligned.fasta",
-        "whole-dataset-mnm": f"{data_dir}/fasta/vpod_1.2/wds_mnm_aligned_VPOD_1.2_het.fasta",
-        "wildtype-mnm": f"{data_dir}/fasta/vpod_1.2/wt_mnm_aligned_VPOD_1.2_het.fasta",
-        "vertebrate-mnm": f"{data_dir}/fasta/vpod_1.2/vert_mnm_aligned_VPOD_1.2_het.fasta",
-        "invertebrate-mnm": f"{data_dir}/fasta/vpod_1.2/inv_mnm_aligned_VPOD_1.2_het.fasta",
-        "wildtype-vert-mnm": f"{data_dir}/fasta/vpod_1.2/wt_vert_mnm_aligned_VPOD_1.2_het.fasta",
-        "wildtype-mut": f"{data_dir}/fasta/vpod_1.2/wt_mut_added_aligned_VPOD_1.2_het.fasta",
+        "whole-dataset": f"{data_dir}/fasta/{model_version}/wds_aligned_VPOD_1.2_het.fasta",
+        "wildtype": f"{data_dir}/fasta/{model_version}/wt_aligned_VPOD_1.2_het.fasta",
+        "vertebrate": f"{data_dir}/fasta/{model_version}/vert_aligned_VPOD_1.2_het.fasta",
+        "invertebrate": f"{data_dir}/fasta/{model_version}/inv_only_aligned_VPOD_1.2_het.fasta",
+        "wildtype-vert": f"{data_dir}/fasta/{model_version}/wt_vert_aligned_VPOD_1.2_het.fasta",
+        "type-one": f"{data_dir}/fasta/{model_version}/Karyasuyama_T1_ops_aligned.fasta",
+        "whole-dataset-mnm": f"{data_dir}/fasta/{model_version}/wds_mnm_aligned_VPOD_1.2_het.fasta",
+        "wildtype-mnm": f"{data_dir}/fasta/{model_version}/wt_mnm_aligned_VPOD_1.2_het.fasta",
+        "vertebrate-mnm": f"{data_dir}/fasta/{model_version}/vert_mnm_aligned_VPOD_1.2_het.fasta",
+        "invertebrate-mnm": f"{data_dir}/fasta/{model_version}/inv_mnm_aligned_VPOD_1.2_het.fasta",
+        "wildtype-vert-mnm": f"{data_dir}/fasta/{model_version}/wt_vert_mnm_aligned_VPOD_1.2_het.fasta",
+        "wildtype-mut": f"{data_dir}/fasta/{model_version}/wt_mut_added_aligned_VPOD_1.2_het.fasta",
 
     }   
     model_raw_data = {
-        "whole-dataset": f"{data_dir}/fasta/vpod_1.2/wds.txt",
-        "wildtype": f"{data_dir}/fasta/vpod_1.2/wt.txt",
-        "vertebrate": f"{data_dir}/fasta/vpod_1.2/vert.txt",
-        "invertebrate": f"{data_dir}/fasta/vpod_1.2/inv_only.txt",
-        "wildtype-vert": f"{data_dir}/fasta/vpod_1.2/wt_vert.txt",
-        "type-one": f"{data_dir}/fasta/vpod_1.2/Karyasuyama_T1_ops.txt",
-        "whole-dataset-mnm": f"{data_dir}/fasta/vpod_1.2/wds_mnm.txt",
-        "wildtype-mnm": f"{data_dir}/fasta/vpod_1.2/wt_mnm.txt",
-        "vertebrate-mnm": f"{data_dir}/fasta/vpod_1.2/vert_mnm.txt",
-        "invertebrate-mnm": f"{data_dir}/fasta/vpod_1.2/inv_mnm.txt",
-        "wildtype-vert-mnm": f"{data_dir}/fasta/vpod_1.2/wt_vert_mnm.txt",
-        "wildtype-mut": f"{data_dir}/fasta/vpod_1.2/wt_mut_added.txt",
+        "whole-dataset": f"{data_dir}/fasta/{model_version}/wds.txt",
+        "wildtype": f"{data_dir}/fasta/{model_version}/wt.txt",
+        "vertebrate": f"{data_dir}/fasta/{model_version}/vert.txt",
+        "invertebrate": f"{data_dir}/fasta/{model_version}/inv_only.txt",
+        "wildtype-vert": f"{data_dir}/fasta/{model_version}/wt_vert.txt",
+        "type-one": f"{data_dir}/fasta/{model_version}/Karyasuyama_T1_ops.txt",
+        "whole-dataset-mnm": f"{data_dir}/fasta/{model_version}/wds_mnm.txt",
+        "wildtype-mnm": f"{data_dir}/fasta/{model_version}/wt_mnm.txt",
+        "vertebrate-mnm": f"{data_dir}/fasta/{model_version}/vert_mnm.txt",
+        "invertebrate-mnm": f"{data_dir}/fasta/{model_version}/inv_mnm.txt",
+        "wildtype-vert-mnm": f"{data_dir}/fasta/{model_version}/wt_vert_mnm.txt",
+        "wildtype-mut": f"{data_dir}/fasta/{model_version}/wt_mut_added.txt",
     }   
     model_metadata = {
-        "whole-dataset": f"{data_dir}/fasta/vpod_1.2/wds_meta.tsv",
-        "wildtype": f"{data_dir}/fasta/vpod_1.2/wt_meta.tsv",
-        "vertebrate": f"{data_dir}/fasta/vpod_1.2/vert_meta.tsv",
-        "invertebrate": f"{data_dir}/fasta/vpod_1.2/inv_meta.tsv",
-        "wildtype-vert": f"{data_dir}/fasta/vpod_1.2/wt_vert_meta.tsv",
-        "type-one": f"{data_dir}/fasta/vpod_1.2/Karyasuyama_T1_ops_meta.tsv",
-        "whole-dataset-mnm": f"{data_dir}/fasta/vpod_1.2/wds_mnm_meta.csv",
-        "wildtype-mnm": f"{data_dir}/fasta/vpod_1.2/wt_mnm_meta.csv",
-        "vertebrate-mnm": f"{data_dir}/fasta/vpod_1.2/vert_mnm_meta.csv",
-        "invertebrate-mnm": f"{data_dir}/fasta/vpod_1.2/inv_mnm_meta.csv",
-        "wildtype-vert-mnm": f"{data_dir}/fasta/vpod_1.2/wt_vert_mnm_meta.csv",
-        "wildtype-mut": f"{data_dir}/fasta/vpod_1.2/wt_meta.tsv",
+        "whole-dataset": f"{data_dir}/fasta/{model_version}/wds_meta.tsv",
+        "wildtype": f"{data_dir}/fasta/{model_version}/wt_meta.tsv",
+        "vertebrate": f"{data_dir}/fasta/{model_version}/vert_meta.tsv",
+        "invertebrate": f"{data_dir}/fasta/{model_version}/inv_meta.tsv",
+        "wildtype-vert": f"{data_dir}/fasta/{model_version}/wt_vert_meta.tsv",
+        "type-one": f"{data_dir}/fasta/{model_version}/Karyasuyama_T1_ops_meta.tsv",
+        "whole-dataset-mnm": f"{data_dir}/fasta/{model_version}/wds_mnm_meta.csv",
+        "wildtype-mnm": f"{data_dir}/fasta/{model_version}/wt_mnm_meta.csv",
+        "vertebrate-mnm": f"{data_dir}/fasta/{model_version}/vert_mnm_meta.csv",
+        "invertebrate-mnm": f"{data_dir}/fasta/{model_version}/inv_mnm_meta.csv",
+        "wildtype-vert-mnm": f"{data_dir}/fasta/{model_version}/wt_vert_mnm_meta.csv",
+        "wildtype-mut": f"{data_dir}/fasta/{model_version}/wt_meta.tsv",
     }   
     model_blast_db = {
-        "whole-dataset": f"{data_dir}/blast_dbs/vpod_1.2/wds_db",
-        "wildtype": f"{data_dir}/blast_dbs/vpod_1.2/wt_db",
-        "vertebrate": f"{data_dir}/blast_dbs/vpod_1.2/vert_db",
-        "invertebrate": f"{data_dir}/blast_dbs/vpod_1.2/invert_db",
-        "wildtype-vert": f"{data_dir}/blast_dbs/vpod_1.2/wt_vert_db",
-        "type-one": f"{data_dir}/blast_dbs/vpod_1.2/t1_db",
-        "whole-dataset-mnm": f"{data_dir}/blast_dbs/vpod_1.2/wds_mnm_db",
-        "wildtype-mnm": f"{data_dir}/blast_dbs/vpod_1.2/wt_mnm_db",
-        "vertebrate-mnm": f"{data_dir}/blast_dbs/vpod_1.2/vert_mnm_db",
-        "invertebrate-mnm": f"{data_dir}/blast_dbs/vpod_1.2/inv_mnm_db",
-        "wildtype-vert-mnm": f"{data_dir}/blast_dbs/vpod_1.2/wt_vert_mnm_db",
-        "wildtype-mut": f"{data_dir}/blast_dbs/vpod_1.2/wt_db",
+        "whole-dataset": f"{data_dir}/blast_dbs/{model_version}/wds_db",
+        "wildtype": f"{data_dir}/blast_dbs/{model_version}/wt_db",
+        "vertebrate": f"{data_dir}/blast_dbs/{model_version}/vert_db",
+        "invertebrate": f"{data_dir}/blast_dbs/{model_version}/invert_db",
+        "wildtype-vert": f"{data_dir}/blast_dbs/{model_version}/wt_vert_db",
+        "type-one": f"{data_dir}/blast_dbs/{model_version}/t1_db",
+        "whole-dataset-mnm": f"{data_dir}/blast_dbs/{model_version}/wds_mnm_db",
+        "wildtype-mnm": f"{data_dir}/blast_dbs/{model_version}/wt_mnm_db",
+        "vertebrate-mnm": f"{data_dir}/blast_dbs/{model_version}/vert_mnm_db",
+        "invertebrate-mnm": f"{data_dir}/blast_dbs/{model_version}/inv_mnm_db",
+        "wildtype-vert-mnm": f"{data_dir}/blast_dbs/{model_version}/wt_vert_mnm_db",
+        "wildtype-mut": f"{data_dir}/blast_dbs/{model_version}/wt_db",
     }   
 
     model_dir = f"{wrk_dir}/models"
 
     if encoding_method == 'aa_prop':
         model_directories = {
-            "whole-dataset": f"{model_dir}/reg_models/vpod_1.2/aa_prop/wds_xgb.pkl",
-            "wildtype": f"{model_dir}/reg_models/vpod_1.2/aa_prop/wt_gbr.pkl",
-            "vertebrate": f"{model_dir}/reg_models/vpod_1.2/aa_prop/vert_xgb.pkl",
-            "invertebrate": f"{model_dir}/reg_models/vpod_1.2/aa_prop/inv_gbr.pkl",
-            "wildtype-vert": f"{model_dir}/reg_models/vpod_1.2/aa_prop/wt_vert_gbr.pkl",
-            "type-one": f"{model_dir}/reg_models/vpod_1.2/aa_prop/t1_xgb.pkl",
-            "whole-dataset-mnm": f"{model_dir}/reg_models/vpod_1.2/aa_prop/wds_mnm_xgb.pkl",
-            "wildtype-mnm": f"{model_dir}/reg_models/vpod_1.2/aa_prop/wt_mnm_gbr.pkl",
-            "vertebrate-mnm": f"{model_dir}/reg_models/vpod_1.2/aa_prop/vert_mnm_xgb.pkl",
-            "invertebrate-mnm": f"{model_dir}/reg_models/vpod_1.2/aa_prop/inv_mnm_gbr.pkl",
-            "wildtype-vert-mnm": f"{model_dir}/reg_models/vpod_1.2/aa_prop/wt_vert_mnm_xgb.pkl",
-            "wildtype-mut": f"{model_dir}/reg_models/vpod_1.2/aa_prop/wt_mut_gbr.pkl",
+            "whole-dataset": f"{model_dir}/reg_models/{model_version}/aa_prop/wds_xgb.pkl",
+            "wildtype": f"{model_dir}/reg_models/{model_version}/aa_prop/wt_gbr.pkl",
+            "vertebrate": f"{model_dir}/reg_models/{model_version}/aa_prop/vert_xgb.pkl",
+            "invertebrate": f"{model_dir}/reg_models/{model_version}/aa_prop/inv_gbr.pkl",
+            "wildtype-vert": f"{model_dir}/reg_models/{model_version}/aa_prop/wt_vert_gbr.pkl",
+            "type-one": f"{model_dir}/reg_models/{model_version}/aa_prop/t1_xgb.pkl",
+            "whole-dataset-mnm": f"{model_dir}/reg_models/{model_version}/aa_prop/wds_mnm_xgb.pkl",
+            "wildtype-mnm": f"{model_dir}/reg_models/{model_version}/aa_prop/wt_mnm_gbr.pkl",
+            "vertebrate-mnm": f"{model_dir}/reg_models/{model_version}/aa_prop/vert_mnm_xgb.pkl",
+            "invertebrate-mnm": f"{model_dir}/reg_models/{model_version}/aa_prop/inv_mnm_gbr.pkl",
+            "wildtype-vert-mnm": f"{model_dir}/reg_models/{model_version}/aa_prop/wt_vert_mnm_xgb.pkl",
+            "wildtype-mut": f"{model_dir}/reg_models/{model_version}/aa_prop/wt_mut_gbr.pkl",
         }
         
         model_bs_dirs = {
-            "whole-dataset": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/wds_H1_H2_H3_P2_V_SCT_PKA_bootstrap_100_2025-03-23_22-05-50",
-            "wildtype": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/wt_H2_H3_P1_NCI_PKA_bootstrap_100_2025-03-24_10-19-45",
-            "vertebrate": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/vert_H2_H3_NCI_SCT_PKB_bootstrap_100_2025-03-21_17-47-40",
-            "invertebrate": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/inv_H1_H3_bootstrap_100_2025-03-21_17-40-08",
-            "wildtype-vert": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/wt_vert_H2_P2_V_MASS_bootstrap_100_2025-03-21_17-25-47",
-            "type-one": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/t1_H3_P1_PKB_bootstrap_100_2025-03-24_10-31-03",
-            "whole-dataset-mnm": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/wds_mnm_H2_H3_NCI_MASS_bootstrap_100_2025-04-15_09-35-46",
-            "wildtype-mnm": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/wt_mnm_H1_H2_H3_NCI_MASS_PKA_bootstrap_100_2025-04-15_10-17-06",
-            "vertebrate-mnm": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/vert_mnm_H3_P2_SCT_PKA_PKB_bootstrap_100_2025-04-15_11-00-24",
-            "invertebrate-mnm": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/inv_mnm_H1_P1_SCT_bootstrap_100_2025-04-15_10-52-20",
-            "wildtype-vert-mnm": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/wt_vert_mnm_H2_H3_PKB_bootstrap_100_2025-04-15_10-40-35",
-            "wildtype-mut": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/wt_mut_H1_H2_H3_SCT_bootstrap_100_2025-04-25_17-14-36",
+            "whole-dataset": f"{model_dir}/bs_models/{model_version}/{encoding_method}/wds_H1_H2_H3_P2_V_SCT_PKA_bootstrap_100_2025-03-23_22-05-50",
+            "wildtype": f"{model_dir}/bs_models/{model_version}/{encoding_method}/wt_H2_H3_P1_NCI_PKA_bootstrap_100_2025-03-24_10-19-45",
+            "vertebrate": f"{model_dir}/bs_models/{model_version}/{encoding_method}/vert_H2_H3_NCI_SCT_PKB_bootstrap_100_2025-03-21_17-47-40",
+            "invertebrate": f"{model_dir}/bs_models/{model_version}/{encoding_method}/inv_H1_H3_bootstrap_100_2025-03-21_17-40-08",
+            "wildtype-vert": f"{model_dir}/bs_models/{model_version}/{encoding_method}/wt_vert_H2_P2_V_MASS_bootstrap_100_2025-03-21_17-25-47",
+            "type-one": f"{model_dir}/bs_models/{model_version}/{encoding_method}/t1_H3_P1_PKB_bootstrap_100_2025-03-24_10-31-03",
+            "whole-dataset-mnm": f"{model_dir}/bs_models/{model_version}/{encoding_method}/wds_mnm_H2_H3_NCI_MASS_bootstrap_100_2025-04-15_09-35-46",
+            "wildtype-mnm": f"{model_dir}/bs_models/{model_version}/{encoding_method}/wt_mnm_H1_H2_H3_NCI_MASS_PKA_bootstrap_100_2025-04-15_10-17-06",
+            "vertebrate-mnm": f"{model_dir}/bs_models/{model_version}/{encoding_method}/vert_mnm_H3_P2_SCT_PKA_PKB_bootstrap_100_2025-04-15_11-00-24",
+            "invertebrate-mnm": f"{model_dir}/bs_models/{model_version}/{encoding_method}/inv_mnm_H1_P1_SCT_bootstrap_100_2025-04-15_10-52-20",
+            "wildtype-vert-mnm": f"{model_dir}/bs_models/{model_version}/{encoding_method}/wt_vert_mnm_H2_H3_PKB_bootstrap_100_2025-04-15_10-40-35",
+            "wildtype-mut": f"{model_dir}/bs_models/{model_version}/{encoding_method}/wt_mut_H1_H2_H3_SCT_bootstrap_100_2025-04-25_17-14-36",
         }
         
     else:
         model_directories = {
-            "whole-dataset": f"{model_dir}/reg_models/vpod_1.2/one_hot/wds_xgb.pkl",
-            "wildtype": f"{model_dir}/reg_models/vpod_1.2/one_hot/wt_xgb.pkl",
-            "vertebrate": f"{model_dir}/reg_models/vpod_1.2/one_hot/vert_xgb.pkl",
-            "invertebrate": f"{model_dir}/reg_models/vpod_1.2/one_hot/invert_BayesianRidge.pkl",
-            "wildtype-vert": f"{model_dir}/reg_models/vpod_1.2/one_hot/wt_vert_xgb.pkl",
-            "type-one": f"{model_dir}/reg_models/vpod_1.2/one_hot/t1_xgb.pkl",
-            "whole-dataset-mnm": f"{model_dir}/reg_models/vpod_1.2/one_hot/wds_mnm_xgb.pkl",
-            "wildtype-mnm": f"{model_dir}/reg_models/vpod_1.2/one_hot/wt_mnm_gbr.pkl",
-            "vertebrate-mnm": f"{model_dir}/reg_models/vpod_1.2/one_hot/vert_mnm_xgb.pkl",
-            "invertebrate-mnm": f"{model_dir}/reg_models/vpod_1.2/one_hot/invert_mnm_gbr.pkl",
-            "wildtype-vert-mnm": f"{model_dir}/reg_models/vpod_1.2/one_hot/wt_vert_mnm_xgb.pkl",
+            "whole-dataset": f"{model_dir}/reg_models/{model_version}/one_hot/wds_xgb.pkl",
+            "wildtype": f"{model_dir}/reg_models/{model_version}/one_hot/wt_xgb.pkl",
+            "vertebrate": f"{model_dir}/reg_models/{model_version}/one_hot/vert_xgb.pkl",
+            "invertebrate": f"{model_dir}/reg_models/{model_version}/one_hot/invert_BayesianRidge.pkl",
+            "wildtype-vert": f"{model_dir}/reg_models/{model_version}/one_hot/wt_vert_xgb.pkl",
+            "type-one": f"{model_dir}/reg_models/{model_version}/one_hot/t1_xgb.pkl",
+            "whole-dataset-mnm": f"{model_dir}/reg_models/{model_version}/one_hot/wds_mnm_xgb.pkl",
+            "wildtype-mnm": f"{model_dir}/reg_models/{model_version}/one_hot/wt_mnm_gbr.pkl",
+            "vertebrate-mnm": f"{model_dir}/reg_models/{model_version}/one_hot/vert_mnm_xgb.pkl",
+            "invertebrate-mnm": f"{model_dir}/reg_models/{model_version}/one_hot/invert_mnm_gbr.pkl",
+            "wildtype-vert-mnm": f"{model_dir}/reg_models/{model_version}/one_hot/wt_vert_mnm_xgb.pkl",
         }
         
         model_bs_dirs = {
-            "whole-dataset": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/wds_bootstrap",
-            "wildtype": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/wt_bootstrap",
-            "vertebrate": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/vert_bootstrap",
-            "invertebrate": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/invert_bootstrap",
-            "wildtype-vert": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/wt_vert_bootstrap",
-            "type-one": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/t1_bootstrap",
-            "whole-dataset-mnm": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/wds_mnm_bootstrap",
-            "wildtype-mnm": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/wt_mnm_bootstrap",
-            "vertebrate-mnm": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/vert_mnm_bootstrap",
-            "invertebrate-mnm": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/invert_mnm_bootstrap",
-            "wildtype-vert-mnm": f"{model_dir}/bs_models/vpod_1.2/{encoding_method}/wt_vert_mnm_bootstrap",
+            "whole-dataset": f"{model_dir}/bs_models/{model_version}/{encoding_method}/wds_bootstrap",
+            "wildtype": f"{model_dir}/bs_models/{model_version}/{encoding_method}/wt_bootstrap",
+            "vertebrate": f"{model_dir}/bs_models/{model_version}/{encoding_method}/vert_bootstrap",
+            "invertebrate": f"{model_dir}/bs_models/{model_version}/{encoding_method}/invert_bootstrap",
+            "wildtype-vert": f"{model_dir}/bs_models/{model_version}/{encoding_method}/wt_vert_bootstrap",
+            "type-one": f"{model_dir}/bs_models/{model_version}/{encoding_method}/t1_bootstrap",
+            "whole-dataset-mnm": f"{model_dir}/bs_models/{model_version}/{encoding_method}/wds_mnm_bootstrap",
+            "wildtype-mnm": f"{model_dir}/bs_models/{model_version}/{encoding_method}/wt_mnm_bootstrap",
+            "vertebrate-mnm": f"{model_dir}/bs_models/{model_version}/{encoding_method}/vert_mnm_bootstrap",
+            "invertebrate-mnm": f"{model_dir}/bs_models/{model_version}/{encoding_method}/invert_mnm_bootstrap",
+            "wildtype-vert-mnm": f"{model_dir}/bs_models/{model_version}/{encoding_method}/wt_vert_mnm_bootstrap",
         }
         
 
@@ -376,7 +375,7 @@ def process_sequence(sequence=None, name=None, selected_model=None, identity_rep
         return(round(float(prediction[0]),1), str(percent_iden))
  
 
-def process_sequences_from_file(file, selected_model, identity_report, blastp, refseq, reffile, bootstrap, encoding_method, wrk_dir):
+def process_sequences_from_file(file, selected_model, identity_report, blastp, refseq, reffile, bootstrap, encoding_method, wrk_dir, model_version):
 
     cache_dir = f"{wrk_dir}/data/cached_predictions"
     if (bootstrap == True or bootstrap == 'True' or bootstrap == 'true' or bootstrap == 'yes'):
@@ -386,18 +385,18 @@ def process_sequences_from_file(file, selected_model, identity_report, blastp, r
         bootstrap = False
         model_type = 'reg_models'
     model_cache_dirs = {
-        "whole-dataset": f"{cache_dir}/{model_type}/vpod_1.2/{encoding_method}/wds_pred_dict.json",
-        "wildtype": f"{cache_dir}/{model_type}/vpod_1.2/{encoding_method}/wt_pred_dict.json",
-        "vertebrate": f"{cache_dir}/{model_type}/vpod_1.2/{encoding_method}/vert_pred_dict.json",
-        "invertebrate": f"{cache_dir}/{model_type}/vpod_1.2/{encoding_method}/invert_pred_dict.json",
-        "wildtype-vert": f"{cache_dir}/{model_type}/vpod_1.2/{encoding_method}/wt_vert_pred_dict.json",
-        "type-one": f"{cache_dir}/{model_type}/vpod_1.2/{encoding_method}/t1_pred_dict.json",
-        "whole-dataset-mnm": f"{cache_dir}/{model_type}/vpod_1.2/{encoding_method}/wds_mnm_pred_dict.json",
-        "wildtype-mnm": f"{cache_dir}/{model_type}/vpod_1.2/{encoding_method}/wt_mnm_pred_dict.json",
-        "vertebrate-mnm": f"{cache_dir}/{model_type}/vpod_1.2/{encoding_method}/vert_mnm_pred_dict.json",
-        "invertebrate-mnm": f"{cache_dir}/{model_type}/vpod_1.2/{encoding_method}/invert_mnm_pred_dict.json",
-        "wildtype-vert-mnm": f"{cache_dir}/{model_type}/vpod_1.2/{encoding_method}/wt_vert_mnm_pred_dict.json",
-        "wildtype-mut": f"{cache_dir}/{model_type}/vpod_1.2/{encoding_method}/wt_mut_pred_dict.json",
+        "whole-dataset": f"{cache_dir}/{model_type}/{model_version}/{encoding_method}/wds_pred_dict.json",
+        "wildtype": f"{cache_dir}/{model_type}/{model_version}/{encoding_method}/wt_pred_dict.json",
+        "vertebrate": f"{cache_dir}/{model_type}/{model_version}/{encoding_method}/vert_pred_dict.json",
+        "invertebrate": f"{cache_dir}/{model_type}/{model_version}/{encoding_method}/invert_pred_dict.json",
+        "wildtype-vert": f"{cache_dir}/{model_type}/{model_version}/{encoding_method}/wt_vert_pred_dict.json",
+        "type-one": f"{cache_dir}/{model_type}/{model_version}/{encoding_method}/t1_pred_dict.json",
+        "whole-dataset-mnm": f"{cache_dir}/{model_type}/{model_version}/{encoding_method}/wds_mnm_pred_dict.json",
+        "wildtype-mnm": f"{cache_dir}/{model_type}/{model_version}/{encoding_method}/wt_mnm_pred_dict.json",
+        "vertebrate-mnm": f"{cache_dir}/{model_type}/{model_version}/{encoding_method}/vert_mnm_pred_dict.json",
+        "invertebrate-mnm": f"{cache_dir}/{model_type}/{model_version}/{encoding_method}/invert_mnm_pred_dict.json",
+        "wildtype-vert-mnm": f"{cache_dir}/{model_type}/{model_version}/{encoding_method}/wt_vert_mnm_pred_dict.json",
+        "wildtype-mut": f"{cache_dir}/{model_type}/{model_version}/{encoding_method}/wt_mut_pred_dict.json",
     }
 
     cache_file = model_cache_dirs[selected_model]
@@ -435,16 +434,16 @@ def process_sequences_from_file(file, selected_model, identity_report, blastp, r
         just_seq = just_seq.replace('\n', '')
         if bootstrap == False:
             if just_seq not in list(mp_cached_pred_dict.keys()):
-                prediction, percent_iden = process_sequence(seq, name, selected_model, identity_report, blastp, refseq, reffile, bootstrap, prediction_dict, encoding_method, wrk_dir)
+                prediction, percent_iden = process_sequence(seq, name, selected_model, identity_report, blastp, refseq, reffile, bootstrap, prediction_dict, encoding_method, wrk_dir, model_version=model_version)
                 mp_cached_pred_dict[just_seq] = {'len': len(just_seq), 'single_prediction': prediction}
                 return len(just_seq), prediction, percent_iden, None, None, None, None, None  # Consistent return values
             else:
-                percent_iden = process_sequence(seq, name, selected_model, identity_report, blastp, refseq, reffile, bootstrap, prediction_dict, encoding_method, wrk_dir, only_blast=True)
+                percent_iden = process_sequence(seq, name, selected_model, identity_report, blastp, refseq, reffile, bootstrap, prediction_dict, encoding_method, wrk_dir, only_blast=True, model_version=model_version)
                 return mp_cached_pred_dict[just_seq]['len'], mp_cached_pred_dict[just_seq]['single_prediction'], percent_iden, None, None, None, None, None  # Consistent return values
 
         else:
             if just_seq not in list(mp_cached_pred_dict.keys()):
-                mean_prediction, ci_lower, ci_upper, updated_prediction_dict, prediction, median_prediction, percent_iden, std_dev, predictions_all = process_sequence(seq, name, selected_model, identity_report, blastp, refseq, reffile, bootstrap, prediction_dict, encoding_method, wrk_dir)
+                mean_prediction, ci_lower, ci_upper, updated_prediction_dict, prediction, median_prediction, percent_iden, std_dev, predictions_all = process_sequence(seq, name, selected_model, identity_report, blastp, refseq, reffile, bootstrap, prediction_dict, encoding_method, wrk_dir, model_version=model_version)
                 prediction_dict.update(updated_prediction_dict) # Update the shared dictionary with the returned dictionary
                 mp_cached_pred_dict[just_seq] = {'len': len(just_seq),
                                             'single_prediction': prediction,
@@ -458,7 +457,7 @@ def process_sequences_from_file(file, selected_model, identity_report, blastp, r
                 # If the seq is in our cache, I need to be able to update the prediction_dict with that info...
                 return len(just_seq), prediction, percent_iden, mean_prediction, ci_lower, ci_upper, median_prediction, std_dev
             else:
-                percent_iden = process_sequence(seq, name, selected_model, identity_report, blastp, refseq, reffile, bootstrap, prediction_dict, encoding_method, wrk_dir, only_blast=True)
+                percent_iden = process_sequence(seq, name, selected_model, identity_report, blastp, refseq, reffile, bootstrap, prediction_dict, encoding_method, wrk_dir, only_blast=True, model_version=model_version)
                 prediction_dict[name] = np.array(mp_cached_pred_dict[just_seq]['all_bs_predictions'])
                 return mp_cached_pred_dict[just_seq]['len'], mp_cached_pred_dict[just_seq]['single_prediction'], percent_iden, mp_cached_pred_dict[just_seq]['mean_prediction'], mp_cached_pred_dict[just_seq]['ci_lower'], mp_cached_pred_dict[just_seq]['ci_upper'], mp_cached_pred_dict[just_seq]['median_prediction'], mp_cached_pred_dict[just_seq]['std_deviation']
 
@@ -512,7 +511,8 @@ def process_sequences_from_file(file, selected_model, identity_report, blastp, r
 def run_optics_predictions(input_sequence, pred_dir=None, output='optics_predictions',
                            model="whole-dataset", encoding_method='aa_prop', blastp=True,
                            iden_report='blastp_report.txt', refseq='bovine', reffile=None,
-                           bootstrap=True, visualize_bootstrap=True, bootstrap_viz_file='bootstrap_viz'):
+                           bootstrap=True, visualize_bootstrap=True, bootstrap_viz_file='bootstrap_viz', save_as='svg', full_spectrum_xaxis=False,
+                           model_version='vpod_1.3'):
     """
     Processes sequences using a selected model and generates prediction outputs.  This function
     encapsulates the logic from the original `main` function, making it callable from
@@ -606,7 +606,7 @@ def run_optics_predictions(input_sequence, pred_dir=None, output='optics_predict
 
     # Input handling (file or sequence string)
     if os.path.isfile(input_sequence):
-        names, mean_predictions, ci_lowers, ci_uppers, prediction_dict, predictions, median_predictions, per_iden_list, std_dev_list, seq_lens_list = process_sequences_from_file(input_sequence, model, blastp_file, blastp, refseq, reffile, bootstrap, encoding_method, wrk_dir)
+        names, mean_predictions, ci_lowers, ci_uppers, prediction_dict, predictions, median_predictions, per_iden_list, std_dev_list, seq_lens_list = process_sequences_from_file(input_sequence, model, blastp_file, blastp, refseq, reffile, bootstrap, encoding_method, wrk_dir, model_version)
         
         # Output file handling (TSV or TXT, Excel)
         if 'predictions' not in {output}:
@@ -620,7 +620,7 @@ def run_optics_predictions(input_sequence, pred_dir=None, output='optics_predict
         with open(temp_input_file, "w") as f:
             f.write(f">temp_seq\n{input_sequence}\n") #write temp file to be consistant with process_sequence_from_file function
         
-        names, mean_predictions, ci_lowers, ci_uppers, prediction_dict, predictions, median_predictions, per_iden_list, std_dev_list, seq_lens_list = process_sequences_from_file(temp_input_file, model, blastp_file, blastp, refseq, reffile, bootstrap, encoding_method, wrk_dir)
+        names, mean_predictions, ci_lowers, ci_uppers, prediction_dict, predictions, median_predictions, per_iden_list, std_dev_list, seq_lens_list = process_sequences_from_file(temp_input_file, model, blastp_file, blastp, refseq, reffile, bootstrap, encoding_method, wrk_dir, model_version)
         output_path = f'{report_dir}/{output}'
         if not output_path.endswith(('.tsv', '.txt')):
             output_path += '.tsv'
@@ -648,7 +648,7 @@ def run_optics_predictions(input_sequence, pred_dir=None, output='optics_predict
                 print(f"{names[i]}\t{predictions[i]}\t{per_iden_list[i]}\t{seq_lens_list[i]}\n")
         else:
             hex_color_list = plot_prediction_subsets_with_CI(names, prediction_dict, mean_predictions,
-                                                            bootstrap_file, visualize_bootstrap)
+                                                            bootstrap_file, visualize_bootstrap, save_as=save_as, full_spectrum_xaxis=full_spectrum_xaxis)
             write_to_excel(names, predictions, per_iden_list, excel_output,
                             mean_predictions, median_predictions, ci_lowers,
                             ci_uppers, std_dev_list, hex_color_list, seq_lens_list)
@@ -680,7 +680,7 @@ def run_optics_predictions(input_sequence, pred_dir=None, output='optics_predict
                       f"output_file: {output}\nmodel: {model}\nencoding_method: {encoding_method}\n"
                       f"blastp: {blastp}\nblastp_report: {iden_report}\nrefseq: {refseq}\n"
                       f"custom_ref_file: {reffile}\nbootstrap: {bootstrap}\n"
-                      f"visualize_bootstrap: {visualize_bootstrap}\nbootstrap_viz_file: {bootstrap_viz_file}\n")
+                      f"\tvisualize_bootstrap: {visualize_bootstrap}\n\t\tbootstrap_viz_file: {bootstrap_viz_file}\n\t\tsave_as: {save_as}\n\t\tfull_spectrum_xaxis: {full_spectrum_xaxis}")
         
         if blastp == True:
             bp_cmd = f'--blastp --blastp_report {iden_report} --refseq {refseq} '
@@ -696,7 +696,7 @@ def run_optics_predictions(input_sequence, pred_dir=None, output='optics_predict
         else:
             bs_cmd = ''
         if visualize_bootstrap == True:
-            vb_cmd = f'--visualize_bootstrap --bootstrap_viz_file {bootstrap_viz_file}'
+            vb_cmd = f'--visualize_bootstrap --bootstrap_viz_file {bootstrap_viz_file} --save_viz_as {save_as} --full_spectrum_xaxis {full_spectrum_xaxis}'
         else:
             vb_cmd = ''
     
@@ -704,6 +704,7 @@ def run_optics_predictions(input_sequence, pred_dir=None, output='optics_predict
                       f"-i {input_sequence} " 
                       f"-o {pred_dir} " 
                       f"-p {output} " 
+                      f"-v {model_version}"
                       f"-m {model} " 
                       f"-e {encoding_method} " 
                       f"{bp_cmd}" 
@@ -757,6 +758,12 @@ if __name__ == '__main__':
                         required=False)
 
     # Prediction model
+    parser.add_argument("-v", "--model_version",
+                        help="Version of models to use (optional).\nBased on the version of VPOD used to train models.", 
+                        type=str, 
+                        default="vpod_1.3",
+                        choices=['vpod_1.3'],
+                        required=False)
     parser.add_argument("-m", "--model", 
                         help="Prediction model to use (optional).", 
                         type=str, 
@@ -801,15 +808,24 @@ if __name__ == '__main__':
                                 help="Enable visualization of bootstrap predictions.", 
                                 action="store_true")
     bootstrap_group.add_argument("--bootstrap_viz_file", 
-                                help="Filename prefix for bootstrap visualization (PDF and SVG).", 
+                                help="Filename prefix for bootstrap visualizations.", 
                                 type=str, 
                                 default="bootstrap_viz")
+    bootstrap_group.add_argument("--save_viz_as", 
+                                help="File type for bootstrap visualizations (SVG, PNG, or PDF).", 
+                                type=str, 
+                                default="svg",
+                                choices=['svg','png','pdf'])
+    bootstrap_group.add_argument("--full_spectrum_xaxis", 
+                            help="Enable visualization of predictions on a full spectrum x-axis (300-650nm).\nOtherwise, x-axis is scaled with predictions.", 
+                            action="store_true")
     
     args = parser.parse_args()
 
     blastp_report_output = f"{args.blastp_report}" if args.blastp else None
     bootstrap_viz_output = f"{args.bootstrap_viz_file}" if args.visualize_bootstrap else None
+    
     run_optics_predictions(args.input, args.output_dir,
                         args.prediction_prefix, args.model, args.encoding,
                         args.blastp, blastp_report_output, args.refseq, args.custom_ref_file,
-                        args.bootstrap, args.visualize_bootstrap, bootstrap_viz_output)
+                        args.bootstrap, args.visualize_bootstrap, bootstrap_viz_output, args.save_viz_as, args.full_spectrum_xaxis, args.model_version)
