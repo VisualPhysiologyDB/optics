@@ -6,11 +6,6 @@ import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from deepBreaks.utils import load_obj
-#try:
-#    from deepBreaks.utils import load_obj
-#except:
-#    from optics_scripts.deepBreaks.utils import load_obj
-
 
 def calculate_ensemble_CI(model_folder, query, name, predictions_dict):
     # Load models
@@ -35,7 +30,7 @@ def calculate_ensemble_CI(model_folder, query, name, predictions_dict):
 
     return mean_predictions, ci_lower, ci_upper, predictions_dict, median_predictions, std_dev, predictions_all
 
-def plot_prediction_subsets_with_CI(names, predictions, mean_preds, pdf_file, visualize_bootstrap, save_as='svg'):
+def plot_prediction_subsets_with_CI(names, predictions, mean_preds, pdf_file, visualize_bootstrap, save_as='svg', full_spectrum_xaxis = False):
     # Customize colors 
     colors = [wavelength_to_rgb(pred) for pred in mean_preds]
     color_specs = [matplotlib.colors.to_hex(color) for color in colors]
@@ -50,7 +45,19 @@ def plot_prediction_subsets_with_CI(names, predictions, mean_preds, pdf_file, vi
         for plot_idx in range(num_plots):
             plt.rcParams["figure.autolayout"] = True
             plt.rcParams["figure.figsize"] = [11.00, 5.00]
-            plt.rcParams['font.family'] = 'Century Gothic'
+            
+            try:
+                plt.rcParams['font.family'] = 'Century Gothic'
+            except:
+                try:
+                    plt.rcParams['font.family'] = 'sans-serif'
+                    plt.rcParams['font.sans-serif'] = 'Avenir'
+                except:
+                    try:
+                        plt.rcParams['font.family'] = 'sans-serif'
+                        plt.rcParams['font.sans-serif'] = ["Helvetica", "DejaVu Sans", "Arial"]               
+                    except:
+                        pass
 
             start_idx = plot_idx * 5
             end_idx = min(start_idx + 5, len(names))
@@ -89,13 +96,22 @@ def plot_prediction_subsets_with_CI(names, predictions, mean_preds, pdf_file, vi
 
             for i, seq_name in enumerate(concat_names):
                 median_y = bplot['medians'][i].get_ydata()[0]
-                y_pos = median_y + 0.70
+                if len(concat_names) >= 3:
+                    y_pos = median_y + 0.70
+                elif len(concat_names) == 2:
+                    y_pos = median_y + 0.60
+                else:
+                    y_pos = median_y + 0.57
+
+
                 x_pos = bplot['medians'][i].get_xdata()[1]
                 plt.text(x_pos, y_pos, seq_name, ha='center', va='top', color='black', fontsize=12, zorder=3)
 
             preds_handle = mpatches.Patch(facecolor='white', edgecolor='black', label='IQR')
             ci_handle = plt.Line2D([], [], color='black', label='95% Confidence Interval')
             
+            if full_spectrum_xaxis == True:
+                plt.xlim(300, 650) 
             plt.xlabel("Predicted λmax (nm)", fontsize=15)
             plt.ylabel("Opsin Sequences", fontsize=15)
             plt.xticks(fontsize=15)
