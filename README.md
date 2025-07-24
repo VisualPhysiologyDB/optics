@@ -1,7 +1,7 @@
 **Code**: [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0) **Data**: [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)  **VPOD_v1.2 DOI**: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.12213246.svg)](https://doi.org/10.5281/zenodo.12213246)
 
 
-# Opsin Phenotype Tool for Inference of Color Sensitivity (OPTICS) [v1.1]
+# Opsin Phenotype Tool for Inference of Color Sensitivity (OPTICS) [v1.3]
 
 ![](https://github.com/VisualPhysiologyDB/optics/blob/main/examples/optics_on_full_ex_test_of_optics_2024-10-15_15-18-01/ex_bs_viz_part4.svg?raw=true)
 
@@ -12,6 +12,7 @@
 
 - **OPTICS** is an open-source tool that predicts the Opsin Phenotype (λmax) from unaligned opsin amino-acid sequences. 
 - **OPTICS** leverages machine learning models trained on the Visual Physiology Opsin Database (VPOD).
+- **OPTICS** can be downloaded and used as a command-line or GUI tool.
 - **OPTICS** is also avaliable as an online tool [**here**](http://galaxy-dev.cnsi.ucsb.edu:8080/?tool_id=optics_1&version=latest), hosted on our [**Galaxy Project**](https://usegalaxy.org/) server.
 
 ## Key Features
@@ -68,42 +69,55 @@
   ```
 Required Args:
 
--i, --input: Either a single sequence or a path to a FASTA file.
+  -i, --input: Either a single sequence or a path to a FASTA file.
 
 General Optional Args:
 
--o, --output_dir: Desired directory to save output folder/files (optional). Default: './prediction_outputs'
+  -o, --output_dir: Desired directory to save output folder/files (optional). Default: './prediction_outputs'
 
--p, --prediction_prefix: Base filename for prediction outputs (optional). Default: 'unnamed'
+  -p, --prediction_prefix: Base filename for prediction outputs (optional). Default: 'unnamed'
 
--m, --model: Prediction model to use (optional). Options: whole-dataset, wildtype, vertebrate, invertebrate, wildtype-vert, type-one, whole-dataset-mnm, wildtype-mnm, vertebrate-mnm, invertebrate-mnm, wildtype-vert-mnm. **Default: whole-dataset** 
+  -v, --model_version: Version of models to use (optional). Based on the version of VPOD used to train models. Options/Default: vpod_1.3 (More version coming later)
 
--e, --encoding: Encoding method to use (optional). Options: one_hot, aa_prop. Default: aa_prop
+  -m, --model: Prediction model to use (optional). Options: whole-dataset, wildtype, vertebrate, invertebrate, wildtype-vert, type-one, whole-dataset-mnm, wildtype-mnm, vertebrate-mnm, invertebrate-mnm, wildtype-vert-mnm. **Default: whole-dataset** 
+
+  -e, --encoding: Encoding method to use (optional). Options: one_hot, aa_prop. Default: aa_prop
 
 BLASTp Analysis Args (optional):
 
---blastp: Enable BLASTp analysis.
+  --blastp: Enable BLASTp analysis.
 
---blastp_report: Filename for BLASTp report. Default: blastp_report.txt
+  --blastp_report: Filename for BLASTp report. Default: blastp_report.txt
 
---refseq: Reference sequence used for blastp analysis. Options: bovine, squid, microbe, custom. Default: bovine
+  --refseq: Reference sequence used for blastp analysis. Options: bovine, squid, microbe, custom. Default: bovine
 
---custom_ref_file: Path to a custom reference sequence file for BLASTp.  Required if --refseq custom is selected.
+  --custom_ref_file: Path to a custom reference sequence file for BLASTp.  Required if --refseq custom is selected.
 
 Bootstrap Analysis Args (optional):
 
---bootstrap: Enable bootstrap predictions.
+  --bootstrap: Enable bootstrap predictions.
 
---visualize_bootstrap: Enable visualization of bootstrap predictions.
+  --visualize_bootstrap: Enable visualization of bootstrap predictions.
 
---bootstrap_viz_file: Filename prefix for bootstrap visualization (PDF and SVG). Default: bootstrap_viz
+  --bootstrap_viz_file: Filename prefix for bootstrap visualization. Default: bootstrap_viz
+
+  --save_viz_as: File type for bootstrap visualizations. Options: SVG, PNG, or PDF Default: SVG
+  
+  --full_spectrum_xaxis: Enables visualization of predictions on a full spectrum x-axis (300-650nm). Otherwise, x-axis is scaled with predictions.
 
   ```     
   ### Example Command Line Usage vvv
   
   ```bash
-  python optics_predictions.py -i ./examples/optics_ex_short.txt -o ex_test_of_optics -p ex_predictions -m wildtype -e aa_prop --blastp -blastp_report blastp_report.txt --refseq squid --bootstrap --visualize_bootstrap --bootstrap_viz_file bootstrap_viz
+  python optics_predictions.py -i ./examples/optics_ex_short.txt -o ex_test_of_optics -p ex_predictions -m wildtype -e aa_prop --blastp -blastp_report blastp_report.txt --refseq squid --bootstrap --visualize_bootstrap --bootstrap_viz_file bootstrap_viz --save_viz_as SVG
   ```
+
+  ### Example GUI Usage vvv
+  
+  ```bash
+  python run_optics_gui.py
+  ```
+
 ### Input
 
 - **Unaligned** FASTA file containing opsin amino-acid sequences.
@@ -157,9 +171,9 @@ Contact information for author questions or feedback.
 
 - Want to use OPTICS without the hassle of the setup? -> [CLICK HERE](http://galaxy-dev.cnsi.ucsb.edu:8080/?tool_id=optics_1&version=latest) to visit our Galaxy Project server and use our tool!
 
-- *OPTICS v1.1 uses VPOD_v1.3 for training.*
+- *OPTICS v1.3 uses VPOD_v1.3 for training.*
 
-- **[Here](https://tinyurl.com/u7hn9adm)** is a link to a bibliography of the publications used to build VPOD_v1.2 (Full version not yet released)
+- **[Here](https://tinyurl.com/u7hn9adm)** is a link to a bibliography of the publications used to build VPOD_v1.2 (VPOD_v1.3 version not yet released)
   
 - If you know of publications for training opsin ML models not included in the VPOD_v1.2 database, please send them to us through **[this form](https://tinyurl.com/29afaxyr)**
   
