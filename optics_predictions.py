@@ -10,6 +10,7 @@ import numpy as np
 import pathlib  # pathlib is generally better than os.path (see below)
 import datetime
 import matplotlib
+matplotlib.use('Agg')  # Use 'Agg' to prevent Mac crash, need a different setting if changing to display in gui
 from joblib import Parallel, delayed
 import tempfile
 from multiprocessing import Manager
