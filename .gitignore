@@ -10,3 +10,4 @@ tmp/
 /deepBreaks/__pycache__
 /analyses
 /optics_scripts/mafft
+*old/
