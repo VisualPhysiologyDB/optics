@@ -1,8 +1,0 @@
-TREE_COLORS
-SEPARATOR TAB
-DATA
-Neogonodactylus_oerstedii|334	label_background	#2700f0
-Neogonodactylus_oerstedii|383	label_background	#6300bd
-Bombus_impatiens|539	label_background	#76ff00
-Bombus_impatiens|424	label_background	#3700e7
-Bombus_impatiens|347	label_background	#610061

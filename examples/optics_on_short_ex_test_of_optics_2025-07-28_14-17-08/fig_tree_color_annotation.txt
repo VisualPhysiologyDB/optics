@@ -1,0 +1,6 @@
+Name	!color
+Neogonodactylus_oerstedii|334	#0600fe
+Neogonodactylus_oerstedii|383	#6100c1
+Bombus_impatiens|539	#70ff00
+Bombus_impatiens|424	#0016ff
+Bombus_impatiens|347	#610061

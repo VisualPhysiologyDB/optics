@@ -1,0 +1,34 @@
+TREE_COLORS
+SEPARATOR TAB
+DATA
+Neogonodactylus_oerstedii|334	label_background	#0600fe
+Neogonodactylus_oerstedii|383	label_background	#6100c1
+Bombus_impatiens|539	label_background	#70ff00
+Bombus_impatiens|424	label_background	#0016ff
+Bombus_impatiens|347	label_background	#610061
+Drosophilia_melanogaster|486	label_background	#00e4ff
+Drosophilia_melanogaster|418	label_background	#00ff46
+Drosophilia_melanogaster|331	label_background	#610061
+Drosophilia_melanogaster|355	label_background	#68006e
+Drosophilia_melanogaster|442	label_background	#2200f3
+Drosophilia_melanogaster|515	label_background	#2fff00
+Lycaena_rubidus|360	label_background	#610061
+Lycaena_rubidus|437	label_background	#00fff2
+Lycaena_rubidus|500	label_background	#00ceff
+Lycaena_rubidus|568	label_background	#00fff8
+Hemigrapsus_sanguineus|480	label_background	#00b0ff
+Schistocerca_gregaria|441	label_background	#009fff
+Schistocerca_gregaria|514	label_background	#6cff00
+Schistocerca_gregaria|339	label_background	#6600b8
+Gryllus_bimaculatus|515	label_background	#3bff00
+Gryllus_bimaculatus|445	label_background	#0036ff
+Gryllus_bimaculatus|332	label_background	#610061
+Gryllus_bimaculatus|511	label_background	#6bff00
+Apis_mellfera|544	label_background	#67ff00
+Apis_mellfera|436	label_background	#0d00fb
+Apis_mellfera|344	label_background	#610061
+Manduca_sexta|520	label_background	#74ff00
+Manduca_sexta|450	label_background	#0039ff
+Manduca_sexta|357	label_background	#610061
+Acyrthosiphon_pisum|518	label_background	#50ff00
+Vargula_tsujii|460	label_background	#008bff

@@ -705,7 +705,7 @@ def run_optics_predictions(input_sequence, pred_dir=None, output='optics_predict
                       f"-i {input_sequence} " 
                       f"-o {pred_dir} " 
                       f"-p {output} " 
-                      f"-v {model_version}"
+                      f"-v {model_version} "
                       f"-m {model} " 
                       f"-e {encoding_method} " 
                       f"{bp_cmd}" 
