@@ -31,45 +31,78 @@ def calculate_ensemble_CI(model_folder, query, name, predictions_dict):
     return mean_predictions, ci_lower, ci_upper, predictions_dict, median_predictions, std_dev, predictions_all
 
 def plot_prediction_subsets_with_CI(names, predictions, mean_preds, pdf_file, visualize_bootstrap, save_as='svg', full_spectrum_xaxis = False):
+    
+    """Generates and saves boxplots of bootstrapped predictions for sequences.
+
+    This function creates a series of plots, with each displaying up to five
+    sequences. For each sequence, it visualizes the distribution of
+    bootstrapped predictions as a boxplot overlaid with a scatter plot of
+    the individual bootstrap values. A 95% confidence interval is also
+    indicated. Plots are saved as separate image files.
+
+    Parameters
+    ----------
+    names : list of str
+        A list of sequence identifiers. The order determines the plotting order.
+    predictions : dict
+        A dictionary mapping sequence names from `names` to their corresponding
+        list or array of bootstrapped prediction values (e.g., λmax).
+    mean_preds : list or array-like
+        A list of mean prediction values for each sequence, used to determine
+        the color of the boxplots. The order must match the `names` list.
+    pdf_file : str
+        The base path and filename for the output plots, without the file
+        extension. E.g., 'results/my_analysis'.
+    visualize_bootstrap : bool or str
+        If `True` or the string 'True', the function will generate and save
+        the plots. Otherwise, it will do nothing.
+    save_as : str, optional
+        The file format for the saved plots (e.g., 'svg', 'png').
+        Defaults to 'svg'.
+    full_spectrum_xaxis : bool, optional
+        If `True`, the x-axis of the plots is fixed to the range [300, 650] nm.
+        Defaults to `False`, which allows matplotlib to auto-scale the axis.
+
+    Notes
+    -----
+    - The function saves output plots as a series of files named using the
+      `pdf_file` base, such as `{pdf_file}_part1.{save_as}`,
+      `{pdf_file}_part2.{save_as}`, etc.
+    - The color of each boxplot is determined by mapping the `mean_preds`
+      value to a color via the `wavelength_to_rgb` helper function.
+    """
+    
     # Customize colors 
     colors = [wavelength_to_rgb(pred) for pred in mean_preds]
     color_specs = [matplotlib.colors.to_hex(color) for color in colors]
 
-    # Confidence interval calculation
-    confidence_level = 0.95
     # Number of plots to generate
     num_plots = (len(names) + 4) // 5
     
     if visualize_bootstrap == 'True' or visualize_bootstrap == True:
+        plt.rcParams["figure.autolayout"] = True  
+        
+              
+        plt.rcParams['font.family'] = 'sans-serif'
+        plt.rcParams['font.sans-serif'] = ['Century Gothic', 'Avenir', 'Helvetica', 'DejaVu Sans', 'Arial']
+
         # Function to generate a plot for a subset of names
         for plot_idx in range(num_plots):
-            plt.rcParams["figure.autolayout"] = True
-            plt.rcParams["figure.figsize"] = [11.00, 5.00]
-            
-            try:
-                plt.rcParams['font.family'] = 'Century Gothic'
-            except:
-                try:
-                    plt.rcParams['font.family'] = 'sans-serif'
-                    plt.rcParams['font.sans-serif'] = 'Avenir'
-                except:
-                    try:
-                        plt.rcParams['font.family'] = 'sans-serif'
-                        plt.rcParams['font.sans-serif'] = ["Helvetica", "DejaVu Sans", "Arial"]               
-                    except:
-                        pass
+
+            # Explicitly create a Figure and Axes object for each plot
+            fig, ax = plt.subplots(figsize=(11.00, 5.00))
 
             start_idx = plot_idx * 5
             end_idx = min(start_idx + 5, len(names))
             subset_names = names[start_idx:end_idx]
-            
-            
+
             bp_data = [predictions[seq] for seq in subset_names]
-            bplot = plt.boxplot(bp_data, showfliers=False, positions=range(1, len(bp_data) + 1), vert=False, patch_artist=True, boxprops={'alpha': 0.6}, widths=0.5)
+            # Use the 'ax' object for all plotting functions
+            bplot = ax.boxplot(bp_data, showfliers=False, positions=range(1, len(bp_data) + 1), vert=False, patch_artist=True, boxprops={'alpha': 0.6}, widths=0.5)
 
             for i, seq in enumerate(subset_names):
                 y_jitter = np.random.uniform(-0.05, 0.05, size=len(predictions[seq]))
-                plt.scatter(predictions[seq], np.full_like(predictions[seq], i + 1) + y_jitter, color='gray', s=20, alpha=0.5)
+                ax.scatter(predictions[seq], np.full_like(predictions[seq], i + 1) + y_jitter, color='gray', s=20, alpha=0.5)
 
             for box, color in zip(bplot['boxes'], color_specs[start_idx:start_idx + len(subset_names)]):
                 box.set_facecolor(color)
@@ -77,13 +110,6 @@ def plot_prediction_subsets_with_CI(names, predictions, mean_preds, pdf_file, vi
             for line in bplot['medians']:
                 line.set_color('black')
                 line.set_linewidth(1)
-
-            # Confidence intervals
-            for i, seq in enumerate(subset_names):
-                alpha = 1 - confidence_level
-                lower_ci = np.percentile(predictions[seq], alpha / 2 * 100)
-                upper_ci = np.percentile(predictions[seq], 100 - alpha / 2 * 100)
-                plt.axhline(i + 1, lower_ci, upper_ci, color='b', linestyle='--')
 
             # Add protein names
             concat_names = []
@@ -103,25 +129,25 @@ def plot_prediction_subsets_with_CI(names, predictions, mean_preds, pdf_file, vi
                 else:
                     y_pos = median_y + 0.57
 
-
                 x_pos = bplot['medians'][i].get_xdata()[1]
-                plt.text(x_pos, y_pos, seq_name, ha='center', va='top', color='black', fontsize=12, zorder=3)
+                ax.text(x_pos, y_pos, seq_name, ha='center', va='top', color='black', fontsize=12, zorder=3)
 
             preds_handle = mpatches.Patch(facecolor='white', edgecolor='black', label='IQR')
-            ci_handle = plt.Line2D([], [], color='black', label='95% Confidence Interval')
-            
-            if full_spectrum_xaxis == True:
-                plt.xlim(300, 650) 
-            plt.xlabel("Predicted λmax (nm)", fontsize=15)
-            plt.ylabel("Opsin Sequences", fontsize=15)
-            plt.xticks(fontsize=15)
-            plt.yticks([])
-            plt.legend(handles=[preds_handle, ci_handle])
-            plt.grid(True, axis='x')  # Grid only on x-axis        
-            # Save each plot with a unique filename
-            plt.savefig(f'{pdf_file}_part{plot_idx + 1}.{save_as}', format=save_as, dpi=400)
-            # Clear the current figure
-            plt.close()
+
+            if full_spectrum_xaxis:
+                ax.set_xlim(300, 650)
+            ax.set_xlabel("Predicted λmax (nm)", fontsize=15)
+            ax.set_ylabel("Opsin Sequences", fontsize=15)
+            ax.tick_params(axis='x', labelsize=15)
+            ax.set_yticks([])
+            ax.legend(handles=[preds_handle, plt.Line2D([], [], color='black', linestyle='-', label='95% Confidence Interval')])
+            ax.grid(True, axis='x')
+
+            # Save the specific figure object
+            fig.savefig(f'{pdf_file}_part{plot_idx + 1}.{save_as}', format=save_as, dpi=400)
+
+            # Explicitly close the figure to release memory
+            plt.close(fig)
         
     #print('\nBootstrap plots done!\n')
     return(color_specs)
