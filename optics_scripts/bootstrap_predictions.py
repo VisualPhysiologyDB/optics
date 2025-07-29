@@ -7,16 +7,27 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from deepBreaks.utils import load_obj
 
-def calculate_ensemble_CI(model_folder, query, name, predictions_dict):
-    # Load models
+def calculate_ensemble_CI(loaded_bs_models, query, name, predictions_dict):
+    """
+    Calculates ensemble predictions and confidence intervals from pre-loaded bootstrap models.
+
+    Args:
+        loaded_bs_models (list): A list of pre-loaded model objects.
+        query (DataFrame): The input data for prediction.
+        name (str): The name of the sequence being processed.
+        predictions_dict (Manager.dict): A shared dictionary to store raw bootstrap predictions.
+
+    Returns:
+        tuple: Contains mean, CI lower, CI upper, updated predictions_dict, median,
+               standard deviation, and a list of all predictions.
+    """
+    # Use the pre-loaded models to make predictions
     predictions_all = []
-    for filename in os.listdir(model_folder):
-        if filename.endswith('.pkl'):  # Assuming you saved models as .pkl
-            model_path = os.path.join(model_folder, filename)
-            model = load_obj(model_path)  # You'll need a 'load_model' function
-            prediction = model.predict(query)
-            prediction = round(float(prediction[0]),1)
-            predictions_all.append(prediction)
+    for model in loaded_bs_models:
+        prediction = model.predict(query)
+        prediction = round(float(prediction[0]),1)
+        predictions_all.append(prediction)
+
     # Calculate ensemble confidence intervals
     predictions_all = np.array(predictions_all)
     predictions_dict.update({name: predictions_all})
