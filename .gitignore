@@ -8,3 +8,5 @@ tmp/
 /data/cached_predictions
 *.pyc
 /deepBreaks/__pycache__
+/examples/old
+/optics_scripts/old
