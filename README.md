@@ -22,6 +22,7 @@
 - **Encoding Methods**: Select between one-hot encoding or amino-acid property encoding for model training and prediction.
 - **BLAST Analysis**: Optionally perform BLASTp analysis to compare query sequences against reference datasets.
 - **Bootstrap Predictions**: Optionally enable bootstrap predictions for enhanced accuracy assessment (suggested limit to 10 sequences for bootstrap visulzations).
+- **Prediction Explanation**: Utilizes SHAP to explain the key features driving the λmax difference between any two sequences.
 
 ## Installation
 
@@ -64,7 +65,7 @@
 
   **MAKE SURE YOU HAVE ALL DEPENDENCIES DOWNLOADED ARE IN THE FOLDER DIRECTORY FOR OPTICS BEFORE RUNNING ANY SCRIPTS!**
   
-  ### **Parameters**
+  ### Main prediction script ('''optics_predictions.py''')
      
   ```
 Required Args:
@@ -139,6 +140,39 @@ Bootstrap Analysis Args (optional):
 
   **Note** - All outputs are written into sub-folders within the 'prediction_outputs' folder, and are marked by time and date.
 
+### Explaining Prediction Differences with SHAP ('''optics_shap.py''')
+For users interested in the "nitty-gritty" of _why_ two sequences have different predicted λmax values, we provide a specialized script that uses *SHAP* (SHapley Additive exPlanations). This tool generates a plot and detailed data files that attribute the difference in prediction to specific features (i.e., amino acid sites and their properties).
+
+This script requires a *FASTA file containing exactly two sequences*.
+
+### SHAP Script Parameters
+Most parameters are identical to the main prediction script. Below are the key arguments:
+
+```
+Required Args:
+  -i, --input: Path to a FASTA file containing two sequences to compare.
+
+Optional Args:
+  -o, --output_dir: Directory to save the SHAP analysis output folder.
+  -p, --prediction_prefix: Base filename for the SHAP plot and data files.
+  -m, --model: Prediction model to use for the comparison.
+  -e, --encoding: Encoding method to use.
+  --save_viz_as: File type for the SHAP visualization (svg, png, or pdf).
+```
+
+### Example Command Line Usage vvv
+
+```bash
+python optics_shap.py -i ./examples/optics_shap_ex.fasta -o ./examples -p ex_shap_test_aa_prop -m whole-dataset-mnm -e aa_prop --save_viz_as svg
+```
+
+### Output 
+
+- SHAP Plot (SVG/PNG/PDF): Visual explanation for the top 10 sites cotributing to prediction differences.
+- SHAP Data (CSV): Detailed feature attribution values.
+- Run Log (TXT): A record of the command used.
+
+***Note - All outputs are written into subfolders generated based on your 'prediction-prefix' under your specified output directory, and are marked by time and date.
 
 ---
 ## License
