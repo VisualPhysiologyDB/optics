@@ -9,11 +9,11 @@
 
 ---
 ## Description
-
 - **OPTICS** is an open-source tool that predicts the Opsin Phenotype (λmax) from unaligned opsin amino-acid sequences. 
 - **OPTICS** leverages machine learning models trained on the Visual Physiology Opsin Database (VPOD).
 - **OPTICS** can be downloaded and used as a command-line or GUI tool.
 - **OPTICS** is also avaliable as an online tool [**here**](http://galaxy-dev.cnsi.ucsb.edu:8080/?tool_id=optics_1&version=latest), hosted on our [**Galaxy Project**](https://usegalaxy.org/) server.
+- Check out our pre-print [**Accessible and Robust Machine Learning Approaches to Improve the Opsin Genotype-Phenotype Map**](https://doi.org/10.1101/2025.08.22.671864) to read more about it!
 
 ## Key Features
 
@@ -193,10 +193,15 @@ All data and code is covered under a GNU General Public License (GPL)(Version 3)
 
       10.5281/zenodo.10667840
     
-- **IF you use OPTICS in your research, please cite the following paper:**
-  **NOTE** - We are currently working on a manuscript specific to OPTICS - so this citation will change in the near future. 
+- **IF you use OPTICS in your research, please cite the following paper(s):**
 
-      Seth A. Frazer, Mahdi Baghbanzadeh, Ali Rahnavard, Keith A. Crandall, & Todd H Oakley. Discovering genotype-phenotype relationships with machine learning and the Visual Physiology Opsin Database (VPOD). GigaScience, 2024.09.01. https://doi.org/10.1093/gigascience/giae073
+  - Our more recent publication directly on the making/utility of OPTICS.
+
+        Seth A. Frazer, Todd H. Oakley. Accessible and Robust Machine Learning Approaches to Improve the Opsin Genotype-Phenotype Map. bioRxiv, 2025.08.22.671864. https://doi.org/10.1101/2025.08.22.671864
+    
+  - Our original paper on the development of VPOD; the opsin genotype-phenotype database backbone for training the ML models used in OPTICS. 
+
+        Seth A. Frazer, Mahdi Baghbanzadeh, Ali Rahnavard, Keith A. Crandall, & Todd H Oakley. Discovering genotype-phenotype relationships with machine learning and the Visual Physiology Opsin Database (VPOD). GigaScience, 2024.09.01. https://doi.org/10.1093/gigascience/giae073
 
 ## Contact
 Contact information for author questions or feedback.
