@@ -1,0 +1,8 @@
+# Example command for optics_predictions.py
+
+python optics_predictions.py -i ./examples/optics_ex_short.txt -o ./examples -p ex_predictions -m wildtype -e aa_prop --blastp --blastp_report blastp_report.txt --refseq squid --bootstrap --visualize_bootstrap --bootstrap_viz_file bootstrap_viz
+
+
+# Example command for optics_shap.py
+
+python optics_shap.py -i ./examples/optics_shap_ex.fasta -o ./examples -p ex_shap_test_aa_prop -m whole-dataset-mnm -e aa_prop --save_viz_as svg

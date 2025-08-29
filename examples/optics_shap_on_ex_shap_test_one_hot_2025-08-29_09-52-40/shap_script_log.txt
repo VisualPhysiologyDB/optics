@@ -1,0 +1,8 @@
+Command executed:
+optics_shap.py -i ./examples/optics_shap_ex.fasta -o ./examples -p ex_shap_test_one_hot -m whole-dataset-mnm -e one_hot --save_viz_as svg
+
+SHAP Base Value (Average Predicted lambda-max): 475.03 nm
+Sum of SHAP differences: 18.65nm
+Actual prediction difference: 18.60nm
+	Optics Prediction for C_phantasticus_LWS1 = 551.20nm
+	Optics Prediction for C_phantasticus_LWS2 = 532.60nm
