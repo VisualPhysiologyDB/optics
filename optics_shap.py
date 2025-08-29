@@ -53,7 +53,9 @@ def generate_shap_explanation(
 
     script_path = pathlib.Path(__file__).resolve()  # Get absolute path
     wrk_dir = str(script_path.parent).replace('\\', '/')
-
+    if not os.path.isdir(f'{wrk_dir}/tmp'):
+        os.makedirs(f'{wrk_dir}/tmp')
+        
     data_dir = f"{wrk_dir}/data"
     model_datasets = {
         "whole-dataset": f"{data_dir}/fasta/{model_version}/wds_aligned_VPOD_1.2_het.fasta",
