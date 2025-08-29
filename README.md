@@ -145,7 +145,7 @@ Bootstrap Analysis Args (optional):
 ### Explaining Prediction Differences with SHAP (```optics_shap.py```
 For users interested in the "nitty-gritty" of _why_ two sequences have different predicted λmax values, we provide a specialized script that uses *SHAP* (SHapley Additive exPlanations). This tool generates a plot and detailed data files that attribute the difference in prediction to specific features (i.e., amino acid sites and their properties).
 
-![](https://github.com/VisualPhysiologyDB/optics/blob/shap_imp/examples/optics_shap_on_ex_shap_test_aa_prop_2025-08-29_09-50-13/ex_shap_test_aa_prop_viz_shap_comparison.svg?raw=true)
+![](https://github.com/VisualPhysiologyDB/optics/blob/main/examples/optics_shap_on_ex_shap_test_aa_prop_2025-08-29_09-50-13/ex_shap_test_aa_prop_viz_shap_comparison.svg?raw=true)
 
 _Example SHAP comparison plot for explaining differences in predictions of Opsin λmax by OPTICS_
 
