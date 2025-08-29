@@ -13,7 +13,7 @@
 - **OPTICS** leverages machine learning models trained on the Visual Physiology Opsin Database (VPOD).
 - **OPTICS** can be downloaded and used as a command-line or GUI tool.
 - **OPTICS** is also avaliable as an online tool [**here**](http://galaxy-dev.cnsi.ucsb.edu:8080/?tool_id=optics_1&version=latest), hosted on our [**Galaxy Project**](https://usegalaxy.org/) server.
-- Check out our pre-print [**Accessible and Robust Machine Learning Approaches to Improve the Opsin Genotype-Phenotype Map**](https://doi.org/10.1101/2025.08.22.671864) to read more about it!
+- **Check out our pre-print [Accessible and Robust Machine Learning Approaches to Improve the Opsin Genotype-Phenotype Map](https://doi.org/10.1101/2025.08.22.671864) to read more about it!**
 
 ## Key Features
 
