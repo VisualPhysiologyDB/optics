@@ -23,3 +23,4 @@ lightgbm>=4.5.0
 tqdm==4.67.1
 progressbar2==4.5.0
 sv_ttk==2.6.0
+shap==0.48.0
