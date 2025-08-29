@@ -63,9 +63,9 @@
   
 ## Usage
 
-  **MAKE SURE YOU HAVE ALL DEPENDENCIES DOWNLOADED ARE IN THE FOLDER DIRECTORY FOR OPTICS BEFORE RUNNING ANY SCRIPTS!**
+  **MAKE SURE YOU HAVE ALL DEPENDENCIES DOWNLOADED AND ARE IN THE FOLDER DIRECTORY FOR OPTICS BEFORE RUNNING ANY SCRIPTS!**
   
-  ### Main prediction script ('''optics_predictions.py''')
+  ### Main prediction script (```optics_predictions.py```)
      
   ```
 Required Args:
@@ -138,12 +138,18 @@ Bootstrap Analysis Args (optional):
 - Bootstrap Graphs (PDF, optional): Visualization of bootstrap prediction results.
 - Job Log (TXT): Log file containing input command to OPTICS, including encoding method and model used.
 
-  **Note** - All outputs are written into sub-folders within the 'prediction_outputs' folder, and are marked by time and date.
+  **Note** - All outputs are written into subfolders generated based on your 'prediction-prefix' under your specified output directory, and are marked by time and date.
+  
+---
 
-### Explaining Prediction Differences with SHAP ('''optics_shap.py''')
+### Explaining Prediction Differences with SHAP (```optics_shap.py```
 For users interested in the "nitty-gritty" of _why_ two sequences have different predicted λmax values, we provide a specialized script that uses *SHAP* (SHapley Additive exPlanations). This tool generates a plot and detailed data files that attribute the difference in prediction to specific features (i.e., amino acid sites and their properties).
 
-This script requires a *FASTA file containing exactly two sequences*.
+![](https://github.com/VisualPhysiologyDB/optics/blob/shap_imp/examples/optics_shap_on_ex_shap_test_aa_prop_2025-08-29_09-50-13/ex_shap_test_aa_prop_viz_shap_comparison.svg?raw=true)
+
+_Example SHAP comparison plot for explaining differences in predictions of Opsin λmax by OPTICS_
+
+This script requires a **FASTA file containing exactly two sequences**.
 
 ### SHAP Script Parameters
 Most parameters are identical to the main prediction script. Below are the key arguments:
@@ -166,13 +172,16 @@ Optional Args:
 python optics_shap.py -i ./examples/optics_shap_ex.fasta -o ./examples -p ex_shap_test_aa_prop -m whole-dataset-mnm -e aa_prop --save_viz_as svg
 ```
 
+### Input
+- **Unaligned** FASTA file containing **EXACTLY TWO** opsin amino-acid sequences for shap comparison.
+
 ### Output 
 
 - SHAP Plot (SVG/PNG/PDF): Visual explanation for the top 10 sites cotributing to prediction differences.
 - SHAP Data (CSV): Detailed feature attribution values.
-- Run Log (TXT): A record of the command used.
+- Run Log (TXT): A record of the commands use and other information pertaining to the shap prediction.
 
-***Note - All outputs are written into subfolders generated based on your 'prediction-prefix' under your specified output directory, and are marked by time and date.
+***Note - Once again, all outputs are written into subfolders generated based on your 'prediction-prefix' under your specified output directory, and are marked by time and date.
 
 ---
 ## License
