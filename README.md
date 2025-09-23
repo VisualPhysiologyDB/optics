@@ -76,13 +76,16 @@ General Optional Args:
 
   -o, --output_dir: Desired directory to save output folder/files (optional). Default: './prediction_outputs'
 
-  -p, --prediction_prefix: Base filename for prediction outputs (optional). Default: 'unnamed'
+  -p, --prediction_prefix: Base filename for prediction outputs. Default: 'unnamed'
 
   -v, --model_version: Version of models to use (optional). Based on the version of VPOD used to train models. Options/Default: vpod_1.3 (More version coming later)
 
-  -m, --model: Prediction model to use (optional). Options: whole-dataset, wildtype, vertebrate, invertebrate, wildtype-vert, type-one, whole-dataset-mnm, wildtype-mnm, vertebrate-mnm, invertebrate-mnm, wildtype-vert-mnm. **Default: whole-dataset** 
+  -m, --model: Prediction model to use. Options: whole-dataset, wildtype, vertebrate, invertebrate, wildtype-vert, type-one, whole-dataset-mnm, wildtype-mnm, vertebrate-mnm, invertebrate-mnm, wildtype-vert-mnm. **Default: whole-dataset** 
 
   -e, --encoding: Encoding method to use (optional). Options: one_hot, aa_prop. Default: aa_prop
+
+  --n_jobs: Number of parallel processes to run (optional). -1 is the default, utilizing all avaiable processors.", 
+
 
 BLASTp Analysis Args (optional):
 
@@ -99,6 +102,10 @@ Bootstrap Analysis Args (optional):
   --bootstrap: Enable bootstrap predictions.
 
   --visualize_bootstrap: Enable visualization of bootstrap predictions.
+
+  --bootstrap_num: Number of bootstrap models to load for prediction replicates. Default // Maximum: 100
+
+  --preload_bootstrap_models: Enable preloading of bootstrap models to memory. Can be quite cumbersome, but will theoretically make predictions faster.
 
   --bootstrap_viz_file: Filename prefix for bootstrap visualization. Default: bootstrap_viz
 

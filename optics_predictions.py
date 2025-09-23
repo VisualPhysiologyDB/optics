@@ -39,7 +39,9 @@ def tqdm_joblib(tqdm_object):
         joblib.parallel.BatchCompletionCallBack = old_batch_callback
         tqdm_object.close()
 
-def process_sequence(sequence=None, name=None, selected_model=None, identity_report=None, blastp=None, refseq=None, reffile=None, bootstrap=None, prediction_dict=None, encoding_method='one_hot', wrk_dir='', only_blast=False, model_version='vpod_1.3', loaded_mod=None, loaded_bs_models=None):
+def process_sequence(sequence=None, name=None, selected_model=None, identity_report=None, blastp=None, refseq=None, reffile=None, 
+                     bootstrap=None, prediction_dict=None, wrk_dir='', only_blast=False, model_version='vpod_1.3', 
+                     loaded_mod=None, loaded_bs_models=None, preload_to_memory=False, bs_model_folder_path=None, bootstrap_num=100):
     
     """Processes a single opsin amino acid sequence for lmax prediction.
 
@@ -227,6 +229,8 @@ def process_sequence(sequence=None, name=None, selected_model=None, identity_rep
     if blastp not in ['no', False, 'False']:
         percent_iden = seq_sim_report(temp_seq, name, refseq, blast_db, raw_data, metadata, identity_report, reffile, wrk_dir)
 
+    
+    # perform temporary alignment to training data for preprocessing
     with tempfile.NamedTemporaryFile(mode="w", dir=f"{wrk_dir}/tmp", suffix=".fasta", delete=False) as temp_ali_file:
         new_ali = temp_ali_file.name 
     try:
@@ -271,17 +275,21 @@ def process_sequence(sequence=None, name=None, selected_model=None, identity_rep
     os.remove(new_ali)
     os.remove(temp_seq)
 
-    if bootstrap:
+    if bootstrap and preload_to_memory:
         # Use the pre-loaded bootstrap models
         if not loaded_bs_models:
              raise ValueError("Bootstrap is enabled, but no pre-loaded bootstrap models were provided.")
-        mean_prediction, ci_lower, ci_upper, prediction_dict, median_prediction, std_dev, predictions_all = calculate_ensemble_CI(loaded_bs_models, new_seq_test, name, prediction_dict)
+        mean_prediction, ci_lower, ci_upper, prediction_dict, median_prediction, std_dev, predictions_all = calculate_ensemble_CI(prediction, loaded_bs_models, new_seq_test, name, prediction_dict, bootstrap_num=bootstrap_num)
+        return (round(float(mean_prediction),1), round(float(ci_lower),1), round(float(ci_upper),1), prediction_dict, round(float(prediction[0]),1), round(float(median_prediction),1), str(percent_iden), round(float(std_dev),1), predictions_all.tolist())
+    elif bootstrap:
+        mean_prediction, ci_lower, ci_upper, prediction_dict, median_prediction, std_dev, predictions_all = calculate_ensemble_CI(prediction, loaded_bs_models, new_seq_test, name, prediction_dict, bs_model_folder_path, bootstrap_num)
         return (round(float(mean_prediction),1), round(float(ci_lower),1), round(float(ci_upper),1), prediction_dict, round(float(prediction[0]),1), round(float(median_prediction),1), str(percent_iden), round(float(std_dev),1), predictions_all.tolist())
     else:
         return (round(float(prediction[0]),1), str(percent_iden))
  
 
-def process_sequences_from_file(file, selected_model, identity_report, blastp, refseq, reffile, bootstrap, encoding_method, wrk_dir, model_version):
+def process_sequences_from_file(file, selected_model, identity_report, blastp, refseq, reffile, 
+                                bootstrap, bootstrap_num, encoding_method, wrk_dir, model_version, preload_to_memory, n_jobs):
     # Extract sequences and their names from the input fasta file
     if file == None:
         raise Exception('Error: No file given')
@@ -367,19 +375,20 @@ def process_sequences_from_file(file, selected_model, identity_report, blastp, r
 
     # Load the base model once before starting parallel jobs to reduce memory overhead.
     model_path = model_directories[selected_model]
-    loaded_mod_preloaded = load_obj(model_path)
+    main_model_preloaded = load_obj(model_path)
     
     # Load all bootstrap models once, if requested, to reduce memory overhead
-    loaded_bs_models_preloaded = []
-    if bootstrap:
+    bs_models_preloaded = []
+    if bootstrap and preload_to_memory:
         bs_model_folder_path = model_bs_dirs[selected_model]
         if os.path.isdir(bs_model_folder_path):
             # Sort to ensure deterministic order
             model_files = sorted([f for f in os.listdir(bs_model_folder_path) if f.endswith('.pkl')])
-            for filename in model_files:
+            for i in range(bootstrap_num):
+                filename = model_files[i]
                 full_path = os.path.join(bs_model_folder_path, filename)
-                loaded_bs_models_preloaded.append(load_obj(full_path))
-        if not loaded_bs_models_preloaded:
+                bs_models_preloaded.append(load_obj(full_path))
+        if not bs_models_preloaded:
             print(f"Warning: Bootstrap is enabled but no models found in {bs_model_folder_path}")
 
 
@@ -392,16 +401,16 @@ def process_sequences_from_file(file, selected_model, identity_report, blastp, r
         just_seq = just_seq.replace('\n', '')
         if bootstrap == False:
             if just_seq not in list(mp_cached_pred_dict.keys()):
-                prediction, percent_iden = process_sequence(seq, name, selected_model, identity_report, blastp, refseq, reffile, bootstrap, prediction_dict, encoding_method, wrk_dir, model_version=model_version, loaded_mod=loaded_mod_preloaded, loaded_bs_models=loaded_bs_models_preloaded)
+                prediction, percent_iden = process_sequence(seq, name, selected_model, identity_report, blastp, refseq, reffile, bootstrap, prediction_dict, wrk_dir, model_version=model_version, loaded_mod=main_model_preloaded)
                 mp_cached_pred_dict[just_seq] = {'len': len(just_seq), 'single_prediction': prediction}
                 return len(just_seq), prediction, percent_iden, None, None, None, None, None  # Consistent return values
             else:
-                percent_iden = process_sequence(seq, name, selected_model, identity_report, blastp, refseq, reffile, bootstrap, prediction_dict, encoding_method, wrk_dir, only_blast=True, model_version=model_version)
+                percent_iden = process_sequence(seq, name, selected_model, identity_report, blastp, refseq, reffile, bootstrap, prediction_dict, wrk_dir, only_blast=True, model_version=model_version)
                 return mp_cached_pred_dict[just_seq]['len'], mp_cached_pred_dict[just_seq]['single_prediction'], percent_iden, None, None, None, None, None  # Consistent return values
 
         else:
             if just_seq not in list(mp_cached_pred_dict.keys()):
-                mean_prediction, ci_lower, ci_upper, updated_prediction_dict, prediction, median_prediction, percent_iden, std_dev, predictions_all = process_sequence(seq, name, selected_model, identity_report, blastp, refseq, reffile, bootstrap, prediction_dict, encoding_method, wrk_dir, model_version=model_version, loaded_mod=loaded_mod_preloaded, loaded_bs_models=loaded_bs_models_preloaded)
+                mean_prediction, ci_lower, ci_upper, updated_prediction_dict, prediction, median_prediction, percent_iden, std_dev, predictions_all = process_sequence(seq, name, selected_model, identity_report, blastp, refseq, reffile, bootstrap, prediction_dict, wrk_dir, model_version=model_version, loaded_mod=main_model_preloaded, loaded_bs_models=bs_models_preloaded, bs_model_folder_path=bs_model_folder_path, bootstrap_num=bootstrap_num)
                 prediction_dict.update(updated_prediction_dict) # Update the shared dictionary with the returned dictionary
                 mp_cached_pred_dict[just_seq] = {'len': len(just_seq),
                                             'single_prediction': prediction,
@@ -415,7 +424,7 @@ def process_sequences_from_file(file, selected_model, identity_report, blastp, r
                 # If the seq is in our cache, I need to be able to update the prediction_dict with that info...
                 return len(just_seq), prediction, percent_iden, mean_prediction, ci_lower, ci_upper, median_prediction, std_dev
             else:
-                percent_iden = process_sequence(seq, name, selected_model, identity_report, blastp, refseq, reffile, bootstrap, prediction_dict, encoding_method, wrk_dir, only_blast=True, model_version=model_version)
+                percent_iden = process_sequence(seq, name, selected_model, identity_report, blastp, refseq, reffile, bootstrap, prediction_dict, wrk_dir, only_blast=True, model_version=model_version)
                 prediction_dict[name] = np.array(mp_cached_pred_dict[just_seq]['all_bs_predictions'])
                 return mp_cached_pred_dict[just_seq]['len'], mp_cached_pred_dict[just_seq]['single_prediction'], percent_iden, mp_cached_pred_dict[just_seq]['mean_prediction'], mp_cached_pred_dict[just_seq]['ci_lower'], mp_cached_pred_dict[just_seq]['ci_upper'], mp_cached_pred_dict[just_seq]['median_prediction'], mp_cached_pred_dict[just_seq]['std_deviation']
 
@@ -424,7 +433,7 @@ def process_sequences_from_file(file, selected_model, identity_report, blastp, r
         with tqdm_joblib(tqdm(total=len(sequences), desc="Processing Sequences", bar_format="{l_bar}{bar:25}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}{postfix}]", 
                               dynamic_ncols=True, colour="#CF9FFF",
                               unit ='seqs',ascii="░▒▓")) as pbar:  # Use tqdm for progress bar
-            results = Parallel(n_jobs=-1)(delayed(process_sequence_wrapper)(seq, names[i]) for i, seq in enumerate(sequences))
+            results = Parallel(n_jobs=n_jobs)(delayed(process_sequence_wrapper)(seq, names[i]) for i, seq in enumerate(sequences))
     except Exception as e:
         updated_cached_pred_dict = dict(mp_cached_pred_dict)        
         # Save the taxon dictionary if it doesn't yet exist or if it has been updated since being loaded 
@@ -469,8 +478,8 @@ def process_sequences_from_file(file, selected_model, identity_report, blastp, r
 def run_optics_predictions(input_sequence, pred_dir=None, output='optics_predictions',
                            model="whole-dataset", encoding_method='aa_prop', blastp=True,
                            iden_report='blastp_report.txt', refseq='bovine', reffile=None,
-                           bootstrap=True, visualize_bootstrap=True, bootstrap_viz_file='bootstrap_viz', save_as='svg', full_spectrum_xaxis=False,
-                           model_version='vpod_1.3'):
+                           bootstrap=True, bootstrap_num = 100, visualize_bootstrap=True, bootstrap_viz_file='bootstrap_viz', save_as='svg', full_spectrum_xaxis=False,
+                           model_version='vpod_1.3', preload_to_memory=False, n_jobs=-1):
     """
     Processes sequences using a selected model and generates prediction outputs.  This function
     encapsulates the logic from the original `main` function, making it callable from
@@ -525,8 +534,9 @@ def run_optics_predictions(input_sequence, pred_dir=None, output='optics_predict
     models = ['whole-dataset', 'wildtype', 'vertebrate', 'invertebrate', 'wildtype-vert', 'type-one', 'whole-dataset-mnm', 'wildtype-mnm', 'vertebrate-mnm', 'invertebrate-mnm', 'wildtype-vert-mnm', 'wildtype-mut']
     encoding_methods = ['one_hot', 'aa_prop']
     ref_seq_choices = ['bovine', 'squid', 'microbe', 'custom']
-    #bool_choices = ['true', 'True', 'false', 'False', True, False] #not used, we cast directly to bool.
-
+    if bootstrap_num > 100:
+        bootstrap_num = 100
+    
     if model not in models:
         raise ValueError(f"Invalid model choice.  Must be one of {models}")
     if encoding_method not in encoding_methods:
@@ -564,7 +574,7 @@ def run_optics_predictions(input_sequence, pred_dir=None, output='optics_predict
 
     # Input handling (file or sequence string)
     if os.path.isfile(input_sequence):
-        names, mean_predictions, ci_lowers, ci_uppers, prediction_dict, predictions, median_predictions, per_iden_list, std_dev_list, seq_lens_list = process_sequences_from_file(input_sequence, model, blastp_file, blastp, refseq, reffile, bootstrap, encoding_method, wrk_dir, model_version)
+        names, mean_predictions, ci_lowers, ci_uppers, prediction_dict, predictions, median_predictions, per_iden_list, std_dev_list, seq_lens_list = process_sequences_from_file(input_sequence, model, blastp_file, blastp, refseq, reffile, bootstrap, bootstrap_num, encoding_method, wrk_dir, model_version, preload_to_memory, n_jobs)
         
         # Output file handling (TSV or TXT, Excel)
         if 'predictions' not in {output}:
@@ -574,11 +584,11 @@ def run_optics_predictions(input_sequence, pred_dir=None, output='optics_predict
 
     else:  # Assume it's a single sequence
         #  create a temporary file.
-        temp_input_file = os.path.join('./tmp', f'temp_input_{dt_label}.fasta')
+        temp_input_file = os.path.join(f'{wrk_dir}/tmp', f'temp_input_{dt_label}.fasta')
         with open(temp_input_file, "w") as f:
             f.write(f">temp_seq\n{input_sequence}\n") #write temp file to be consistant with process_sequence_from_file function
         
-        names, mean_predictions, ci_lowers, ci_uppers, prediction_dict, predictions, median_predictions, per_iden_list, std_dev_list, seq_lens_list = process_sequences_from_file(temp_input_file, model, blastp_file, blastp, refseq, reffile, bootstrap, encoding_method, wrk_dir, model_version)
+        names, mean_predictions, ci_lowers, ci_uppers, prediction_dict, predictions, median_predictions, per_iden_list, std_dev_list, seq_lens_list = process_sequences_from_file(temp_input_file, model, blastp_file, blastp, refseq, reffile, bootstrap, bootstrap_num, encoding_method, wrk_dir, model_version, preload_to_memory, n_jobs)
         output_path = f'{report_dir}/{output}'
         if not output_path.endswith(('.tsv', '.txt')):
             output_path += '.tsv'
@@ -737,6 +747,10 @@ if __name__ == '__main__':
                         default="aa_prop",
                         choices=['one_hot', 'aa_prop'],
                         required=False)
+    parser.add_argument("--n_jobs",
+                        help="Number of parallel processes to run.\n-1 is the default, utilizing all avaiable processors.", 
+                        type=int,
+                        default=-1)
 
     # BLASTp options
     blastp_group = parser.add_argument_group("BLASTp analysis (optional)") # Group related args
@@ -763,6 +777,13 @@ if __name__ == '__main__':
     bootstrap_group.add_argument("--bootstrap", 
                                 help="Enable bootstrap predictions.", 
                                 action="store_true")
+    bootstrap_group.add_argument("--bootstrap_num", 
+                                help="Number of bootstrap models to load for prediction replicates. Default and max is 100", 
+                                type=int,
+                                default=100)
+    bootstrap_group.add_argument("--preload_bootstrap_models", 
+                                help="Enable preloading of bootstrap models to memory.\nCan be quite cumbersome, but will theoretically make predictions faster.", 
+                                action="store_true")
     bootstrap_group.add_argument("--visualize_bootstrap", 
                                 help="Enable visualization of bootstrap predictions.", 
                                 action="store_true")
@@ -787,4 +808,5 @@ if __name__ == '__main__':
     run_optics_predictions(args.input, args.output_dir,
                         args.prediction_prefix, args.model, args.encoding,
                         args.blastp, blastp_report_output, args.refseq, args.custom_ref_file,
-                        args.bootstrap, args.visualize_bootstrap, bootstrap_viz_output, args.save_viz_as, args.full_spectrum_xaxis, args.model_version)
+                        args.bootstrap, args.bootstrap_num, args.visualize_bootstrap, bootstrap_viz_output, args.save_viz_as, 
+                        args.full_spectrum_xaxis, args.model_version, args.preload_bootstrap_models, args.n_jobs)

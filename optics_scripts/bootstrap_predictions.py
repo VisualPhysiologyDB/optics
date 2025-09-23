@@ -1,13 +1,11 @@
 import os
 import numpy as np
-import random
-from joblib import Parallel, delayed
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from deepBreaks.utils import load_obj
 
-def calculate_ensemble_CI(loaded_bs_models, query, name, predictions_dict):
+def calculate_ensemble_CI(original_prediction, loaded_bs_models, query, name, predictions_dict, model_folder=None, bootstrap_num=100):
     """
     Calculates ensemble predictions and confidence intervals from pre-loaded bootstrap models.
 
@@ -21,20 +19,38 @@ def calculate_ensemble_CI(loaded_bs_models, query, name, predictions_dict):
         tuple: Contains mean, CI lower, CI upper, updated predictions_dict, median,
                standard deviation, and a list of all predictions.
     """
-    # Use the pre-loaded models to make predictions
+    # Use the pre-loaded or real-time load boot-strapped models to make predictions
+    
+    # List for storing all the bootstrap predictions
     predictions_all = []
-    for model in loaded_bs_models:
-        prediction = model.predict(query)
-        prediction = round(float(prediction[0]),1)
-        predictions_all.append(prediction)
+    # Append original prediction to list of predictions
+    predictions_all.append(round(float(original_prediction[0]),1))
+
+    if loaded_bs_models and model_folder==None:
+        for model in loaded_bs_models:
+            prediction = model.predict(query)
+            prediction = round(float(prediction[0]),1)
+            predictions_all.append(prediction)
+    else:
+        i = 0
+        for filename in os.listdir(model_folder):
+            if filename.endswith('.pkl') and i < bootstrap_num:  # Assuming you saved models as .pkl
+                model_path = os.path.join(model_folder, filename)
+                model = load_obj(model_path)  # You'll need a 'load_model' function
+                prediction = model.predict(query)
+                prediction = round(float(prediction[0]),1)
+                predictions_all.append(prediction)
+                
+                i+= 1
+
 
     # Calculate ensemble confidence intervals
     predictions_all = np.array(predictions_all)
     predictions_dict.update({name: predictions_all})
     confidence_level = 0.95
     alpha = 1 - confidence_level
-    ci_lower = np.percentile(predictions_all, alpha / 2 * 100)
-    ci_upper = np.percentile(predictions_all, 100 - alpha / 2 * 100)
+    ci_lower = np.percentile(predictions_all, alpha / 2 * bootstrap_num)
+    ci_upper = np.percentile(predictions_all, bootstrap_num - alpha / 2 * bootstrap_num)
     mean_predictions = np.mean(predictions_all)
     median_predictions = np.median(predictions_all)
     std_dev = np.std(predictions_all)
