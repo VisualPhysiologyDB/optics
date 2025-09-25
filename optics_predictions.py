@@ -431,7 +431,7 @@ def process_sequences_from_file(file, selected_model, identity_report, blastp, r
 
     try:
         with tqdm_joblib(tqdm(total=len(sequences), desc="Processing Sequences", bar_format="{l_bar}{bar:25}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}{postfix}]", 
-                              mininterval=20 dynamic_ncols=True, colour="#CF9FFF",
+                              mininterval=20, dynamic_ncols=True, colour="#CF9FFF",
                               unit ='seq',ascii="░▒▓")) as pbar:  # Use tqdm for progress bar
             results = Parallel(n_jobs=n_jobs)(delayed(process_sequence_wrapper)(seq, names[i]) for i, seq in enumerate(sequences))
     except Exception as e:
