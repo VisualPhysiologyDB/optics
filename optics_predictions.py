@@ -2,6 +2,7 @@ import subprocess
 import os
 import json
 import argparse
+import time
 import datetime
 import tempfile
 import pathlib
@@ -217,10 +218,11 @@ def process_sequence(sequence=None, name=None, selected_model=None, bootstrap=No
                 break # Exit loop on success
 
         except Exception:
-            continue # Try next threshold
+            pass # Try next threshold
     
     if prediction is None:
-        raise Exception("Failed to process sequence with all gap thresholds.")
+        print(f"Failed to process sequence with all gap thresholds.\nRemoving sequence {name} from the final analysis")
+        return None
 
     os.remove(new_ali)
     os.remove(temp_seq)
@@ -243,8 +245,22 @@ def process_sequences_from_file(file, selected_model, identity_report, blastp, r
     # Extract sequences and their names from the input fasta file
     if file == None:
         raise Exception('Error: No file given')
-    names,sequences = extract_fasta_entries(file)       
+    names_unfiltered,sequences_unfiltered = extract_fasta_entries(file)
     
+    names=[]
+    sequences=[]
+    for name,seq in zip(names_unfiltered, sequences_unfiltered):
+        just_seq = seq.split('\n',1)[1]
+        just_seq = just_seq.replace('\n', '')
+        if len(just_seq) > 300 and len(just_seq) <= 500:
+            names.append(name)
+            sequences.append(seq)
+        else:
+            if len(just_seq) < 300:
+                print(f'WARNING: Sequence {name} is less than 300 amino acids long.\nWe do not recommend predicting on incomplete/partial sequence. This will be dropped from the prediction analysis.')
+            elif len(just_seq) > 500:
+                print(f'WARNING: Sequence {name} is greater than 500 amino acids long.\nWe do not recommend predicting on sequences that are (likely) not visual opsins. This will be dropped from the prediction analysis.')
+
     data_dir = f"{wrk_dir}/data"
     model_raw_data = {
         "whole-dataset": f"{data_dir}/fasta/{model_version}/wds.txt",
@@ -404,28 +420,36 @@ def process_sequences_from_file(file, selected_model, identity_report, blastp, r
         if bootstrap == False:
             if just_seq not in list(mp_cached_pred_dict.keys()):
                 prediction = process_sequence(seq, name, selected_model, bootstrap, prediction_dict, wrk_dir, model_version=model_version, loaded_mod=main_model_preloaded)
-                mp_cached_pred_dict[just_seq] = {'len': len(just_seq), 'single_prediction': prediction}
-                return len(just_seq), prediction, None, None, None, None, None  # Consistent return values
+                if (prediction is not None):
+                    mp_cached_pred_dict[just_seq] = {'len': len(just_seq), 'single_prediction': prediction}
+                    return len(just_seq), prediction, None, None, None, None, None  # Consistent return values
+                else:
+                    return None
             else:
                 return mp_cached_pred_dict[just_seq]['len'], mp_cached_pred_dict[just_seq]['single_prediction'], None, None, None, None, None  # Consistent return values
 
         else:
             if just_seq not in list(mp_cached_pred_dict.keys()):
                 mean_prediction, ci_lower, ci_upper, updated_prediction_dict, prediction, median_prediction, std_dev, predictions_all = process_sequence(seq, name, selected_model, bootstrap, prediction_dict, wrk_dir, model_version=model_version, loaded_mod=main_model_preloaded, loaded_bs_models=bs_models_preloaded, bs_model_folder_path=bs_model_folder_path, bootstrap_num=bootstrap_num)
-                prediction_dict.update(updated_prediction_dict) # Update the shared dictionary with the returned dictionary
-                mp_cached_pred_dict[just_seq] = {'len': len(just_seq),
-                                            'single_prediction': prediction,
-                                            'mean_prediction' : mean_prediction,
-                                            'ci_lower' : ci_lower,
-                                            'ci_upper' : ci_upper,
-                                            'median_prediction' : median_prediction,
-                                            'std_deviation' : std_dev,
-                                            'all_bs_predictions' : predictions_all
-                                            }
-                # If the seq is in our cache, I need to be able to update the prediction_dict with that info...
-                return len(just_seq), prediction, mean_prediction, ci_lower, ci_upper, median_prediction, std_dev
+                
+                if (mean_prediction is not None) and (prediction_dict is not None):
+                    prediction_dict.update(updated_prediction_dict) # Update the shared dictionary with the returned dictionary
+                    mp_cached_pred_dict[just_seq] = {'len': len(just_seq),
+                                                'single_prediction': prediction,
+                                                'mean_prediction' : mean_prediction,
+                                                'ci_lower' : ci_lower,
+                                                'ci_upper' : ci_upper,
+                                                'median_prediction' : median_prediction,
+                                                'std_deviation' : std_dev,
+                                                'all_bs_predictions' : predictions_all
+                                                }
+                    # If the seq is in our cache, I need to be able to update the prediction_dict with that info...
+                    return len(just_seq), prediction, mean_prediction, ci_lower, ci_upper, median_prediction, std_dev
+                else:
+                    return None
             else:
                 prediction_dict[name] = np.array(mp_cached_pred_dict[just_seq]['all_bs_predictions'])
+                #time.sleep(0.1)
                 return mp_cached_pred_dict[just_seq]['len'], mp_cached_pred_dict[just_seq]['single_prediction'], mp_cached_pred_dict[just_seq]['mean_prediction'], mp_cached_pred_dict[just_seq]['ci_lower'], mp_cached_pred_dict[just_seq]['ci_upper'], mp_cached_pred_dict[just_seq]['median_prediction'], mp_cached_pred_dict[just_seq]['std_deviation']
 
 
@@ -451,16 +475,20 @@ def process_sequences_from_file(file, selected_model, identity_report, blastp, r
 
     seq_lens, predictions, mean_predictions, ci_lowers, ci_uppers, median_predictions, std_dev_list = [], [], [], [], [], [], []
     # Extract results
-    for result in results:
-        seq_len, prediction, mean_prediction, ci_lower, ci_upper, median_prediction, std_dev = result
-        seq_lens.append(seq_len)
-        predictions.append(prediction)
-        if mean_prediction is not None:  # Handle bootstrap case
-            mean_predictions.append(mean_prediction)
-            ci_lowers.append(ci_lower)
-            ci_uppers.append(ci_upper)
-            median_predictions.append(median_prediction)
-            std_dev_list.append(std_dev)
+    for i, result in enumerate(results):
+        try:
+            seq_len, prediction, mean_prediction, ci_lower, ci_upper, median_prediction, std_dev = result
+            seq_lens.append(seq_len)
+            predictions.append(prediction)
+            if bootstrap:
+                mean_predictions.append(mean_prediction)
+                ci_lowers.append(ci_lower)
+                ci_uppers.append(ci_upper)
+                median_predictions.append(median_prediction)
+                std_dev_list.append(std_dev)
+        except:
+          sequences.remove(i)
+          names.remove(i)  
             
     updated_cached_pred_dict = dict(mp_cached_pred_dict)        
     # Save the taxon dictionary if it doesn't yet exist or if it has been updated since being loaded 

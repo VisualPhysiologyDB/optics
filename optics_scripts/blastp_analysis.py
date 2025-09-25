@@ -304,7 +304,7 @@ def run_blastp_analysis(query_sequences, query_ids, opsin_database, opsin_db_fas
                         )
                         tasks_args.append(args)
 
-                print(f"INFO: Starting parwise analysis to closest VPOD match for {len(tasks_args)} sequences...")
+                print(f"INFO: Starting pairwise analysis to closest VPOD match for {len(tasks_args)} sequences...")
                 newly_processed_results = Parallel(n_jobs=n_jobs, verbose=5)(
                     delayed(align_and_analyze_one)(*args) for args in tasks_args
                 )
