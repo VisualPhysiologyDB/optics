@@ -1,0 +1,17 @@
+Selected Options...
+input_fasta: ./examples/optics_ex_short.txt
+report_dir: ./examples/optics_on_short_ex_predictions_2025-09-25_14-47-52
+output_file: short_ex_predictions_predictions
+model: wildtype
+encoding_method: aa_prop
+blastp: True
+blastp_report: blastp_report.txt
+refseq: squid
+custom_ref_file: None
+bootstrap: True
+	visualize_bootstrap: True
+		bootstrap_viz_file: bootstrap_viz
+		save_as: svg
+		full_spectrum_xaxis: False
+Command executed (reconstructed): python optics_predictions.py -i ./examples/optics_ex_short.txt -o ./examples -p short_ex_predictions_predictions -v vpod_1.3 -m wildtype -e aa_prop --blastp --blastp_report blastp_report.txt --refseq squid --bootstrap --visualize_bootstrap --bootstrap_viz_file bootstrap_viz --save_viz_as svg --full_spectrum_xaxis False
+

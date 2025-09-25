@@ -1,6 +1,5 @@
 import subprocess 
 import os
-import sys
 import json
 import argparse
 import datetime
@@ -17,7 +16,7 @@ matplotlib.use('Agg')  # Use 'Agg' to prevent Mac crash when using GUI
 from deepBreaks.utils import load_obj
 from deepBreaks.preprocessing import read_data
 from optics_scripts.utils import extract_fasta_entries, write_to_excel
-from optics_scripts.blastp_align import seq_sim_report
+from optics_scripts.blastp_analysis import run_blastp_analysis
 from optics_scripts.bootstrap_predictions import calculate_ensemble_CI, plot_prediction_subsets_with_CI, wavelength_to_rgb
 
 import contextlib
@@ -39,8 +38,7 @@ def tqdm_joblib(tqdm_object):
         joblib.parallel.BatchCompletionCallBack = old_batch_callback
         tqdm_object.close()
 
-def process_sequence(sequence=None, name=None, selected_model=None, identity_report=None, blastp=None, refseq=None, reffile=None, 
-                     bootstrap=None, prediction_dict=None, wrk_dir='', only_blast=False, model_version='vpod_1.3', 
+def process_sequence(sequence=None, name=None, selected_model=None, bootstrap=None, prediction_dict=None, wrk_dir='', model_version='vpod_1.3', 
                      loaded_mod=None, loaded_bs_models=None, preload_to_memory=False, bs_model_folder_path=None, bootstrap_num=100):
     
     """Processes a single opsin amino acid sequence for lmax prediction.
@@ -156,6 +154,98 @@ def process_sequence(sequence=None, name=None, selected_model=None, identity_rep
         "wildtype-mut": f"{data_dir}/fasta/{model_version}/wt_mut_added_aligned_VPOD_1.2_het.fasta",
 
     }   
+
+    if sequence == None:
+        return ('Error: No sequence given')
+    #print(sequence)
+    if selected_model == None:
+        return ('Error: No model selected')
+    
+    
+    alignment_data = model_datasets[selected_model]
+    
+    with tempfile.NamedTemporaryFile(mode="w", dir=f"{wrk_dir}/tmp", suffix=".fasta", delete=False) as temp_seq_file:
+        temp_seq = temp_seq_file.name
+        if '>' in sequence:
+            temp_seq_file.write(sequence)
+        else:
+            temp_seq_file.write(f">placeholder_name\n{sequence}")
+                        
+    # perform temporary alignment to training data for preprocessing
+    with tempfile.NamedTemporaryFile(mode="w", dir=f"{wrk_dir}/tmp", suffix=".fasta", delete=False) as temp_ali_file:
+        new_ali = temp_ali_file.name 
+        
+    mafft_executables = [
+        'mafft',
+        str(pathlib.Path(wrk_dir) / 'optics_scripts/mafft/mafft-win/mafft.bat'),
+        str(pathlib.Path(wrk_dir) / 'optics_scripts/mafft/mafft-mac/mafft.bat')
+    ]
+
+    alignment_successful = False
+    last_error = ""
+    for exe in mafft_executables:
+        try:
+            mafft_cmd = [exe, '--add', temp_seq, '--keeplength', alignment_data]
+            with open(new_ali, 'w') as f_out:
+                subprocess.run(mafft_cmd, stdout=f_out, stderr=subprocess.PIPE, check=True, text=True)
+            #print(f"INFO: MAFFT alignment successful using '{exe}'.")
+            alignment_successful = True
+            break
+        except FileNotFoundError:
+            #print(f"INFO: MAFFT not found at '{exe}', trying next option.")
+            last_error = f"Executable not found at '{exe}'."
+        except subprocess.CalledProcessError as e:
+            #print(f"WARNING: MAFFT at '{exe}' failed.")
+            last_error = e.stderr.decode()
+            continue
+
+    if not alignment_successful:
+        raise(Exception(f'ERROR: MAFFT alignment failed for all options. Last error:\n{last_error}'))
+            
+    seq_type = 'aa'
+    prediction = None
+    for gap_thresh in [0.5, 0.501, 0.505, 0.51]:
+        try:
+            new_seq_test = read_data(new_ali, seq_type=seq_type, is_main=True, gap_threshold=gap_thresh)
+            ref_copy = read_data(alignment_data, seq_type=seq_type, is_main=True, gap_threshold=gap_thresh)
+            last_seq = int(ref_copy.shape[0])
+            new_seq_test = new_seq_test.iloc[last_seq:].copy()
+            
+            # Use the pre-loaded model object
+            if loaded_mod:
+                prediction = loaded_mod.predict(new_seq_test)
+                break # Exit loop on success
+
+        except Exception:
+            continue # Try next threshold
+    
+    if prediction is None:
+        raise Exception("Failed to process sequence with all gap thresholds.")
+
+    os.remove(new_ali)
+    os.remove(temp_seq)
+
+    if bootstrap and preload_to_memory:
+        # Use the pre-loaded bootstrap models
+        if not loaded_bs_models:
+             raise ValueError("Bootstrap is enabled, but no pre-loaded bootstrap models were provided.")
+        mean_prediction, ci_lower, ci_upper, prediction_dict, median_prediction, std_dev, predictions_all = calculate_ensemble_CI(prediction, loaded_bs_models, new_seq_test, name, prediction_dict, bootstrap_num=bootstrap_num)
+        return (round(float(mean_prediction),1), round(float(ci_lower),1), round(float(ci_upper),1), prediction_dict, round(float(prediction[0]),1), round(float(median_prediction),1), round(float(std_dev),1), predictions_all.tolist())
+    elif bootstrap:
+        mean_prediction, ci_lower, ci_upper, prediction_dict, median_prediction, std_dev, predictions_all = calculate_ensemble_CI(prediction, loaded_bs_models, new_seq_test, name, prediction_dict, bs_model_folder_path, bootstrap_num)
+        return (round(float(mean_prediction),1), round(float(ci_lower),1), round(float(ci_upper),1), prediction_dict, round(float(prediction[0]),1), round(float(median_prediction),1), round(float(std_dev),1), predictions_all.tolist())
+    else:
+        return (round(float(prediction[0]),1))
+ 
+
+def process_sequences_from_file(file, selected_model, identity_report, blastp, refseq, reffile, 
+                                bootstrap, bootstrap_num, encoding_method, wrk_dir, model_version, preload_to_memory, n_jobs):
+    # Extract sequences and their names from the input fasta file
+    if file == None:
+        raise Exception('Error: No file given')
+    names,sequences = extract_fasta_entries(file)       
+    
+    data_dir = f"{wrk_dir}/data"
     model_raw_data = {
         "whole-dataset": f"{data_dir}/fasta/{model_version}/wds.txt",
         "wildtype": f"{data_dir}/fasta/{model_version}/wt.txt",
@@ -197,103 +287,11 @@ def process_sequence(sequence=None, name=None, selected_model=None, identity_rep
         "invertebrate-mnm": f"{data_dir}/blast_dbs/{model_version}/inv_mnm_db",
         "wildtype-vert-mnm": f"{data_dir}/blast_dbs/{model_version}/wt_vert_mnm_db",
         "wildtype-mut": f"{data_dir}/blast_dbs/{model_version}/wt_db",
-    }   
-
-    if sequence == None:
-        return ('Error: No sequence given')
-    #print(sequence)
-    if selected_model == None:
-        return ('Error: No model selected')
+    } 
     
-    
-    alignment_data = model_datasets[selected_model]
     raw_data = model_raw_data[selected_model]
     metadata = model_metadata[selected_model]
     blast_db = model_blast_db[selected_model]
-    
-    with tempfile.NamedTemporaryFile(mode="w", dir=f"{wrk_dir}/tmp", suffix=".fasta", delete=False) as temp_seq_file:
-        temp_seq = temp_seq_file.name
-        if '>' in sequence:
-            temp_seq_file.write(sequence)
-        else:
-            temp_seq_file.write(f">placeholder_name\n{sequence}")
-    
-    if only_blast:
-        percent_iden = '-'
-        if blastp not in ['no', False, 'False']:
-            percent_iden = seq_sim_report(temp_seq, name, refseq, blast_db, raw_data, metadata, identity_report, reffile, wrk_dir)
-        os.remove(temp_seq)
-        return percent_iden
-
-    percent_iden = '-'
-    if blastp not in ['no', False, 'False']:
-        percent_iden = seq_sim_report(temp_seq, name, refseq, blast_db, raw_data, metadata, identity_report, reffile, wrk_dir)
-
-    
-    # perform temporary alignment to training data for preprocessing
-    with tempfile.NamedTemporaryFile(mode="w", dir=f"{wrk_dir}/tmp", suffix=".fasta", delete=False) as temp_ali_file:
-        new_ali = temp_ali_file.name 
-    try:
-        cmd = ['mafft', '--add', temp_seq, '--keeplength', alignment_data]
-        with open(new_ali, 'w') as f:
-            subprocess.run(cmd, stdout=f, check=True, stderr=subprocess.PIPE)
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        try:
-            mafft_exe = f'{wrk_dir}/optics_scripts/mafft/mafft-win/mafft.bat'
-            cmd = [mafft_exe, '--add', temp_seq, '--keeplength', alignment_data]
-            with open(new_ali, 'w') as f:
-                subprocess.run(cmd, stdout=f, check=True, stderr=subprocess.PIPE)
-        except (subprocess.CalledProcessError, FileNotFoundError): 
-            try:
-                mafft_exe = f'{wrk_dir}/optics_scripts/mafft/mafft-mac/mafft.bat'
-                cmd = [mafft_exe, '--add', temp_seq, '--keeplength', alignment_data]
-                with open(new_ali, 'w') as f:
-                    subprocess.run(cmd, stdout=f, check=True, stderr=subprocess.PIPE)
-            except subprocess.CalledProcessError as e:
-                raise Exception(f'MAFFT alignment failed. Check FASTA formatting.\n{e.stderr.decode()}')
-            
-    seq_type = 'aa'
-    prediction = None
-    for gap_thresh in [0.5, 0.501, 0.505, 0.51]:
-        try:
-            new_seq_test = read_data(new_ali, seq_type=seq_type, is_main=True, gap_threshold=gap_thresh)
-            ref_copy = read_data(alignment_data, seq_type=seq_type, is_main=True, gap_threshold=gap_thresh)
-            last_seq = int(ref_copy.shape[0])
-            new_seq_test = new_seq_test.iloc[last_seq:].copy()
-            
-            # Use the pre-loaded model object
-            if loaded_mod:
-                prediction = loaded_mod.predict(new_seq_test)
-                break # Exit loop on success
-
-        except Exception:
-            continue # Try next threshold
-    
-    if prediction is None:
-        raise Exception("Failed to process sequence with all gap thresholds.")
-
-    os.remove(new_ali)
-    os.remove(temp_seq)
-
-    if bootstrap and preload_to_memory:
-        # Use the pre-loaded bootstrap models
-        if not loaded_bs_models:
-             raise ValueError("Bootstrap is enabled, but no pre-loaded bootstrap models were provided.")
-        mean_prediction, ci_lower, ci_upper, prediction_dict, median_prediction, std_dev, predictions_all = calculate_ensemble_CI(prediction, loaded_bs_models, new_seq_test, name, prediction_dict, bootstrap_num=bootstrap_num)
-        return (round(float(mean_prediction),1), round(float(ci_lower),1), round(float(ci_upper),1), prediction_dict, round(float(prediction[0]),1), round(float(median_prediction),1), str(percent_iden), round(float(std_dev),1), predictions_all.tolist())
-    elif bootstrap:
-        mean_prediction, ci_lower, ci_upper, prediction_dict, median_prediction, std_dev, predictions_all = calculate_ensemble_CI(prediction, loaded_bs_models, new_seq_test, name, prediction_dict, bs_model_folder_path, bootstrap_num)
-        return (round(float(mean_prediction),1), round(float(ci_lower),1), round(float(ci_upper),1), prediction_dict, round(float(prediction[0]),1), round(float(median_prediction),1), str(percent_iden), round(float(std_dev),1), predictions_all.tolist())
-    else:
-        return (round(float(prediction[0]),1), str(percent_iden))
- 
-
-def process_sequences_from_file(file, selected_model, identity_report, blastp, refseq, reffile, 
-                                bootstrap, bootstrap_num, encoding_method, wrk_dir, model_version, preload_to_memory, n_jobs):
-    # Extract sequences and their names from the input fasta file
-    if file == None:
-        raise Exception('Error: No file given')
-    names,sequences = extract_fasta_entries(file)       
     
     model_dir = f"{wrk_dir}/models"
     if encoding_method == 'aa_prop':
@@ -367,8 +365,11 @@ def process_sequences_from_file(file, selected_model, identity_report, blastp, r
         try:
             with open(cache_file, 'r') as f:
                 cached_pred_dict = json.load(f)
+                print('\nPrediction cache file successfully loaded\n')
         except FileNotFoundError:
             cached_pred_dict = {}
+            print('Cache file could not be successfully loaded, starting a new one from scratch\n')
+
     else:
         cached_pred_dict = {}
         
@@ -397,20 +398,20 @@ def process_sequences_from_file(file, selected_model, identity_report, blastp, r
     mp_cached_pred_dict = manager.dict(cached_pred_dict)  # Initialize a multiprocess available cached dict with cached data
     
     def process_sequence_wrapper(seq, name):  # Helper function
+        bs_model_folder_path = model_bs_dirs[selected_model]
         just_seq = seq.split('\n', 1)[1]
         just_seq = just_seq.replace('\n', '')
         if bootstrap == False:
             if just_seq not in list(mp_cached_pred_dict.keys()):
-                prediction, percent_iden = process_sequence(seq, name, selected_model, identity_report, blastp, refseq, reffile, bootstrap, prediction_dict, wrk_dir, model_version=model_version, loaded_mod=main_model_preloaded)
+                prediction = process_sequence(seq, name, selected_model, bootstrap, prediction_dict, wrk_dir, model_version=model_version, loaded_mod=main_model_preloaded)
                 mp_cached_pred_dict[just_seq] = {'len': len(just_seq), 'single_prediction': prediction}
-                return len(just_seq), prediction, percent_iden, None, None, None, None, None  # Consistent return values
+                return len(just_seq), prediction, None, None, None, None, None  # Consistent return values
             else:
-                percent_iden = process_sequence(seq, name, selected_model, identity_report, blastp, refseq, reffile, bootstrap, prediction_dict, wrk_dir, only_blast=True, model_version=model_version)
-                return mp_cached_pred_dict[just_seq]['len'], mp_cached_pred_dict[just_seq]['single_prediction'], percent_iden, None, None, None, None, None  # Consistent return values
+                return mp_cached_pred_dict[just_seq]['len'], mp_cached_pred_dict[just_seq]['single_prediction'], None, None, None, None, None  # Consistent return values
 
         else:
             if just_seq not in list(mp_cached_pred_dict.keys()):
-                mean_prediction, ci_lower, ci_upper, updated_prediction_dict, prediction, median_prediction, percent_iden, std_dev, predictions_all = process_sequence(seq, name, selected_model, identity_report, blastp, refseq, reffile, bootstrap, prediction_dict, wrk_dir, model_version=model_version, loaded_mod=main_model_preloaded, loaded_bs_models=bs_models_preloaded, bs_model_folder_path=bs_model_folder_path, bootstrap_num=bootstrap_num)
+                mean_prediction, ci_lower, ci_upper, updated_prediction_dict, prediction, median_prediction, std_dev, predictions_all = process_sequence(seq, name, selected_model, bootstrap, prediction_dict, wrk_dir, model_version=model_version, loaded_mod=main_model_preloaded, loaded_bs_models=bs_models_preloaded, bs_model_folder_path=bs_model_folder_path, bootstrap_num=bootstrap_num)
                 prediction_dict.update(updated_prediction_dict) # Update the shared dictionary with the returned dictionary
                 mp_cached_pred_dict[just_seq] = {'len': len(just_seq),
                                             'single_prediction': prediction,
@@ -422,17 +423,16 @@ def process_sequences_from_file(file, selected_model, identity_report, blastp, r
                                             'all_bs_predictions' : predictions_all
                                             }
                 # If the seq is in our cache, I need to be able to update the prediction_dict with that info...
-                return len(just_seq), prediction, percent_iden, mean_prediction, ci_lower, ci_upper, median_prediction, std_dev
+                return len(just_seq), prediction, mean_prediction, ci_lower, ci_upper, median_prediction, std_dev
             else:
-                percent_iden = process_sequence(seq, name, selected_model, identity_report, blastp, refseq, reffile, bootstrap, prediction_dict, wrk_dir, only_blast=True, model_version=model_version)
                 prediction_dict[name] = np.array(mp_cached_pred_dict[just_seq]['all_bs_predictions'])
-                return mp_cached_pred_dict[just_seq]['len'], mp_cached_pred_dict[just_seq]['single_prediction'], percent_iden, mp_cached_pred_dict[just_seq]['mean_prediction'], mp_cached_pred_dict[just_seq]['ci_lower'], mp_cached_pred_dict[just_seq]['ci_upper'], mp_cached_pred_dict[just_seq]['median_prediction'], mp_cached_pred_dict[just_seq]['std_deviation']
+                return mp_cached_pred_dict[just_seq]['len'], mp_cached_pred_dict[just_seq]['single_prediction'], mp_cached_pred_dict[just_seq]['mean_prediction'], mp_cached_pred_dict[just_seq]['ci_lower'], mp_cached_pred_dict[just_seq]['ci_upper'], mp_cached_pred_dict[just_seq]['median_prediction'], mp_cached_pred_dict[just_seq]['std_deviation']
 
 
     try:
         with tqdm_joblib(tqdm(total=len(sequences), desc="Processing Sequences", bar_format="{l_bar}{bar:25}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}{postfix}]", 
-                              dynamic_ncols=True, colour="#CF9FFF",
-                              unit ='seqs',ascii="░▒▓")) as pbar:  # Use tqdm for progress bar
+                              mininterval=20 dynamic_ncols=True, colour="#CF9FFF",
+                              unit ='seq',ascii="░▒▓")) as pbar:  # Use tqdm for progress bar
             results = Parallel(n_jobs=n_jobs)(delayed(process_sequence_wrapper)(seq, names[i]) for i, seq in enumerate(sequences))
     except Exception as e:
         updated_cached_pred_dict = dict(mp_cached_pred_dict)        
@@ -449,13 +449,12 @@ def process_sequences_from_file(file, selected_model, identity_report, blastp, r
         
         raise Exception(f"Error: {e}...\n")
 
-    seq_lens, predictions, per_iden_list, mean_predictions, ci_lowers, ci_uppers, median_predictions, std_dev_list = [], [], [], [], [], [], [], []
+    seq_lens, predictions, mean_predictions, ci_lowers, ci_uppers, median_predictions, std_dev_list = [], [], [], [], [], [], []
     # Extract results
     for result in results:
-        seq_len, prediction, percent_iden, mean_prediction, ci_lower, ci_upper, median_prediction, std_dev = result
+        seq_len, prediction, mean_prediction, ci_lower, ci_upper, median_prediction, std_dev = result
         seq_lens.append(seq_len)
         predictions.append(prediction)
-        per_iden_list.append(percent_iden)
         if mean_prediction is not None:  # Handle bootstrap case
             mean_predictions.append(mean_prediction)
             ci_lowers.append(ci_lower)
@@ -472,6 +471,19 @@ def process_sequences_from_file(file, selected_model, identity_report, blastp, r
                 json.dump(updated_cached_pred_dict, f, indent=4)  # indent for pretty formatting
         except FileNotFoundError:
             print(f"Error: Cached prediction file can't be saved...\n")
+           
+    #pick-up here        
+    if blastp:
+        just_seq_list = []
+        for seq in sequences:
+            just_seq = seq.split('\n', 1)[1]
+            just_seq = just_seq.replace('\n', '')
+            just_seq_list.append(just_seq)
+        blastp_results_df = run_blastp_analysis(just_seq_list, names, blast_db, raw_data, metadata, 
+                 output_file=identity_report, 
+                 ref_seq_id=refseq, reffile=reffile, wrk_dir=wrk_dir, n_jobs=n_jobs)
+        
+        per_iden_list = blastp_results_df['percent_identity']
 
     return(names, mean_predictions, ci_lowers, ci_uppers, prediction_dict, predictions, median_predictions, per_iden_list, std_dev_list, seq_lens)
 
@@ -548,6 +560,9 @@ def run_optics_predictions(input_sequence, pred_dir=None, output='optics_predict
     # Directory setup (with added handling for pre-existing directories)
     if not os.path.isdir(f'{wrk_dir}/tmp'):
         os.makedirs(f'{wrk_dir}/tmp')
+        
+    if not os.path.isdir(f'{wrk_dir}/data/cached_blastp_analysis'):
+        os.makedirs(f'{wrk_dir}/data/cached_blastp_analysis')
     
     if not pred_dir is None:
         if not os.path.isdir(pred_dir):
@@ -566,8 +581,9 @@ def run_optics_predictions(input_sequence, pred_dir=None, output='optics_predict
 
 
     blastp_file = f'{report_dir}/{iden_report}'
-    if not (blastp_file.endswith(('.txt','.tsv','.csv'))):
-           blastp_file += '.txt'
+    
+    blastp_file = blastp_file.replace('.tsv', '').replace('.txt', '').replace('.csv', '')
+    blastp_file += '.csv'
 
     bootstrap_file = f'{report_dir}/{bootstrap_viz_file}'
     log_file = f'{report_dir}/arg_log.txt'
