@@ -44,7 +44,7 @@ def run_blastp_bulk(query_file, database):
     """
     Performs a single BLASTp search for all sequences in a query file.
     """
-    print("INFO: Running blastp for all query sequences...")
+    print("INFO: Running BLASTp for all query sequences...")
     try:
         # We request specific columns for easier parsing later.
         outfmt_str = "6 qseqid sseqid pident length mismatch gapopen evalue bitscore"
@@ -241,7 +241,7 @@ def run_blastp_analysis(query_sequences, query_ids, opsin_database, opsin_db_fas
     This function is designed to be called from other Python scripts.
     """
     # --- Setup ---
-    temp_dir = Path(wrk_dir) / "temp_align_files"
+    temp_dir = Path(wrk_dir) / "tmp"
     temp_dir.mkdir(exist_ok=True)
     
     try:
@@ -271,7 +271,7 @@ def run_blastp_analysis(query_sequences, query_ids, opsin_database, opsin_db_fas
             record = SeqRecord(Seq(seq), id=qid, description="")
             uncached_records.append(record)
     
-    print(f"INFO: Found {len(cached_results)} sequences in cache. Processing {len(uncached_records)} new sequences.")
+    print(f"INFO: Found {len(cached_results)} sequences in BLASTp cache. Processing {len(uncached_records)} new sequences.")
 
     # --- Step 2: Process uncached sequences ---
     newly_processed_results = []
@@ -304,7 +304,7 @@ def run_blastp_analysis(query_sequences, query_ids, opsin_database, opsin_db_fas
                         )
                         tasks_args.append(args)
 
-                print(f"INFO: Starting pairwise analysis to closest VPOD match for {len(tasks_args)} sequences...")
+                print(f"INFO: Starting MAFFT pairwise analysis to closest VPOD match for {len(tasks_args)} sequences...")
                 newly_processed_results = Parallel(n_jobs=n_jobs, verbose=5)(
                     delayed(align_and_analyze_one)(*args) for args in tasks_args
                 )

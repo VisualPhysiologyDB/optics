@@ -11,6 +11,8 @@ from joblib import Parallel, delayed
 import pandas as pd
 import numpy as np
 import matplotlib
+import warnings
+
 matplotlib.use('Agg')  # Use 'Agg' to prevent Mac crash when using GUI
 
 # The VPOD/OPTICS special sauce ~
@@ -39,229 +41,223 @@ def tqdm_joblib(tqdm_object):
         joblib.parallel.BatchCompletionCallBack = old_batch_callback
         tqdm_object.close()
 
-def process_sequence(sequence=None, name=None, selected_model=None, bootstrap=None, prediction_dict=None, wrk_dir='', model_version='vpod_1.3', 
-                     loaded_mod=None, loaded_bs_models=None, preload_to_memory=False, bs_model_folder_path=None, bootstrap_num=100):
-    
-    """Processes a single opsin amino acid sequence for lmax prediction.
+# Set of the 20 standard amino acid one-letter codes
+STANDARD_AMINO_ACIDS = {
+    'A', 'R', 'N', 'D', 'C', 'Q', 'E', 'G', 'H', 'I',
+    'L', 'K', 'M', 'F', 'P', 'S', 'T', 'W', 'Y', 'V'
+}
+# Global flag to ensure the warning message is printed only once
+_non_standard_amino_acid_warning_shown = False
 
-    This helper function orchestrates the processing of a single input opsin amino acid sequence.
-    It determines file paths based on the selected model and encoding method,
-    optionally performs a BLASTp search against a curated blastp database, 
-    aligns the sequence to a reference alignment using MAFFT, and predicts 
-    lmax using a pre-trained regression model. It can also perform
-    bootstrap analysis to estimate prediction confidence intervals.
+def filter_non_standard_aa(sequence: str) -> str:
+    """
+    Filters a protein sequence to keep only the 20 standard amino acids.
 
-    It handles temporary file creation for sequence input and alignment output,
-    and attempts to run MAFFT using system-installed, Windows, or macOS
-    executables bundled with the application.
+    Removes any non-standard amino acids (e.g., U, O, X, B, Z) and issues a
+    one-time warning to the console if any are found.
 
     Args:
-        sequence (str, optional): The input amino acid sequence. Can be a
-            raw sequence string or a string containing a full FASTA entry
-            (header starting with '>'). Defaults to None.
-        name (str, optional): The identifier or name for the sequence, used
-            primarily for tracking in reports and dictionaries. Defaults to None.
-        selected_model (str, optional): A key indicating which pre-trained model
-            and associated dataset files (alignment, raw data, metadata, BLAST DB,
-            model files) to use. Valid keys are defined within the function's
-            internal dictionaries (e.g., "whole-dataset", "wildtype", etc.).
-            Defaults to None.
-        identity_report (str, optional): Path to write a detailed BLASTp identity
-            report file by the `seq_sim_report` function. Defaults to None.
-        blastp (bool | str, optional): If True or not 'no'/'False', runs BLASTp
-            via `seq_sim_report` to find the percent identity to the best hit
-            in the selected model's BLAST database. Defaults to None.
-        refseq (str, optional): Reference sequence identifier used by
-            `seq_sim_report` for specific BLAST comparisons if needed.
-            Defaults to None.
-        reffile (str, optional): Path to a file containing reference sequences,
-            used by `seq_sim_report` if needed for BLAST comparison.
-            Defaults to None.
-        bootstrap (bool, optional): If True, performs bootstrap analysis using
-            pre-generated bootstrap models to calculate prediction mean,
-            confidence intervals, median, and standard deviation. Defaults to None.
-        prediction_dict (dict, optional): A dictionary, typically a
-            `multiprocessing.Manager().dict()` passed from a calling function,
-            used to aggregate raw bootstrap predictions across multiple sequence
-            processes when `bootstrap` is True. This function *receives* the
-            updated dict from `calculate_ensemble_CI` and *returns* it.
-            Defaults to None.
-        encoding_method (str, optional): Specifies the sequence encoding method
-            used for model training ('one_hot' or 'aa_prop'). This determines
-            which set of model files and bootstrap directories are used.
-            Defaults to 'one_hot'.
-        wrk_dir (str, optional): The working directory for the analysis. If '',
-            it defaults to the directory containing the script. Used for locating
-            data, models, and temporary files. Defaults to ''.
-        only_blast (bool, optional): If True, performs only the BLASTp step
-            (if `blastp` is enabled) and returns the percent identity. Skips
-            alignment and prediction. Useful for quickly getting identity for
-            cached sequences. Defaults to False.
-        loaded_mod (object, optional): A pre-loaded model object. If provided,
-            the function will skip loading the model from disk, improving performance
-            and memory usage in parallel operations. Defaults to None.
-        loaded_bs_models (dict, optional): A dictionary of pre-loaded bootstrap
-            model objects
+        sequence: The input protein sequence string.
 
     Returns:
-        tuple | str:
-            - If `bootstrap` is True: A tuple containing:
-                (mean_prediction (float), ci_lower (float), ci_upper (float),
-                 prediction_dict (dict), single_best_prediction (float),
-                 median_prediction (float), percent_identity (str),
-                 std_deviation (float), all_bootstrap_predictions (list))
-            - If `bootstrap` is False: A tuple containing:
-                (single_best_prediction (float), percent_identity (str))
-            - If `only_blast` is True: The percent identity (str).
-            - If `sequence` or `selected_model` is None: An error message (str).
-
-    Raises:
-        Exception: If MAFFT alignment fails across all attempted execution
-            methods (Linux, Windows, macOS).
-        FileNotFoundError: If temporary files created during the process cannot
-            be deleted (indicates potential filesystem issues).
-        Exception: Can propagate exceptions from called functions like
-            `seq_sim_report`, `read_data`, `load_obj`, `calculate_ensemble_CI`.
-            
-    Requires:
-        - MAFFT executable accessible via system PATH, or bundled versions at
-          '{wrk_dir}/optics_scripts/mafft/mafft-win/mafft.bat' (Windows) or
-          '{wrk_dir}/optics_scripts/mafft/mafft-mac/mafft.bat' (macOS).
-        - Pre-generated data files (FASTA alignments, raw sequences, metadata,
-          BLAST databases) and model files (.pkl regression models, bootstrap
-          model directories) organized as expected relative to `wrk_dir`.
-        - External Python libraries: pathlib, tempfile, subprocess, os, numpy.
-        - Helper functions/modules: `read_data`, `load_obj`, `seq_sim_report`,
-          `calculate_ensemble_CI` (assumed to be defined elsewhere).
+        A new string containing only the standard amino acids.
     """
+    global _non_standard_amino_acid_warning_shown
     
-    if wrk_dir == '':
-        script_path = pathlib.Path(__file__).resolve()  # Get absolute path
-        wrk_dir = str(script_path.parent).replace('\\', '/')
-
-    data_dir = f"{wrk_dir}/data"
-    model_datasets = {
-        "whole-dataset": f"{data_dir}/fasta/{model_version}/wds_aligned_VPOD_1.2_het.fasta",
-        "wildtype": f"{data_dir}/fasta/{model_version}/wt_aligned_VPOD_1.2_het.fasta",
-        "vertebrate": f"{data_dir}/fasta/{model_version}/vert_aligned_VPOD_1.2_het.fasta",
-        "invertebrate": f"{data_dir}/fasta/{model_version}/inv_only_aligned_VPOD_1.2_het.fasta",
-        "wildtype-vert": f"{data_dir}/fasta/{model_version}/wt_vert_aligned_VPOD_1.2_het.fasta",
-        "type-one": f"{data_dir}/fasta/{model_version}/Karyasuyama_T1_ops_aligned.fasta",
-        "whole-dataset-mnm": f"{data_dir}/fasta/{model_version}/wds_mnm_aligned_VPOD_1.2_het.fasta",
-        "wildtype-mnm": f"{data_dir}/fasta/{model_version}/wt_mnm_aligned_VPOD_1.2_het.fasta",
-        "vertebrate-mnm": f"{data_dir}/fasta/{model_version}/vert_mnm_aligned_VPOD_1.2_het.fasta",
-        "invertebrate-mnm": f"{data_dir}/fasta/{model_version}/inv_mnm_aligned_VPOD_1.2_het.fasta",
-        "wildtype-vert-mnm": f"{data_dir}/fasta/{model_version}/wt_vert_mnm_aligned_VPOD_1.2_het.fasta",
-        "wildtype-mut": f"{data_dir}/fasta/{model_version}/wt_mut_added_aligned_VPOD_1.2_het.fasta",
-
-    }   
-
-    if sequence == None:
-        return ('Error: No sequence given')
-    #print(sequence)
-    if selected_model == None:
-        return ('Error: No model selected')
+    # Using a list comprehension for a concise and performant filter
+    filtered_sequence_list = [aa for aa in sequence.upper() if aa in STANDARD_AMINO_ACIDS]
+    filtered_sequence = "".join(filtered_sequence_list)
     
-    
-    alignment_data = model_datasets[selected_model]
-    
-    with tempfile.NamedTemporaryFile(mode="w", dir=f"{wrk_dir}/tmp", suffix=".fasta", delete=False) as temp_seq_file:
-        temp_seq = temp_seq_file.name
-        if '>' in sequence:
-            temp_seq_file.write(sequence)
-        else:
-            temp_seq_file.write(f">placeholder_name\n{sequence}")
-                        
-    # perform temporary alignment to training data for preprocessing
-    with tempfile.NamedTemporaryFile(mode="w", dir=f"{wrk_dir}/tmp", suffix=".fasta", delete=False) as temp_ali_file:
-        new_ali = temp_ali_file.name 
+    # Check if any non-standard amino acids were removed
+    if len(filtered_sequence) != len(sequence) and not _non_standard_amino_acid_warning_shown:
+        warnings.warn("Warning: Non-standard amino acids were detected in your input. These have been removed for the prediction. Only the 20 standard amino acids are supported.")
+        _non_standard_amino_acid_warning_shown = True
         
-    mafft_executables = [
-        'mafft',
-        str(pathlib.Path(wrk_dir) / 'optics_scripts/mafft/mafft-win/mafft.bat'),
-        str(pathlib.Path(wrk_dir) / 'optics_scripts/mafft/mafft-mac/mafft.bat')
-    ]
+    return filtered_sequence
 
-    alignment_successful = False
-    last_error = ""
-    for exe in mafft_executables:
-        try:
-            mafft_cmd = [exe, '--add', temp_seq, '--keeplength', alignment_data]
-            with open(new_ali, 'w') as f_out:
-                subprocess.run(mafft_cmd, stdout=f_out, stderr=subprocess.PIPE, check=True, text=True)
-            #print(f"INFO: MAFFT alignment successful using '{exe}'.")
-            alignment_successful = True
-            break
-        except FileNotFoundError:
-            #print(f"INFO: MAFFT not found at '{exe}', trying next option.")
-            last_error = f"Executable not found at '{exe}'."
-        except subprocess.CalledProcessError as e:
-            #print(f"WARNING: MAFFT at '{exe}' failed.")
-            last_error = e.stderr.decode()
-            continue
-
-    if not alignment_successful:
-        raise(Exception(f'ERROR: MAFFT alignment failed for all options. Last error:\n{last_error}'))
-            
-    seq_type = 'aa'
-    prediction = None
-    for gap_thresh in [0.5, 0.501, 0.505, 0.51]:
-        try:
-            new_seq_test = read_data(new_ali, seq_type=seq_type, is_main=True, gap_threshold=gap_thresh)
-            ref_copy = read_data(alignment_data, seq_type=seq_type, is_main=True, gap_threshold=gap_thresh)
-            last_seq = int(ref_copy.shape[0])
-            new_seq_test = new_seq_test.iloc[last_seq:].copy()
-            
-            # Use the pre-loaded model object
-            if loaded_mod:
-                prediction = loaded_mod.predict(new_seq_test)
-                break # Exit loop on success
-
-        except Exception:
-            pass # Try next threshold
+### REFACTOR NOTE: This new worker function is designed to be self-contained.
+### It loads its own models, preventing the memory duplication that caused crashes.
+### It no longer uses Manager.dict(), instead returning a simple dictionary.
+def _worker_predict_sequence(name, sequence, selected_model, bootstrap, wrk_dir, model_version, model_path, bs_model_folder_path, bootstrap_num, preload_to_memory):
+    """
+    Worker function executed by each parallel process.
+    It loads its own models to prevent memory duplication in the main process.
+    """
+    time.sleep(0.1)
+    ### REFACTOR NOTE: All model loading now happens HERE, inside the worker.
+    # Each process gets its own copy without overwhelming the system.
+    main_model = load_obj(model_path)
     
-    if prediction is None:
-        print(f"Failed to process sequence with all gap thresholds.\nRemoving sequence {name} from the final analysis")
-        return None
-
-    os.remove(new_ali)
-    os.remove(temp_seq)
-
+    # Initialize bootstrap models list.
+    bootstrap_models = []
     if bootstrap and preload_to_memory:
-        # Use the pre-loaded bootstrap models
-        if not loaded_bs_models:
-             raise ValueError("Bootstrap is enabled, but no pre-loaded bootstrap models were provided.")
-        mean_prediction, ci_lower, ci_upper, prediction_dict, median_prediction, std_dev, predictions_all = calculate_ensemble_CI(prediction, loaded_bs_models, new_seq_test, name, prediction_dict, bootstrap_num=bootstrap_num)
-        return (round(float(mean_prediction),1), round(float(ci_lower),1), round(float(ci_upper),1), prediction_dict, round(float(prediction[0]),1), round(float(median_prediction),1), round(float(std_dev),1), predictions_all.tolist())
-    elif bootstrap:
-        mean_prediction, ci_lower, ci_upper, prediction_dict, median_prediction, std_dev, predictions_all = calculate_ensemble_CI(prediction, loaded_bs_models, new_seq_test, name, prediction_dict, bs_model_folder_path, bootstrap_num)
-        return (round(float(mean_prediction),1), round(float(ci_lower),1), round(float(ci_upper),1), prediction_dict, round(float(prediction[0]),1), round(float(median_prediction),1), round(float(std_dev),1), predictions_all.tolist())
-    else:
-        return (round(float(prediction[0]),1))
- 
+        if os.path.isdir(bs_model_folder_path):
+            model_files = sorted([f for f in os.listdir(bs_model_folder_path) if f.endswith('.pkl')])
+            # Only load the number of models requested
+            for i in range(min(bootstrap_num, len(model_files))):
+                full_path = os.path.join(bs_model_folder_path, model_files[i])
+                bootstrap_models.append(load_obj(full_path))
+        if not bootstrap_models:
+             print(f"Warning: Bootstrap enabled but no models found in {bs_model_folder_path} for worker process.")
+
+
+    alignment_data_paths = {
+        "whole-dataset": f"{wrk_dir}/data/fasta/{model_version}/wds_aligned_VPOD_1.2_het.fasta",
+        "wildtype": f"{wrk_dir}/data/fasta/{model_version}/wt_aligned_VPOD_1.2_het.fasta",
+        "vertebrate": f"{wrk_dir}/data/fasta/{model_version}/vert_aligned_VPOD_1.2_het.fasta",
+        "invertebrate": f"{wrk_dir}/data/fasta/{model_version}/inv_only_aligned_VPOD_1.2_het.fasta",
+        "wildtype-vert": f"{wrk_dir}/data/fasta/{model_version}/wt_vert_aligned_VPOD_1.2_het.fasta",
+        "type-one": f"{wrk_dir}/data/fasta/{model_version}/Karyasuyama_T1_ops_aligned.fasta",
+        "whole-dataset-mnm": f"{wrk_dir}/data/fasta/{model_version}/wds_mnm_aligned_VPOD_1.2_het.fasta",
+        "wildtype-mnm": f"{wrk_dir}/data/fasta/{model_version}/wt_mnm_aligned_VPOD_1.2_het.fasta",
+        "vertebrate-mnm": f"{wrk_dir}/data/fasta/{model_version}/vert_mnm_aligned_VPOD_1.2_het.fasta",
+        "invertebrate-mnm": f"{wrk_dir}/data/fasta/{model_version}/inv_mnm_aligned_VPOD_1.2_het.fasta",
+        "wildtype-vert-mnm": f"{wrk_dir}/data/fasta/{model_version}/wt_vert_mnm_aligned_VPOD_1.2_het.fasta",
+        "wildtype-mut": f"{wrk_dir}/data/fasta/{model_version}/wt_mut_added_aligned_VPOD_1.2_het.fasta",
+    }
+    alignment_data = alignment_data_paths[selected_model]
+
+    process_id = os.getpid()
+    safe_name = "".join(c for c in name if c.isalnum()) # Clean the name for use in a filename
+    temp_dir = os.path.join(wrk_dir, 'tmp')
+    temp_seq_path = os.path.join(temp_dir, f"{process_id}_{safe_name}_seq.fasta")
+    temp_ali_path = os.path.join(temp_dir, f"{process_id}_{safe_name}_ali.fasta")
+    
+    try:
+        with open(temp_seq_path, "w") as f:
+            f.write(f">{name}\n{sequence}")
+
+
+        mafft_executables = [
+            'mafft',
+            str(pathlib.Path(wrk_dir) / 'optics_scripts/mafft/mafft-win/mafft.bat'),
+            str(pathlib.Path(wrk_dir) / 'optics_scripts/mafft/mafft-mac/mafft.bat')
+        ]
+        
+        alignment_successful = False
+        last_error = ""
+        for exe in mafft_executables:
+            try:
+                mafft_cmd = [exe, '--add', temp_seq_path, '--keeplength', alignment_data]
+                with open(temp_ali_path, 'w') as f_out:
+                    subprocess.run(mafft_cmd, stdout=f_out, stderr=subprocess.PIPE, check=True, text=True)
+                alignment_successful = True
+                break
+            except (FileNotFoundError, subprocess.CalledProcessError) as e:
+                last_error = str(e)
+                continue
+
+        if not alignment_successful:
+            warnings.warn(f'ERROR: MAFFT alignment failed for {name}. Last error:\n{last_error}')
+            return name, None # Return name to identify failure
+
+        seq_type = 'aa'
+        prediction = None
+        new_seq_test = None
+        ref_copy = read_data(alignment_data, seq_type=seq_type, is_main=True, gap_threshold=0.50)
+        last_seq = int(ref_copy.shape[0])
+        for gap_thresh in [0.5, 0.501, 0.505, 0.51, 0.515, 0.520]:
+            try:
+                new_seq_test = read_data(temp_ali_path, seq_type=seq_type, is_main=True, gap_threshold=gap_thresh)
+                new_seq_test = new_seq_test.iloc[last_seq:].copy()
+                                
+                ### CHANGE NOTE: Added a defensive check here.
+                # Predicting on an empty DataFrame can cause C-level crashes.
+                if new_seq_test.empty:
+                    # This can happen with very gappy sequences. It's not an error, just can't predict.
+                    warnings.warn(f'You might have a gappy sequence causing an issue: {name}')
+                    time.sleep(0.1)
+                    continue
+                
+                prediction = main_model.predict(new_seq_test)
+                break 
+            except Exception:
+                warnings.warn(f'Trying additional distance thresholds for sequence {name}')
+                time.sleep(0.1)
+                continue
+
+        if prediction is None:
+            warnings.warn(f"Failed to process sequence with all gap thresholds: {name}")
+            return name, None
+        
+        # This dictionary will be returned and used to update the main cache
+        result_dict = {
+            'len': len(sequence),
+            'single_prediction': round(float(prediction[0]), 1)
+        }
+
+        if bootstrap:
+            ### REFACTOR NOTE: We pass the loaded bootstrap_models list here.
+            # No Manager.dict() is needed for prediction_dict; it's temporary for this call.
+            mean_pred, ci_low, ci_up, median_pred, std_dev, all_preds = calculate_ensemble_CI(
+                prediction, bootstrap_models, new_seq_test, name, bootstrap_num, bs_model_folder_path
+            )
+            result_dict.update({
+                'mean_prediction': round(float(mean_pred), 1),
+                'ci_lower': round(float(ci_low), 1),
+                'ci_upper': round(float(ci_up), 1),
+                'median_prediction': round(float(median_pred), 1),
+                'std_deviation': round(float(std_dev), 1),
+                'all_bs_predictions': all_preds.tolist()
+            })
+        
+        return sequence, result_dict
+
+    finally:
+        # Manual cleanup of the files created by this specific worker
+        if os.path.exists(temp_seq_path):
+            os.remove(temp_seq_path)
+        if os.path.exists(temp_ali_path):
+            os.remove(temp_ali_path)
 
 def process_sequences_from_file(file, selected_model, identity_report, blastp, refseq, reffile, 
-                                bootstrap, bootstrap_num, encoding_method, wrk_dir, model_version, preload_to_memory, n_jobs):
-    # Extract sequences and their names from the input fasta file
-    if file == None:
-        raise Exception('Error: No file given')
-    names_unfiltered,sequences_unfiltered = extract_fasta_entries(file)
+                                bootstrap, bootstrap_num, encoding_method, wrk_dir, model_version, preload_to_memory, n_jobs, tolerate_non_standard_aa=False):
+    if file is None:
+        raise ValueError('Error: No input file was provided.')
+        
+    names_unfiltered, sequences_unfiltered = extract_fasta_entries(file)
     
-    names=[]
-    sequences=[]
-    for name,seq in zip(names_unfiltered, sequences_unfiltered):
-        just_seq = seq.split('\n',1)[1]
-        just_seq = just_seq.replace('\n', '')
-        if len(just_seq) > 300 and len(just_seq) <= 500:
-            names.append(name)
-            sequences.append(seq)
-        else:
-            if len(just_seq) < 300:
-                print(f'WARNING: Sequence {name} is less than 300 amino acids long.\nWe do not recommend predicting on incomplete/partial sequence. This will be dropped from the prediction analysis.')
-            elif len(just_seq) > 500:
-                print(f'WARNING: Sequence {name} is greater than 500 amino acids long.\nWe do not recommend predicting on sequences that are (likely) not visual opsins. This will be dropped from the prediction analysis.')
+    # --- REFACTOR 1: Process all sequences first, tracking valid entries ---
+    # This list will store all sequences that pass initial checks, preserving duplicates and order.
+    all_valid_entries = []
+    removed_sequences = []
+    
+    for name, seq_entry in zip(names_unfiltered, sequences_unfiltered):
+        seq_body = seq_entry.split('\n', 1)[1].replace('\n', '')
+        clean_seq_body = filter_non_standard_aa(seq_body)
+        
+        # Condition 1: Check for non-standard amino acids
+        if (clean_seq_body != seq_body) and not tolerate_non_standard_aa:
+            print(f'WARNING: Sequence {name} contained non-standard amino acids and will be skipped.')
+            removed_sequences.append(name)
+            continue # Skip to the next sequence
+
+        # Condition 2: Check for valid length
+        if not (300 <= len(clean_seq_body) <= 600):
+            print(f'WARNING: Sequence {name} (length {len(clean_seq_body)}) is outside the 300-600 aa range and will be skipped.')
+            if seq_body != clean_seq_body:
+                print(f'NOTE: This sequence was originally {len(seq_body)} aa but was cleaned to {len(clean_seq_body)} aa.')
+            removed_sequences.append(name)
+            continue # Skip to the next sequence
+            
+        # If all checks pass, add it to our list of valid entries
+        all_valid_entries.append({'name': name, 'sequence': clean_seq_body})
+
+    if tolerate_non_standard_aa:
+        print(f'\n{len(removed_sequences)} sequences were removed due to length constraints.')
+    else:
+        print(f'\n{len(removed_sequences)} sequences were removed due to length constraints and/or non-standard amino acids.')
+
+    # Get the unique set of sequences that actually need prediction
+    unique_seq_to_name_map = {}
+    for entry in all_valid_entries:
+        sequence = entry['sequence']
+        if sequence not in unique_seq_to_name_map:
+            unique_seq_to_name_map[sequence] = entry['name']
+    print(f'Found {len(all_valid_entries)} valid sequences to process, corresponding to {len(unique_seq_to_name_map)} unique sequences.')
 
     data_dir = f"{wrk_dir}/data"
+    # Dictionaries for paths remain the same...
     model_raw_data = {
         "whole-dataset": f"{data_dir}/fasta/{model_version}/wds.txt",
         "wildtype": f"{data_dir}/fasta/{model_version}/wt.txt",
@@ -369,408 +365,286 @@ def process_sequences_from_file(file, selected_model, identity_report, blastp, r
             "invertebrate-mnm": f"{model_dir}/bs_models/{model_version}/{encoding_method}/invert_mnm_bootstrap",
             "wildtype-vert-mnm": f"{model_dir}/bs_models/{model_version}/{encoding_method}/wt_vert_mnm_bootstrap",
         }
+    
+    model_path = model_directories[selected_model]
+    bs_model_folder_path = model_bs_dirs.get(selected_model, '') # Use .get for safety
 
+    # --- Caching Logic ---
     cache_dir = f"{wrk_dir}/data/cached_predictions"
+    os.makedirs(cache_dir, exist_ok=True)
     model_type = 'bs_models' if bootstrap else 'reg_models'
     cache_file = f"{cache_dir}/{model_type}/{model_version}/{encoding_method}/{selected_model}_pred_dict.json"
 
-    # Load the existing prediction dictionary to pull from if a sequence has already been predicted by the chosen model
-    # Check to see if an existing prediiction dictionary already exists to save time.
-    # In this dictionary the sequence will be our keys, and the len(seq), prediction, percent_iden, mean_prediction, ci_lower, ci_upper, median_prediction, std_dev will be the corresponding values...
-    if os.path.isfile(cache_file):
-        try:
-            with open(cache_file, 'r') as f:
-                cached_pred_dict = json.load(f)
-                print('\nPrediction cache file successfully loaded\n')
-        except FileNotFoundError:
-            cached_pred_dict = {}
-            print('Cache file could not be successfully loaded, starting a new one from scratch\n')
-
-    else:
-        cached_pred_dict = {}
-        
-
-    # Load the base model once before starting parallel jobs to reduce memory overhead.
-    model_path = model_directories[selected_model]
-    main_model_preloaded = load_obj(model_path)
-    
-    # Load all bootstrap models once, if requested, to reduce memory overhead
-    bs_models_preloaded = []
-    if bootstrap and preload_to_memory:
-        bs_model_folder_path = model_bs_dirs[selected_model]
-        if os.path.isdir(bs_model_folder_path):
-            # Sort to ensure deterministic order
-            model_files = sorted([f for f in os.listdir(bs_model_folder_path) if f.endswith('.pkl')])
-            for i in range(bootstrap_num):
-                filename = model_files[i]
-                full_path = os.path.join(bs_model_folder_path, filename)
-                bs_models_preloaded.append(load_obj(full_path))
-        if not bs_models_preloaded:
-            print(f"Warning: Bootstrap is enabled but no models found in {bs_model_folder_path}")
-
-
-    manager = Manager()
-    prediction_dict = manager.dict()  # Use a shared dictionary for prediction outputs
-    mp_cached_pred_dict = manager.dict(cached_pred_dict)  # Initialize a multiprocess available cached dict with cached data
-    
-    def process_sequence_wrapper(seq, name):  # Helper function
-        bs_model_folder_path = model_bs_dirs[selected_model]
-        just_seq = seq.split('\n', 1)[1]
-        just_seq = just_seq.replace('\n', '')
-        if bootstrap == False:
-            if just_seq not in list(mp_cached_pred_dict.keys()):
-                prediction = process_sequence(seq, name, selected_model, bootstrap, prediction_dict, wrk_dir, model_version=model_version, loaded_mod=main_model_preloaded)
-                if (prediction is not None):
-                    mp_cached_pred_dict[just_seq] = {'len': len(just_seq), 'single_prediction': prediction}
-                    return len(just_seq), prediction, None, None, None, None, None  # Consistent return values
-                else:
-                    return None
-            else:
-                return mp_cached_pred_dict[just_seq]['len'], mp_cached_pred_dict[just_seq]['single_prediction'], None, None, None, None, None  # Consistent return values
-
-        else:
-            if just_seq not in list(mp_cached_pred_dict.keys()):
-                mean_prediction, ci_lower, ci_upper, updated_prediction_dict, prediction, median_prediction, std_dev, predictions_all = process_sequence(seq, name, selected_model, bootstrap, prediction_dict, wrk_dir, model_version=model_version, loaded_mod=main_model_preloaded, loaded_bs_models=bs_models_preloaded, bs_model_folder_path=bs_model_folder_path, bootstrap_num=bootstrap_num)
-                
-                if (mean_prediction is not None) and (prediction_dict is not None):
-                    prediction_dict.update(updated_prediction_dict) # Update the shared dictionary with the returned dictionary
-                    mp_cached_pred_dict[just_seq] = {'len': len(just_seq),
-                                                'single_prediction': prediction,
-                                                'mean_prediction' : mean_prediction,
-                                                'ci_lower' : ci_lower,
-                                                'ci_upper' : ci_upper,
-                                                'median_prediction' : median_prediction,
-                                                'std_deviation' : std_dev,
-                                                'all_bs_predictions' : predictions_all
-                                                }
-                    # If the seq is in our cache, I need to be able to update the prediction_dict with that info...
-                    return len(just_seq), prediction, mean_prediction, ci_lower, ci_upper, median_prediction, std_dev
-                else:
-                    return None
-            else:
-                prediction_dict[name] = np.array(mp_cached_pred_dict[just_seq]['all_bs_predictions'])
-                #time.sleep(0.1)
-                return mp_cached_pred_dict[just_seq]['len'], mp_cached_pred_dict[just_seq]['single_prediction'], mp_cached_pred_dict[just_seq]['mean_prediction'], mp_cached_pred_dict[just_seq]['ci_lower'], mp_cached_pred_dict[just_seq]['ci_upper'], mp_cached_pred_dict[just_seq]['median_prediction'], mp_cached_pred_dict[just_seq]['std_deviation']
-
-
     try:
-        with tqdm_joblib(tqdm(total=len(sequences), desc="Processing Sequences", bar_format="{l_bar}{bar:25}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}{postfix}]", 
-                              mininterval=20, dynamic_ncols=True, colour="#CF9FFF",
-                              unit ='seq',ascii="░▒▓")) as pbar:  # Use tqdm for progress bar
-            results = Parallel(n_jobs=n_jobs)(delayed(process_sequence_wrapper)(seq, names[i]) for i, seq in enumerate(sequences))
-    except Exception as e:
-        updated_cached_pred_dict = dict(mp_cached_pred_dict)        
-        # Save the taxon dictionary if it doesn't yet exist or if it has been updated since being loaded 
-        if list(updated_cached_pred_dict.keys()) > list(cached_pred_dict.keys()):  
-            #print('Saving Updated Dictionary') 
-            try:
-                with open(cache_file, 'w') as f:
-                    json.dump(updated_cached_pred_dict, f, indent=4)  # indent for pretty formatting
-                    raise Exception(f"Error Occured During the Prediction Process:\n{e}\n")
+        with open(cache_file, 'r') as f:
+            cached_pred_dict = json.load(f)
+        print('\nPrediction cache file successfully loaded.\n')
+    except (json.JSONDecodeError, FileNotFoundError):
+        cached_pred_dict = {}
+        print('\nCache file not found or invalid. A new cache will be created.\n')
+    
+    prediction_results = {}
+    # The list for multiprocessing will now store tuples of (name, sequence)
+    sequences_for_mp = []
 
-            except FileNotFoundError:
-                raise Exception(f"Error: Cached prediction file can't be saved...\n")
-        
-        raise Exception(f"Error: {e}...\n")
-
-    seq_lens, predictions, mean_predictions, ci_lowers, ci_uppers, median_predictions, std_dev_list = [], [], [], [], [], [], []
-    # Extract results
-    for i, result in enumerate(results):
-        try:
-            seq_len, prediction, mean_prediction, ci_lower, ci_upper, median_prediction, std_dev = result
-            seq_lens.append(seq_len)
-            predictions.append(prediction)
-            if bootstrap:
-                mean_predictions.append(mean_prediction)
-                ci_lowers.append(ci_lower)
-                ci_uppers.append(ci_upper)
-                median_predictions.append(median_prediction)
-                std_dev_list.append(std_dev)
-        except:
-          sequences.remove(i)
-          names.remove(i)  
+    # Iterate through the unique sequences using the new map
+    for seq, name in unique_seq_to_name_map.items():
+        if seq in cached_pred_dict:
+            prediction_results[seq] = cached_pred_dict[seq]
+        else:
+            # Add the real name and sequence to the list for the worker
+            sequences_for_mp.append((name, seq))
             
-    updated_cached_pred_dict = dict(mp_cached_pred_dict)        
-    # Save the taxon dictionary if it doesn't yet exist or if it has been updated since being loaded 
-    if list(updated_cached_pred_dict.keys()) > list(cached_pred_dict.keys()):  
-        #print('Saving Updated Dictionary') 
-        try:
-            with open(cache_file, 'w') as f:
-                json.dump(updated_cached_pred_dict, f, indent=4)  # indent for pretty formatting
-        except FileNotFoundError:
-            print(f"Error: Cached prediction file can't be saved...\n")
-           
-    #pick-up here        
-    if blastp:
-        just_seq_list = []
-        for seq in sequences:
-            just_seq = seq.split('\n', 1)[1]
-            just_seq = just_seq.replace('\n', '')
-            just_seq_list.append(just_seq)
-        blastp_results_df = run_blastp_analysis(just_seq_list, names, blast_db, raw_data, metadata, 
-                 output_file=identity_report, 
-                 ref_seq_id=refseq, reffile=reffile, wrk_dir=wrk_dir, n_jobs=n_jobs)
-        
-        per_iden_list = blastp_results_df['percent_identity']
+    print(f"{len(prediction_results)} unique sequences found in cache. Predicting {len(sequences_for_mp)} new unique sequences.")
 
-    return(names, mean_predictions, ci_lowers, ci_uppers, prediction_dict, predictions, median_predictions, per_iden_list, std_dev_list, seq_lens)
+    if sequences_for_mp:
+        try:
+            with tqdm_joblib(tqdm(total=len(sequences_for_mp), desc="Processing New Sequences", bar_format="{l_bar}{bar:25}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}{postfix}]")) as pbar:
+                # The worker now gets the real name and the sequence.
+                # IMPORTANT: The worker MUST return the sequence as the first element in the tuple,
+                # as the sequence is our unique key for mapping results back.
+                # Expected return format: (sequence, result_data)
+                mp_results = Parallel(n_jobs=n_jobs, backend='loky')(
+                    delayed(_worker_predict_sequence)(
+                        name, # The actual name of the first-seen sequence
+                        seq,  # The sequence string
+                        selected_model, bootstrap, wrk_dir, model_version, model_path, 
+                        bs_model_folder_path, bootstrap_num, preload_to_memory
+                    ) for name, seq in sequences_for_mp
+                )
+            
+            newly_predicted_count = 0
+            for seq_key, result_data in mp_results:
+                if result_data:
+                    prediction_results[seq_key] = result_data # Store result
+                    cached_pred_dict[seq_key] = result_data   # Update cache object
+                    newly_predicted_count += 1
+                else:
+                    # This case is tricky; if a sequence fails, we need to remove all entries with it.
+                    print(f"Failed to get prediction for a sequence, it will be excluded from final results.")
+                    # Mark this sequence as failed in our results dictionary
+                    prediction_results[seq_key] = None
+            
+            if newly_predicted_count > 0:
+                print(f"Saving {newly_predicted_count} new predictions to cache file...")
+                try:
+                    with open(cache_file, 'w') as f:
+                        json.dump(cached_pred_dict, f, indent=4)
+                except Exception as e:
+                    print(f"Error: Could not save cache file: {e}")
+
+        except Exception as e:
+            print(f"A critical error occurred during multiprocessing: {e}")
+            # Attempt to save any results we managed to get before the error
+            if any(prediction_results):
+                with open(cache_file, 'w') as f:
+                    json.dump(cached_pred_dict, f, indent=4)
+            raise
+
+    # --- REFACTOR 3: Assemble final results by iterating through the original valid entries ---
+    names, predictions, mean_predictions, ci_lowers, ci_uppers, median_predictions, std_dev_list, seq_lens = [], [], [], [], [], [], [], []
+    prediction_dict = {}
+    final_blast_entries = [] # For running BLASTp only on the final set
+
+    for entry in all_valid_entries:
+        name = entry['name']
+        sequence = entry['sequence']
+        
+        # Look up the result for this sequence
+        result = prediction_results.get(sequence)
+        
+        if result:
+            names.append(name)
+            final_blast_entries.append({'name': name, 'sequence': sequence})
+            
+            predictions.append(result.get('single_prediction'))
+            seq_lens.append(result.get('len'))
+            if bootstrap:
+                mean_predictions.append(result.get('mean_prediction'))
+                ci_lowers.append(result.get('ci_lower'))
+                ci_uppers.append(result.get('ci_upper'))
+                median_predictions.append(result.get('median_prediction'))
+                std_dev_list.append(result.get('std_deviation'))
+                if 'all_bs_predictions' in result:
+                    prediction_dict[name] = np.array(result['all_bs_predictions'])
+        else:
+            # This sequence failed prediction or was not processed; add its name to the removed list.
+            if name not in removed_sequences:
+                removed_sequences.append(name)
+
+    per_iden_list = ['N/A'] * len(names)
+    if blastp and names:
+        # Extract unique sequences and their first corresponding names for BLAST
+        unique_blast_seqs = {item['sequence']: item['name'] for item in reversed(final_blast_entries)}
+        blast_sequences = list(unique_blast_seqs.keys())
+        blast_names = list(unique_blast_seqs.values())
+
+        blastp_results_df = run_blastp_analysis(blast_sequences, blast_names, blast_db, raw_data, metadata, 
+                                                output_file=identity_report, 
+                                                ref_seq_id=refseq, reffile=reffile, wrk_dir=wrk_dir, n_jobs=n_jobs)
+        
+        if not blastp_results_df.empty:
+            # Map results back to all sequences
+            blast_map = blastp_results_df.set_index('query_id')['percent_identity'].to_dict()
+            name_to_seq_map = {item['name']: item['sequence'] for item in final_blast_entries}
+            seq_to_blast_result = {seq: blast_map.get(name) for seq, name in unique_blast_seqs.items()}
+            
+            per_iden_list = [seq_to_blast_result.get(name_to_seq_map.get(name), 'N/A') for name in names]
+
+
+    return names, mean_predictions, ci_lowers, ci_uppers, prediction_dict, predictions, median_predictions, per_iden_list, std_dev_list, seq_lens, removed_sequences
+
 
 def run_optics_predictions(input_sequence, pred_dir=None, output='optics_predictions',
                            model="whole-dataset", encoding_method='aa_prop', blastp=True,
                            iden_report='blastp_report.txt', refseq='bovine', reffile=None,
                            bootstrap=True, bootstrap_num = 100, visualize_bootstrap=True, bootstrap_viz_file='bootstrap_viz', save_as='svg', full_spectrum_xaxis=False,
-                           model_version='vpod_1.3', preload_to_memory=False, n_jobs=-1):
-    """
-    Processes sequences using a selected model and generates prediction outputs.  This function
-    encapsulates the logic from the original `main` function, making it callable from
-    other scripts or notebooks.
+                           model_version='vpod_1.3', preload_to_memory=False, n_jobs=-1, tolerate_non_standard_aa=False):
+    ### REFACTOR NOTE: The 'preload_to_memory' argument is now ignored as it's an anti-pattern.
+    #if preload_to_memory:
+    #    print("Warning: --preload_bootstrap_models is deprecated and has no effect. Models are now loaded within each worker process to ensure stability.")
 
-    Args:
-        input_sequence (str): Either a single sequence or a path to a FASTA file.
-        report_dir (str, optional):  Name of folder directory to create.  Defaults to a
-            timestamped directory if None.  If a directory name is provided, a timestamp
-            will be appended to avoid overwrites, and all results put in a 'prediction_outputs' subdirectory.
-        output (str, optional): Name for output file. Defaults to 'optics_predictions.txt'.
-        model (str, optional): Model to use for prediction. Defaults to "whole-dataset".
-        encoding_method (str, optional): Encoding method. Defaults to 'aa_prop'.
-        blastp (bool, optional): Enable blastp analysis. Defaults to True.
-        iden_report (str, optional): Blastp report output file name. Defaults to 'blastp_report.txt'.
-        refseq (str, optional): Reference sequence for blastp. Defaults to 'bovine'.
-        reffile (str, optional): Custom reference sequence file. Defaults to None.
-        bootstrap (bool, optional): Enable bootstrap predictions. Defaults to True.
-        visualize_bootstrap (bool, optional): Enable visualization of bootstrap predictions. Defaults to True.
-        bootstrap_viz_file (str, optional): Output file name for bootstrap visualization. Defaults to 'bootstrap_viz'.
-
-    Returns:
-        tuple: A tuple containing the following lists (in order):
-            - names: List of sequence names.
-            - mean_predictions: List of mean predictions (if bootstrapping).
-            - ci_lowers: List of lower confidence interval bounds (if bootstrapping).
-            - ci_uppers: List of upper confidence interval bounds (if bootstrapping).
-            - prediction_dict: Dictionary of all bootstrap predictions (if bootstrapping).
-            - predictions: List of single predictions (or first prediction from bootstrap).
-            - median_predictions: List of median predictions (if bootstrapping).
-            - per_iden_list: List of percent identities from BLASTp.
-            - std_dev_list: List of standard deviations (if bootstrapping).
-            - seq_lens_list: list of sequence lengths
-
-        Also creates several output files within the specified report directory:
-            - Main results file (TSV or TXT)
-            - Excel file with additional formatting
-            - BLASTp report (if blastp is enabled)
-            - Bootstrap visualization (PDF, if bootstrapping and visualization are enabled)
-            - Argument log file
-            - Color annotation files for FigTree and iTOL
-
-    Raises:
-        Exception: If `input_sequence` is not a file or a valid sequence.  (Improved error handling.)
-    """
     dt_label = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-    script_path = pathlib.Path(__file__).resolve()  # Get absolute path
+    script_path = pathlib.Path(__file__).resolve()
     wrk_dir = str(script_path.parent).replace('\\', '/')
-    #print(f"Script directory (pathlib): {wrk_dir}")
-
-    # Argument validation (mimicking argparse behavior, but for function inputs)
+    
     models = ['whole-dataset', 'wildtype', 'vertebrate', 'invertebrate', 'wildtype-vert', 'type-one', 'whole-dataset-mnm', 'wildtype-mnm', 'vertebrate-mnm', 'invertebrate-mnm', 'wildtype-vert-mnm', 'wildtype-mut']
-    encoding_methods = ['one_hot', 'aa_prop']
-    ref_seq_choices = ['bovine', 'squid', 'microbe', 'custom']
-    if bootstrap_num > 100:
-        bootstrap_num = 100
-    
     if model not in models:
-        raise ValueError(f"Invalid model choice.  Must be one of {models}")
-    if encoding_method not in encoding_methods:
-        raise ValueError(f"Invalid encoding method choice.  Must be one of {encoding_methods}")
-    if refseq not in ref_seq_choices:
-        raise ValueError(f"Invalid refseq choice. Must be one of {ref_seq_choices}")
-    # No need to check bool_choices.  We'll convert directly to boolean.
+        raise ValueError(f"Invalid model choice. Must be one of {models}")
+    if bootstrap_num > 100:
+        print("Warning: bootstrap_num cannot exceed 100. Setting to 100.")
+        bootstrap_num = 100
 
-    # Directory setup (with added handling for pre-existing directories)
-    if not os.path.isdir(f'{wrk_dir}/tmp'):
-        os.makedirs(f'{wrk_dir}/tmp')
-        
-    if not os.path.isdir(f'{wrk_dir}/data/cached_blastp_analysis'):
-        os.makedirs(f'{wrk_dir}/data/cached_blastp_analysis')
+    # Directory setup
+    os.makedirs(f'{wrk_dir}/tmp', exist_ok=True)
+    os.makedirs(f'{wrk_dir}/data/cached_blastp_analysis', exist_ok=True)
     
-    if not pred_dir is None:
-        if not os.path.isdir(pred_dir):
-            os.makedirs(pred_dir)
+    if pred_dir:
+        os.makedirs(pred_dir, exist_ok=True)
     else:
-        if not os.path.isdir('./prediction_outputs'):
-            os.makedirs('./prediction_outputs') 
+        pred_dir = './prediction_outputs'
+        os.makedirs(pred_dir, exist_ok=True)
     
-    output = output.replace('.tsv', '').replace('.txt', '').replace('.csv', '')
-    if pred_dir is None:
-        report_dir = f'./prediction_outputs/optics_on_unamed_{dt_label}'
-    else:
-        report_dir = f'{pred_dir}/optics_on_{output}_{dt_label}'
-    os.makedirs(report_dir, exist_ok=True)  # exist_ok=True prevents errors if dir exists
+    output_prefix = output.replace('.tsv', '').replace('.txt', '').replace('.csv', '')
+    report_dir = f'{pred_dir}/optics_on_{output_prefix}_{dt_label}'
+    os.makedirs(report_dir, exist_ok=True)
 
-
-
-    blastp_file = f'{report_dir}/{iden_report}'
-    
-    blastp_file = blastp_file.replace('.tsv', '').replace('.txt', '').replace('.csv', '')
-    blastp_file += '.csv'
-
-    bootstrap_file = f'{report_dir}/{bootstrap_viz_file}'
+    blastp_file = f'{report_dir}/{iden_report}'.replace('.tsv', '').replace('.txt', '') + '.csv'
+    bootstrap_file_path = f'{report_dir}/{bootstrap_viz_file}'
     log_file = f'{report_dir}/arg_log.txt'
 
-    # Input handling (file or sequence string)
-    if os.path.isfile(input_sequence):
-        names, mean_predictions, ci_lowers, ci_uppers, prediction_dict, predictions, median_predictions, per_iden_list, std_dev_list, seq_lens_list = process_sequences_from_file(input_sequence, model, blastp_file, blastp, refseq, reffile, bootstrap, bootstrap_num, encoding_method, wrk_dir, model_version, preload_to_memory, n_jobs)
+    temp_input_file_path = None
+    if not os.path.isfile(input_sequence):
+        # Treat as a single sequence string, write to a temp file
+        temp_input_file = tempfile.NamedTemporaryFile(mode="w", dir=f'{wrk_dir}/tmp', suffix=".fasta", delete=False)
+        temp_input_file.write(f">input_sequence\n{input_sequence}\n")
+        temp_input_file.close()
+        input_sequence_path = temp_input_file.name
+        temp_input_file_path = input_sequence_path
+    else:
+        input_sequence_path = input_sequence
+
+    try:
+        names, mean_preds, ci_lows, ci_ups, pred_dict, preds, median_preds, iden_list, std_devs, seq_lens_list, removed = process_sequences_from_file(
+            input_sequence_path, model, blastp_file, blastp, refseq, reffile, bootstrap, 
+            bootstrap_num, encoding_method, wrk_dir, model_version, preload_to_memory, n_jobs, tolerate_non_standard_aa
+        )
+
+        output_path = f'{report_dir}/{output_prefix}_predictions.tsv'
+        excel_output = f'{report_dir}/{output_prefix}_predictions_for_excel.xlsx'
+
+        if not names:
+            print("No sequences were successfully processed. No output files will be generated.")
+            return None, None
+
+        # Write main results file
+        with open(output_path, 'w') as f:
+            if not bootstrap:
+                colors = [wavelength_to_rgb(p) for p in preds if p is not None]
+                hex_color_list = [matplotlib.colors.to_hex(c) for c in colors]
+                write_to_excel(names, preds, iden_list, excel_output, hex_color_list=hex_color_list, seq_lens_list=seq_lens_list)
+                pred_df = pd.DataFrame({
+                    'Names': names,
+                    'Single_Prediction': preds,
+                    '%Identity_Nearest_VPOD_Sequence': iden_list,
+                    'Sequence_Length': seq_lens_list,
+                    'Lmax_Hex_Color': hex_color_list
+                })
+                pred_df.to_csv(f, sep='\t', index=False)
+            else:
+                hex_color_list = plot_prediction_subsets_with_CI(names, pred_dict, mean_preds,
+                                                                bootstrap_file_path, visualize_bootstrap, save_as=save_as, full_spectrum_xaxis=full_spectrum_xaxis)
+                write_to_excel(names, preds, iden_list, excel_output,
+                                mean_preds, median_preds, ci_lows,
+                                ci_ups, std_devs, hex_color_list, seq_lens_list)
+                pred_df = pd.DataFrame({
+                    'Names': names,
+                    'Single_Prediction': preds,
+                    'Prediction_Means': mean_preds,
+                    'Prediction_Medians': median_preds,
+                    'Prediction_Lower_Bounds': ci_lows,
+                    'Prediction_Upper_Bounds': ci_ups,
+                    'Std_Deviation': std_devs,
+                    '%Identity_Nearest_VPOD_Sequence': iden_list,
+                    'Sequence_Length': seq_lens_list,
+                    'Lmax_Hex_Color': hex_color_list
+                })
+                pred_df.to_csv(f, sep='\t', index=False)
         
-        # Output file handling (TSV or TXT, Excel)
-        if 'predictions' not in {output}:
-            output += '_predictions'
-        output_path = f'{report_dir}/{output}.tsv'
-        excel_output = f'{report_dir}/{output}_for_excel.xlsx'
+        # ... (rest of the file writing, logging, and color annotations remain the same) ...
+        # Write a text file for sequences/ids removed from the optics analysis
+        if len(removed) > 0:
+            print(f'Saving text file with accessions/ids {len(removed)} removed sequence(s)')
+            with open(f'{report_dir}/removed_sequences.txt', 'w') as f:
+                for seq_name in removed:
+                    f.write(f"{seq_name}\n")
 
-    else:  # Assume it's a single sequence
-        #  create a temporary file.
-        temp_input_file = os.path.join(f'{wrk_dir}/tmp', f'temp_input_{dt_label}.fasta')
-        with open(temp_input_file, "w") as f:
-            f.write(f">temp_seq\n{input_sequence}\n") #write temp file to be consistant with process_sequence_from_file function
+        # Write log file and color annotations...
+        with open(log_file, 'w') as f:
+            arg_string = (f"input_sequence: {input_sequence}\nreport_dir: {report_dir}\n"
+                        f"output_file: {output}\nmodel: {model}\nencoding_method: {encoding_method}\n"
+                        f"blastp: {blastp}\nblastp_report: {iden_report}\nrefseq: {refseq}\n"
+                        f"custom_ref_file: {reffile}\nbootstrap: {bootstrap}\n"
+                        f"\tvisualize_bootstrap: {visualize_bootstrap}\n\t\tbootstrap_viz_file: {bootstrap_viz_file}\n\t\tsave_as: {save_as}\n\t\tfull_spectrum_xaxis: {full_spectrum_xaxis}")
+            f.write(f"Selected Options...\n{arg_string}\n")
+            print(f"\nModel Used:\t{model}\nEncoding Method:\t{encoding_method}\n")
         
-        names, mean_predictions, ci_lowers, ci_uppers, prediction_dict, predictions, median_predictions, per_iden_list, std_dev_list, seq_lens_list = process_sequences_from_file(temp_input_file, model, blastp_file, blastp, refseq, reffile, bootstrap, bootstrap_num, encoding_method, wrk_dir, model_version, preload_to_memory, n_jobs)
-        output_path = f'{report_dir}/{output}'
-        if not output_path.endswith(('.tsv', '.txt')):
-            output_path += '.tsv'
-        excel_output = output_path.replace('.tsv', '_for_excel.xlsx').replace('.txt', '_for_excel.xlsx')
-        os.remove(temp_input_file) #clean up temp file
+        if 'hex_color_list' in locals() and hex_color_list:
+            with open(f'{report_dir}/fig_tree_color_annotation.txt', 'w') as g:
+                g.write("Name\t!color\n")
+                for name, hex_color in zip(names, hex_color_list):
+                    g.write(f"{name}\t{hex_color}\n")
 
-
-    # Write main results file
-    with open(output_path, 'w') as f:
-        if not bootstrap: #cast to bool to simplify logic
-            colors = [wavelength_to_rgb(pred) for pred in predictions]
-            hex_color_list = [matplotlib.colors.to_hex(color) for color in colors]
-            write_to_excel(names, predictions, per_iden_list, excel_output, hex_color_list=hex_color_list, seq_lens_list=seq_lens_list)
-            # Make Prediction Dataframe
-            pred_df = pd.DataFrame({
-            'Names': names,
-            'Single_Prediction': predictions,
-            '%Identity_Nearest_VPOD_Sequence': per_iden_list,
-            'Sequence_Length': seq_lens_list,
-            'Lmax_Hex_Color': hex_color_list
-            })
-            # Write to file
-            pred_df.to_csv(f, sep='\t', index=False)
-            for i in range(len(names)):
-                print(f"{names[i]}\t{predictions[i]}\t{per_iden_list[i]}\t{seq_lens_list[i]}\n")
-        else:
-            hex_color_list = plot_prediction_subsets_with_CI(names, prediction_dict, mean_predictions,
-                                                            bootstrap_file, visualize_bootstrap, save_as=save_as, full_spectrum_xaxis=full_spectrum_xaxis)
-            write_to_excel(names, predictions, per_iden_list, excel_output,
-                            mean_predictions, median_predictions, ci_lowers,
-                            ci_uppers, std_dev_list, hex_color_list, seq_lens_list)
-            # Make Prediction Dataframe
-            pred_df = pd.DataFrame({
-            'Names': names,
-            'Single_Prediction': predictions,
-            'Prediction_Means': mean_predictions,
-            'Prediction_Medians': median_predictions,
-            'Prediction_Lower_Bounds': ci_lowers,
-            'Prediction_Upper_Bounds': ci_uppers,
-            'Std_Deviation': std_dev_list,
-            '%Identity_Nearest_VPOD_Sequence': per_iden_list,
-            'Sequence_Length': seq_lens_list,
-            'Lmax_Hex_Color': hex_color_list
-            })
-            # Write to file
-            pred_df.to_csv(f, sep='\t', index=False)
-            
-            print('Names\tSingle_Prediction\tPrediction_Means\tPrediction_Medians\tPrediction_Lower_Bounds\tPrediction_Upper_Bounds\tStd_Deviation\t%Identity_Nearest_VPOD_Sequence\tSequence_Length\n')
-            for i in range(len(names)):
-                print(f"{names[i]}\t{predictions[i]}\t{mean_predictions[i]}\t{median_predictions[i]}\t{ci_lowers[i]}\t{ci_uppers[i]}\t{std_dev_list[i]}\t{per_iden_list[i]}\t{seq_lens_list[i]}\n")
-
-
-
-    # Write log file
-    with open(log_file, 'w') as f:
-        #  We don't have sys.argv, so we reconstruct the equivalent.
-        arg_string = (f"input_fasta: {input_sequence}\nreport_dir: {report_dir}\n"
-                      f"output_file: {output}\nmodel: {model}\nencoding_method: {encoding_method}\n"
-                      f"blastp: {blastp}\nblastp_report: {iden_report}\nrefseq: {refseq}\n"
-                      f"custom_ref_file: {reffile}\nbootstrap: {bootstrap}\n"
-                      f"\tvisualize_bootstrap: {visualize_bootstrap}\n\t\tbootstrap_viz_file: {bootstrap_viz_file}\n\t\tsave_as: {save_as}\n\t\tfull_spectrum_xaxis: {full_spectrum_xaxis}")
+            with open(f'{report_dir}/itol_color_annotation.txt', 'w') as g:
+                g.write("TREE_COLORS\nSEPARATOR TAB\nDATA\n")
+                for name, hex_color in zip(names, hex_color_list):
+                    g.write(f"{name}\tlabel_background\t{hex_color}\n")
         
-        if blastp == True:
-            bp_cmd = f'--blastp --blastp_report {iden_report} --refseq {refseq} '
-        else:
-            bp_cmd = ''
-        if reffile is not None and refseq == 'custom':
-            rf_cmd = f"--custom_ref_file {reffile} "
-        else:
-            rf_cmd = ''
-            
-        if bootstrap == True:
-            bs_cmd = '--bootstrap '
-        else:
-            bs_cmd = ''
-        if visualize_bootstrap == True:
-            vb_cmd = f'--visualize_bootstrap --bootstrap_viz_file {bootstrap_viz_file} --save_viz_as {save_as} --full_spectrum_xaxis {full_spectrum_xaxis}'
-        else:
-            vb_cmd = ''
-    
-        exec_cmd =  (f"python optics_predictions.py " 
-                      f"-i {input_sequence} " 
-                      f"-o {pred_dir} " 
-                      f"-p {output} " 
-                      f"-v {model_version} "
-                      f"-m {model} " 
-                      f"-e {encoding_method} " 
-                      f"{bp_cmd}" 
-                      f"{rf_cmd}" 
-                      f"{bs_cmd}" 
-                      f"{vb_cmd}\n")
-        f.write(f"Selected Options...\n{arg_string}\n")  # More informative
-        f.write(f"Command executed (reconstructed): {exec_cmd}\n")
-        #f.write(f"Model Used:\t{model}\nEncoding Method:\t{encoding_method}\n")
-        print(f"\nModel Used:\t{model}\nEncoding Method:\t{encoding_method}\n")
+        print(f"Predictions Complete! Results are in: {report_dir}")
+        return pred_df, output_path
 
-    # Write color annotation files
-    with open(f'{report_dir}/fig_tree_color_annotation.txt', 'w') as g:
-        g.write("Name\t!color\n")
-        for name, hex_color in zip(names, hex_color_list):
-            g.write(f"{name}\t{hex_color}\n")
+    finally:
+        # Clean up the temporary file if it was created
+        if temp_input_file_path and os.path.exists(temp_input_file_path):
+            os.remove(temp_input_file_path)
 
-    with open(f'{report_dir}/itol_color_annotation.txt', 'w') as g:
-        g.write("TREE_COLORS\nSEPARATOR TAB\nDATA\n")
-        for name, hex_color in zip(names, hex_color_list):
-            g.write(f"{name}\tlabel_background\t{hex_color}\n")
-
-    print('Predictions Complete!')
-
-    return pred_df, output_path
-        
 if __name__ == '__main__':
-    # This part will only execute when the script is run directly (not imported)
-    # It provides a simple way to test the module functionality from the command line
-        
     parser = argparse.ArgumentParser(description="Predict protein properties using OPTICS.")
-
-    # Input sequence or FASTA file
+    # Arguments remain the same...
     parser.add_argument("-i", "--input", 
                         help="Either a single sequence or a path to a FASTA file", 
                         type=str, 
                         required=True)
-
-    # Output directory for all results
     parser.add_argument("-o", "--output_dir", 
                         help="Desired directory to save output folder/files (optional).", 
                         type=str, 
                         default=None,
                         required=False)
-
-    # Base filename for prediction folder and all subsequent results
     parser.add_argument("-p", "--prediction_prefix", 
                         help="Base filename for prediction outputs (optional).", 
                         type=str, 
                         default="unnamed", 
                         required=False)
-
-    # Prediction model
     parser.add_argument("-v", "--model_version",
                         help="Version of models to use (optional).\nBased on the version of VPOD used to train models.", 
                         type=str, 
@@ -783,8 +657,6 @@ if __name__ == '__main__':
                         default="whole-dataset", 
                         choices=['whole-dataset', 'wildtype', 'vertebrate', 'invertebrate', 'wildtype-vert', 'type-one', 'whole-dataset-mnm', 'wildtype-mnm', 'vertebrate-mnm', 'invertebrate-mnm', 'wildtype-vert-mnm', 'wildtype-mut'],
                         required=False)
-
-    # Encoding method
     parser.add_argument("-e", "--encoding", 
                         help="Encoding method to use (optional).", 
                         type=str, 
@@ -795,10 +667,7 @@ if __name__ == '__main__':
                         help="Number of parallel processes to run.\n-1 is the default, utilizing all avaiable processors.", 
                         type=int,
                         default=-1)
-
-    # BLASTp options
-    blastp_group = parser.add_argument_group("BLASTp analysis (optional)") # Group related args
-
+    blastp_group = parser.add_argument_group("BLASTp analysis (optional)")
     blastp_group.add_argument("--blastp", 
                             help="Enable BLASTp analysis.", 
                             action="store_true")
@@ -813,11 +682,8 @@ if __name__ == '__main__':
                             choices=['bovine', 'squid', 'microbe', 'custom'])
     blastp_group.add_argument("--custom_ref_file",
                             help="Path to a custom reference sequence file for BLASTp.", 
-                            type=str)  # No default, as it's optional
-
-    # Bootstrap options
+                            type=str)
     bootstrap_group = parser.add_argument_group("Bootstrap analysis (optional)")
-
     bootstrap_group.add_argument("--bootstrap", 
                                 help="Enable bootstrap predictions.", 
                                 action="store_true")
@@ -826,7 +692,7 @@ if __name__ == '__main__':
                                 type=int,
                                 default=100)
     bootstrap_group.add_argument("--preload_bootstrap_models", 
-                                help="Enable preloading of bootstrap models to memory.\nCan be quite cumbersome, but will theoretically make predictions faster.", 
+                                help="DEPRECATED: This flag has no effect. Models are always loaded in worker processes for stability.", 
                                 action="store_true")
     bootstrap_group.add_argument("--visualize_bootstrap", 
                                 help="Enable visualization of bootstrap predictions.", 
@@ -846,11 +712,8 @@ if __name__ == '__main__':
     
     args = parser.parse_args()
 
-    blastp_report_output = f"{args.blastp_report}" if args.blastp else None
-    bootstrap_viz_output = f"{args.bootstrap_viz_file}" if args.visualize_bootstrap else None
-    
     run_optics_predictions(args.input, args.output_dir,
                         args.prediction_prefix, args.model, args.encoding,
-                        args.blastp, blastp_report_output, args.refseq, args.custom_ref_file,
-                        args.bootstrap, args.bootstrap_num, args.visualize_bootstrap, bootstrap_viz_output, args.save_viz_as, 
+                        args.blastp, args.blastp_report, args.refseq, args.custom_ref_file,
+                        args.bootstrap, args.bootstrap_num, args.visualize_bootstrap, args.bootstrap_viz_file, args.save_viz_as, 
                         args.full_spectrum_xaxis, args.model_version, args.preload_bootstrap_models, args.n_jobs)

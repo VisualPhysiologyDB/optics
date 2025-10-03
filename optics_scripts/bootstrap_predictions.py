@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from deepBreaks.utils import load_obj
 
-def calculate_ensemble_CI(original_prediction, loaded_bs_models, query, name, predictions_dict, model_folder=None, bootstrap_num=100):
+def calculate_ensemble_CI(original_prediction, loaded_bs_models, query, name, bootstrap_num=100, model_folder=None,):
     """
     Calculates ensemble predictions and confidence intervals from pre-loaded bootstrap models.
 
@@ -26,7 +26,7 @@ def calculate_ensemble_CI(original_prediction, loaded_bs_models, query, name, pr
     # Append original prediction to list of predictions
     predictions_all.append(round(float(original_prediction[0]),1))
 
-    if loaded_bs_models and model_folder==None:
+    if len(loaded_bs_models) == bootstrap_num:
         for model in loaded_bs_models:
             prediction = model.predict(query)
             prediction = round(float(prediction[0]),1)
@@ -55,7 +55,7 @@ def calculate_ensemble_CI(original_prediction, loaded_bs_models, query, name, pr
     median_predictions = np.median(predictions_all)
     std_dev = np.std(predictions_all)
 
-    return mean_predictions, ci_lower, ci_upper, predictions_dict, median_predictions, std_dev, predictions_all
+    return mean_predictions, ci_lower, ci_upper, median_predictions, std_dev, predictions_all
 
 def plot_prediction_subsets_with_CI(names, predictions, mean_preds, pdf_file, visualize_bootstrap, save_as='svg', full_spectrum_xaxis = False):
     
