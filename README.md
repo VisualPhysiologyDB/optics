@@ -29,7 +29,7 @@
 1. [Installation](#installation)
 2. [Usage](#usage)
    * [```optics_predictions.py```](#main-prediction-script-optics_predictionspy)
-     * [Using the OPTICS GUI](##using-the-optics-gui-run_optics_guipy---an-more-user-friendly-alternative-to-command-line)  
+     * [Using the OPTICS GUI](#using-the-optics-gui-run_optics_guipy---an-more-user-friendly-alternative-to-command-line)  
      * [Understanding Model Choice](#understanding-the-λmax-prediction-models)  
    * [```optics_shap.py```](#explaining-prediction-differences-with-shap-optics_shappy)
 3. [License](#license)
