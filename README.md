@@ -63,7 +63,7 @@
   
 ## Usage
 
-  **MAKE SURE YOU HAVE ALL DEPENDENCIES DOWNLOADED AND ARE IN THE FOLDER DIRECTORY FOR OPTICS BEFORE RUNNING ANY SCRIPTS!**
+  **MAKE SURE YOU HAVE ALL DEPENDENCIES DOWNLOADED AND THAT YOU ARE IN THE FOLDER DIRECTORY FOR OPTICS (or have loaded it as a module) BEFORE RUNNING ANY SCRIPTS!**
   
   ### Main prediction script (```optics_predictions.py```)
      
@@ -84,7 +84,9 @@ General Optional Args:
 
   -e, --encoding: Encoding method to use (optional). Options: one_hot, aa_prop. Default: aa_prop
 
-  --n_jobs: Number of parallel processes to run (optional). -1 is the default, utilizing all avaiable processors.", 
+  --tolerate_non_standard_aa: Allows OPTICS to run predictions on sequences with 'non-standard' amino-acids (e.g. - 'X','O','B', etc...)(optional). Default: False
+
+  --n_jobs: Number of parallel processes to run (optional). -1 is the default, utilizing all avaiable processors., 
 
 
 BLASTp Analysis Args (optional):
@@ -104,8 +106,6 @@ Bootstrap Analysis Args (optional):
   --visualize_bootstrap: Enable visualization of bootstrap predictions.
 
   --bootstrap_num: Number of bootstrap models to load for prediction replicates. Default // Maximum: 100
-
-  --preload_bootstrap_models: Enable preloading of bootstrap models to memory. Can be quite cumbersome, but will theoretically make predictions faster.
 
   --bootstrap_viz_file: Filename prefix for bootstrap visualization. Default: bootstrap_viz
 
@@ -146,10 +146,31 @@ Bootstrap Analysis Args (optional):
 - Job Log (TXT): Log file containing input command to OPTICS, including encoding method and model used.
 
   **Note** - All outputs are written into subfolders generated based on your 'prediction-prefix' under your specified output directory, and are marked by time and date.
-  
+
+## **Understanding the λmax Prediction Models**
+
+The ```--model``` flag allows you to select a specific pre-trained model for wavelength prediction. Each available model is named after the data-subset it was trained on, allowing you to choose the one best suited for your research question. This was originally done to test how factors like taxonomic group or gene family inclusivity impact prediction performance.
+
+### **Base Model Datasets**
+
+The primary models include:
+
+* **whole-dataset**: Trained on the entire VPOD dataset, including all taxonomic groups and both wild-type and mutant sequences. In most cases, **this is the recommended model** as it leverages the most data.  
+* **wildtype**: Trained exclusively on wild-type opsin sequences, with all mutant sequences removed.  
+* **vertebrate**: Trained only on sequences from the phylum Chordata.  
+* **invertebrate**: Trained only on sequences from species not in the phylum Chordata.  
+* **wildtype-vert**: A more specific subset containing only wild-type sequences from vertebrates.
+
+### **The ```-mnm``` Suffix: Dataset Augmentation with Mine-n-Match (MNM)**
+
+The key difference between models with and without the ```-mnm``` suffix lies in the source of the phenotype data (the λmax values).
+
+* **Standard models** (e.g., wildtype): These are trained *exclusively* on data where the sequence-to-relationship was validated experimentally through **heterologous expression**. This represents a controlled, in-vitro dataset.  
+* **```-mnm``` models** (e.g., wildtype-mnm): These are trained on an augmented dataset. It includes the standard heterologous expression data *plus* additional data from our **"Mine-n-Match" (mnm)** procedure. This process systematically infers connections between sequences and **in-vivo**  measurements, providing a broader and more biologically contextualized training set.
+  * Note, the methodology behind MNM and the implimentation of that data into VPOD/OPTICS is elaborated upon in our publication introducing OPTICS ([Frazer et al. 2025](https://doi.org/10.1101/2025.08.22.671864) )
 ---
 
-### Explaining Prediction Differences with SHAP (```optics_shap.py```
+### Explaining Prediction Differences with SHAP (```optics_shap.py```)
 For users interested in the "nitty-gritty" of _why_ two sequences have different predicted λmax values, we provide a specialized script that uses *SHAP* (SHapley Additive exPlanations). This tool generates a plot and detailed data files that attribute the difference in prediction to specific features (i.e., amino acid sites and their properties).
 
 ![](https://github.com/VisualPhysiologyDB/optics/blob/main/examples/optics_shap_on_ex_shap_test_aa_prop_2025-08-29_09-50-13/ex_shap_test_aa_prop_viz_shap_comparison.svg?raw=true)
