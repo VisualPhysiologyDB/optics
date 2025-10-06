@@ -24,6 +24,16 @@
 - **Bootstrap Predictions**: Optionally enable bootstrap predictions for enhanced accuracy assessment (suggested limit to 10 sequences for bootstrap visulzations).
 - **Prediction Explanation**: Utilizes SHAP to explain the key features driving the λmax difference between any two sequences.
 
+## Table of Contents
+
+1. [Installation](#installation)
+2. [Usage](#usage)
+   * [```optics_predictions.py```](#main-prediction-script-(```optics_predictions.py```))
+   * [```optics_shap.py```](#explaining-prediction-differences-with-shap-(```optics_shap.py```))
+3. [License](#license)
+4. [Citation](#citation)
+5. [Contact](#contact)
+6. [Additional Resources](#additional-notes/resources)
 ## Installation
 
 1. **Clone the repository:**
