@@ -28,12 +28,14 @@
 
 1. [Installation](#installation)
 2. [Usage](#usage)
-   * [```optics_predictions.py```](#main-prediction-script-(```optics_predictions.py```))
-   * [```optics_shap.py```](#explaining-prediction-differences-with-shap-(```optics_shap.py```))
+   * [```optics_predictions.py```](#main-prediction-script-optics_predictionspy)
+     * [Understanding Model Choice](#understanding-the-λmax-prediction-models)  
+   * [```optics_shap.py```](#explaining-prediction-differences-with-shap-optics_shappy)
 3. [License](#license)
 4. [Citation](#citation)
 5. [Contact](#contact)
-6. [Additional Resources](#additional-notes/resources)
+6. [Additional Resources](#additional-notesresources)
+
 ## Installation
 
 1. **Clone the repository:**
