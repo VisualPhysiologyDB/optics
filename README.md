@@ -29,6 +29,7 @@
 1. [Installation](#installation)
 2. [Usage](#usage)
    * [```optics_predictions.py```](#main-prediction-script-optics_predictionspy)
+     * [Using the OPTICS GUI](#  
      * [Understanding Model Choice](#understanding-the-λmax-prediction-models)  
    * [```optics_shap.py```](#explaining-prediction-differences-with-shap-optics_shappy)
 3. [License](#license)
@@ -132,12 +133,6 @@ Bootstrap Analysis Args (optional):
   python optics_predictions.py -i ./examples/optics_ex_short.txt -o ex_test_of_optics -p ex_predictions -m wildtype -e aa_prop --blastp -blastp_report blastp_report.txt --refseq squid --bootstrap --visualize_bootstrap --bootstrap_viz_file bootstrap_viz --save_viz_as SVG
   ```
 
-  ### Example GUI Usage vvv
-  
-  ```bash
-  python run_optics_gui.py
-  ```
-
 ### Input
 
 - **Unaligned** FASTA file containing opsin amino-acid sequences.
@@ -158,6 +153,21 @@ Bootstrap Analysis Args (optional):
 - Job Log (TXT): Log file containing input command to OPTICS, including encoding method and model used.
 
   **Note** - All outputs are written into subfolders generated based on your 'prediction-prefix' under your specified output directory, and are marked by time and date.
+
+## **Using the OPTICS GUI (```run_optics_gui.py```)** - An more user-friendly alternative to command-line
+
+That's right! No-need for command line, OPTICS can also be used as a GUI! 
+The usage is quite simple, just use the command below (with your OPTICS conda enviornment activated) and get to predicting. ;)
+
+  ### Example GUI Usage vvv
+  
+  ```bash
+  python run_optics_gui.py
+  ```
+
+<img src="https://github.com/VisualPhysiologyDB/optics/blob/main/data/logo/optics_gui_ex.png?raw=true" alt="ex optics gui" style="width:50%; height:50%;">
+
+_Example of the OPTICS GUI interface_
 
 ## **Understanding the λmax Prediction Models**
 
