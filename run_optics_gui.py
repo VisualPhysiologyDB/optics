@@ -115,7 +115,7 @@ class HumanEyeLoadingScreen(tk.Toplevel):
         """The main animation loop for the eye's movement."""
         if not self.animation_running: return
 
-        # --- Update Gaze Logic ---
+        # --- Gaze Logic ---
         self.gaze_timer -= 1
         if self.gaze_timer <= 0:
             # Move to the next target position in our sequence
@@ -273,6 +273,13 @@ class OpticsGUI(tk.Tk):
         ttk.Label(scrollable_frame, font=("Century Gothic", 12), text="Encoding Method:").grid(row=current_row, column=0, padx=5, pady=5, sticky=tk.W)
         self.encoding_var = tk.StringVar(value=self.encoding_choices[1]) # Default to aa_prop
         ttk.Combobox(scrollable_frame, textvariable=self.encoding_var, values=self.encoding_choices, state="readonly", width=57).grid(row=current_row, column=1, padx=5, pady=5, sticky=tk.EW)
+        current_row += 1
+        
+        # Allow predictions on non-standard AA option
+        ttk.Label(scrollable_frame, font=("Century Gothic", 12), text="Tolerate Non-standard AAs:").grid(row=current_row, column=0, padx=5, pady=5, sticky=tk.W)
+        self.non_standard_aa_var = tk.BooleanVar(value=False) 
+        self.non_standard_aa_check = ttk.Checkbutton(scrollable_frame, text="Enable to predict on sequences with non-standard amino-acids", variable=self.non_standard_aa_var)
+        self.non_standard_aa_check.grid(row=current_row, column=1, columnspan=2, padx=5, pady=5, sticky=tk.EW)
         current_row += 1
         
         # --- BLASTp Options Frame ---
@@ -465,6 +472,7 @@ class OpticsGUI(tk.Tk):
             version_val = self.version_var.get()
             model_val = self.model_var.get()
             encoding_val = self.encoding_var.get()
+            tol_non_stan_aa = self.non_standard_aa_var.get()
             
             blastp_val = self.blastp_enabled_var.get()
             iden_report_val = self.blastp_report_var.get() if blastp_val else None
@@ -492,7 +500,8 @@ class OpticsGUI(tk.Tk):
                 bootstrap_viz_file=bootstrap_viz_file_val,
                 save_as=viz_ftyp_val,
                 full_spectrum_xaxis=xaxis_val,
-                model_version=version_val
+                model_version=version_val,
+                tolerate_non_standard_aa=tol_non_stan_aa
             )
             
             self.log_message(f"\n--- Predictions Complete ---")

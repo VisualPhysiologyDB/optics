@@ -46,7 +46,6 @@ def calculate_ensemble_CI(original_prediction, loaded_bs_models, query, name, bo
 
     # Calculate ensemble confidence intervals
     predictions_all = np.array(predictions_all)
-    predictions_dict.update({name: predictions_all})
     confidence_level = 0.95
     alpha = 1 - confidence_level
     ci_lower = np.percentile(predictions_all, alpha / 2 * bootstrap_num)
