@@ -84,7 +84,7 @@ def _worker_predict_sequence(name, sequence, selected_model, bootstrap, wrk_dir,
     It loads its own models to prevent memory duplication in the main process.
     """
     time.sleep(0.1)
-    ### REFACTOR NOTE: All model loading now happens HERE, inside the worker.
+    ### All model loading now happens HERE, inside the worker.
     # Each process gets its own copy without overwhelming the system.
     main_model = load_obj(model_path)
     
@@ -187,8 +187,7 @@ def _worker_predict_sequence(name, sequence, selected_model, bootstrap, wrk_dir,
         }
 
         if bootstrap:
-            ### REFACTOR NOTE: We pass the loaded bootstrap_models list here.
-            # No Manager.dict() is needed for prediction_dict; it's temporary for this call.
+            ### We pass the loaded bootstrap_models list here.
             mean_pred, ci_low, ci_up, median_pred, std_dev, all_preds = calculate_ensemble_CI(
                 prediction, bootstrap_models, new_seq_test, name, bootstrap_num, bs_model_folder_path
             )
@@ -217,7 +216,7 @@ def process_sequences_from_file(file, selected_model, identity_report, blastp, r
         
     names_unfiltered, sequences_unfiltered = extract_fasta_entries(file)
     
-    # --- REFACTOR 1: Process all sequences first, tracking valid entries ---
+    # Process all sequences first, tracking valid entries ---
     # This list will store all sequences that pass initial checks, preserving duplicates and order.
     all_valid_entries = []
     removed_sequences = []
@@ -441,7 +440,7 @@ def process_sequences_from_file(file, selected_model, identity_report, blastp, r
                     json.dump(cached_pred_dict, f, indent=4)
             raise
 
-    # --- REFACTOR 3: Assemble final results by iterating through the original valid entries ---
+    # Assemble final results by iterating through the original valid entries ---
     names, predictions, mean_predictions, ci_lowers, ci_uppers, median_predictions, std_dev_list, seq_lens = [], [], [], [], [], [], [], []
     prediction_dict = {}
     final_blast_entries = [] # For running BLASTp only on the final set
@@ -500,9 +499,6 @@ def run_optics_predictions(input_sequence, pred_dir=None, output='optics_predict
                            iden_report='blastp_report.txt', refseq='bovine', reffile=None,
                            bootstrap=True, bootstrap_num = 100, visualize_bootstrap=True, bootstrap_viz_file='bootstrap_viz', save_as='svg', full_spectrum_xaxis=False,
                            model_version='vpod_1.3', preload_to_memory=False, n_jobs=-1, tolerate_non_standard_aa=False):
-    ### REFACTOR NOTE: The 'preload_to_memory' argument is now ignored as it's an anti-pattern.
-    #if preload_to_memory:
-    #    print("Warning: --preload_bootstrap_models is deprecated and has no effect. Models are now loaded within each worker process to ensure stability.")
 
     dt_label = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
     script_path = pathlib.Path(__file__).resolve()
@@ -591,7 +587,6 @@ def run_optics_predictions(input_sequence, pred_dir=None, output='optics_predict
                 })
                 pred_df.to_csv(f, sep='\t', index=False)
         
-        # ... (rest of the file writing, logging, and color annotations remain the same) ...
         # Write a text file for sequences/ids removed from the optics analysis
         if len(removed) > 0:
             print(f'Saving text file with accessions/ids {len(removed)} removed sequence(s)')
@@ -663,6 +658,9 @@ if __name__ == '__main__':
                         default="aa_prop",
                         choices=['one_hot', 'aa_prop'],
                         required=False)
+    parser.add_argument("--tolerate_non_standard_aa",
+                            help="Allows OPTICS to run predictions on sequences with 'non-standard' amino-acids (e.g. - 'X','O','B', etc...)(optional)", 
+                            action="store_true")
     parser.add_argument("--n_jobs",
                         help="Number of parallel processes to run.\n-1 is the default, utilizing all avaiable processors.", 
                         type=int,
@@ -691,9 +689,6 @@ if __name__ == '__main__':
                                 help="Number of bootstrap models to load for prediction replicates. Default and max is 100", 
                                 type=int,
                                 default=100)
-    bootstrap_group.add_argument("--preload_bootstrap_models", 
-                                help="DEPRECATED: This flag has no effect. Models are always loaded in worker processes for stability.", 
-                                action="store_true")
     bootstrap_group.add_argument("--visualize_bootstrap", 
                                 help="Enable visualization of bootstrap predictions.", 
                                 action="store_true")
@@ -716,4 +711,4 @@ if __name__ == '__main__':
                         args.prediction_prefix, args.model, args.encoding,
                         args.blastp, args.blastp_report, args.refseq, args.custom_ref_file,
                         args.bootstrap, args.bootstrap_num, args.visualize_bootstrap, args.bootstrap_viz_file, args.save_viz_as, 
-                        args.full_spectrum_xaxis, args.model_version, args.preload_bootstrap_models, args.n_jobs)
+                        args.full_spectrum_xaxis, args.model_version, False, args.n_jobs, args.tolerate_non_standard_aa)
