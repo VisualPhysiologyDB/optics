@@ -211,7 +211,14 @@ def align_and_analyze_one(query_record, closest_match_id, blast_metrics, ref_seq
         # Match the ID up to the first space to handle diverse metadata files
         match_meta = metadata_df.loc[closest_match_id.split()[0]]
         species = match_meta.get("Species", "-")
-        opsin_family = match_meta.get("Opsin_Family", "-")
+        
+        if match_meta.get("Opsin_Family", "-") == '-':
+            opsin_family = match_meta.get("Gene_Description", '-')
+        else:
+            opsin_family = match_meta.get("Opsin_Family", "-")
+        if opsin_family == '':
+            opsin_family = '-'
+        
         lmax = match_meta.get("Lambda_Max", "-")
         accession = match_meta.get("Accession", closest_match_id)
     except KeyError:

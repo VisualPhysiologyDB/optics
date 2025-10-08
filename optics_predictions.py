@@ -102,18 +102,18 @@ def _worker_predict_sequence(name, sequence, selected_model, bootstrap, wrk_dir,
 
 
     alignment_data_paths = {
-        "whole-dataset": f"{wrk_dir}/data/fasta/{model_version}/wds_aligned_VPOD_1.2_het.fasta",
-        "wildtype": f"{wrk_dir}/data/fasta/{model_version}/wt_aligned_VPOD_1.2_het.fasta",
-        "vertebrate": f"{wrk_dir}/data/fasta/{model_version}/vert_aligned_VPOD_1.2_het.fasta",
-        "invertebrate": f"{wrk_dir}/data/fasta/{model_version}/inv_only_aligned_VPOD_1.2_het.fasta",
-        "wildtype-vert": f"{wrk_dir}/data/fasta/{model_version}/wt_vert_aligned_VPOD_1.2_het.fasta",
+        "whole-dataset": f"{wrk_dir}/data/fasta/{model_version}/wds_aligned_VPOD_1.3_het.fasta",
+        "wildtype": f"{wrk_dir}/data/fasta/{model_version}/wt_aligned_VPOD_1.3_het.fasta",
+        "vertebrate": f"{wrk_dir}/data/fasta/{model_version}/vert_aligned_VPOD_1.3_het.fasta",
+        "invertebrate": f"{wrk_dir}/data/fasta/{model_version}/inv_aligned_VPOD_1.3_het.fasta",
+        "wildtype-vert": f"{wrk_dir}/data/fasta/{model_version}/wt_vert_aligned_VPOD_1.3_het.fasta",
         "type-one": f"{wrk_dir}/data/fasta/{model_version}/Karyasuyama_T1_ops_aligned.fasta",
-        "whole-dataset-mnm": f"{wrk_dir}/data/fasta/{model_version}/wds_mnm_aligned_VPOD_1.2_het.fasta",
-        "wildtype-mnm": f"{wrk_dir}/data/fasta/{model_version}/wt_mnm_aligned_VPOD_1.2_het.fasta",
-        "vertebrate-mnm": f"{wrk_dir}/data/fasta/{model_version}/vert_mnm_aligned_VPOD_1.2_het.fasta",
-        "invertebrate-mnm": f"{wrk_dir}/data/fasta/{model_version}/inv_mnm_aligned_VPOD_1.2_het.fasta",
-        "wildtype-vert-mnm": f"{wrk_dir}/data/fasta/{model_version}/wt_vert_mnm_aligned_VPOD_1.2_het.fasta",
-        "wildtype-mut": f"{wrk_dir}/data/fasta/{model_version}/wt_mut_added_aligned_VPOD_1.2_het.fasta",
+        "whole-dataset-mnm": f"{wrk_dir}/data/fasta/{model_version}/wds_mnm_aligned_VPOD_1.3_het.fasta",
+        "wildtype-mnm": f"{wrk_dir}/data/fasta/{model_version}/wt_mnm_aligned_VPOD_1.3_het.fasta",
+        "vertebrate-mnm": f"{wrk_dir}/data/fasta/{model_version}/vert_mnm_aligned_VPOD_1.3_het.fasta",
+        "invertebrate-mnm": f"{wrk_dir}/data/fasta/{model_version}/inv_mnm_aligned_VPOD_1.3_het.fasta",
+        "wildtype-vert-mnm": f"{wrk_dir}/data/fasta/{model_version}/wt_vert_mnm_aligned_VPOD_1.3_het.fasta",
+        "wildtype-mut": f"{wrk_dir}/data/fasta/{model_version}/wt_mut_added_aligned_VPOD_1.3_het.fasta",
     }
     alignment_data = alignment_data_paths[selected_model]
 
@@ -261,7 +261,7 @@ def process_sequences_from_file(file, selected_model, identity_report, blastp, r
         "whole-dataset": f"{data_dir}/fasta/{model_version}/wds.txt",
         "wildtype": f"{data_dir}/fasta/{model_version}/wt.txt",
         "vertebrate": f"{data_dir}/fasta/{model_version}/vert.txt",
-        "invertebrate": f"{data_dir}/fasta/{model_version}/inv_only.txt",
+        "invertebrate": f"{data_dir}/fasta/{model_version}/inv.txt",
         "wildtype-vert": f"{data_dir}/fasta/{model_version}/wt_vert.txt",
         "type-one": f"{data_dir}/fasta/{model_version}/Karyasuyama_T1_ops.txt",
         "whole-dataset-mnm": f"{data_dir}/fasta/{model_version}/wds_mnm.txt",
@@ -322,17 +322,17 @@ def process_sequences_from_file(file, selected_model, identity_report, blastp, r
         }
         
         model_bs_dirs = {
-            "whole-dataset": f"{model_dir}/bs_models/{model_version}/{encoding_method}/wds_H1_H2_H3_P2_V_SCT_PKA_bootstrap_100_2025-03-23_22-05-50",
+            "whole-dataset": f"{model_dir}/bs_models/{model_version}/{encoding_method}/wds_H1_P2_SCT_bootstrap_100_2025-10-07_01-41-40",
             "wildtype": f"{model_dir}/bs_models/{model_version}/{encoding_method}/wt_H2_H3_P1_NCI_PKA_bootstrap_100_2025-03-24_10-19-45",
             "vertebrate": f"{model_dir}/bs_models/{model_version}/{encoding_method}/vert_H2_H3_NCI_SCT_PKB_bootstrap_100_2025-03-21_17-47-40",
             "invertebrate": f"{model_dir}/bs_models/{model_version}/{encoding_method}/inv_H1_H3_bootstrap_100_2025-03-21_17-40-08",
             "wildtype-vert": f"{model_dir}/bs_models/{model_version}/{encoding_method}/wt_vert_H2_P2_V_MASS_bootstrap_100_2025-03-21_17-25-47",
             "type-one": f"{model_dir}/bs_models/{model_version}/{encoding_method}/t1_H3_P1_PKB_bootstrap_100_2025-03-24_10-31-03",
-            "whole-dataset-mnm": f"{model_dir}/bs_models/{model_version}/{encoding_method}/wds_mnm_H2_H3_NCI_MASS_bootstrap_100_2025-04-15_09-35-46",
-            "wildtype-mnm": f"{model_dir}/bs_models/{model_version}/{encoding_method}/wt_mnm_H1_H2_H3_NCI_MASS_PKA_bootstrap_100_2025-04-15_10-17-06",
-            "vertebrate-mnm": f"{model_dir}/bs_models/{model_version}/{encoding_method}/vert_mnm_H3_P2_SCT_PKA_PKB_bootstrap_100_2025-04-15_11-00-24",
-            "invertebrate-mnm": f"{model_dir}/bs_models/{model_version}/{encoding_method}/inv_mnm_H1_P1_SCT_bootstrap_100_2025-04-15_10-52-20",
-            "wildtype-vert-mnm": f"{model_dir}/bs_models/{model_version}/{encoding_method}/wt_vert_mnm_H2_H3_PKB_bootstrap_100_2025-04-15_10-40-35",
+            "whole-dataset-mnm": f"{model_dir}/bs_models/{model_version}/{encoding_method}/wds_mnm_H2_H3_NCI_MASS_bootstrap_100_2025-10-07_01-56-07",
+            "wildtype-mnm": f"{model_dir}/bs_models/{model_version}/{encoding_method}/wt_mnm_H2_P1_NCI_MASS_SASA_PKB_bootstrap_100_2025-10-07_02-24-00",
+            "vertebrate-mnm": f"{model_dir}/bs_models/{model_version}/{encoding_method}/vert_mnm_H3_P2_SCT_PKA_PKB_bootstrap_100_2025-10-07_03-10-05",
+            "invertebrate-mnm": f"{model_dir}/bs_models/{model_version}/{encoding_method}/inv_mnm_H1_P1_SCT_bootstrap_100_2025-10-07_03-02-54",
+            "wildtype-vert-mnm": f"{model_dir}/bs_models/{model_version}/{encoding_method}/wt_vert_mnm_H2_H3_PKB_bootstrap_100_2025-10-07_02-52-26",
             "wildtype-mut": f"{model_dir}/bs_models/{model_version}/{encoding_method}/wt_mut_H1_H2_H3_SCT_bootstrap_100_2025-04-25_17-14-36",
         }
         
