@@ -1,2 +1,2 @@
-makeblastdb -in E:/safra/Documents/GitHub/optics/data/fasta/vpod_1.2/wds.txt -dbtype prot -out wds_mnm_db
+makeblastdb -in D:/safra/Documents/GitHub/optics/data/fasta/vpod_1.3/wds_mnm.txt -dbtype prot -out wds_mnm_db
 
