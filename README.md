@@ -177,7 +177,8 @@ The ```--model``` flag allows you to select a specific pre-trained model for wav
 
 The primary models include:
 
-* **whole-dataset**: Trained on the entire VPOD dataset, including all taxonomic groups and both wild-type and mutant sequences. In most cases, **this is the recommended model** as it leverages the most data.  
+* **whole-dataset**: Trained on the entire VPOD dataset, including all taxonomic groups and both wild-type and mutant sequences. In most cases, **this is the recommended model** as it leverages the most data.
+  * Generally, more data = better models (assuming that data is good data)
 * **wildtype**: Trained exclusively on wild-type opsin sequences, with all mutant sequences removed.  
 * **vertebrate**: Trained only on sequences from the phylum Chordata.  
 * **invertebrate**: Trained only on sequences from species not in the phylum Chordata.  
