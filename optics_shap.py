@@ -58,18 +58,18 @@ def generate_shap_explanation(
         
     data_dir = f"{wrk_dir}/data"
     model_datasets = {
-        "whole-dataset": f"{data_dir}/fasta/{model_version}/wds_aligned_VPOD_1.2_het.fasta",
-        "wildtype": f"{data_dir}/fasta/{model_version}/wt_aligned_VPOD_1.2_het.fasta",
-        "vertebrate": f"{data_dir}/fasta/{model_version}/vert_aligned_VPOD_1.2_het.fasta",
-        "invertebrate": f"{data_dir}/fasta/{model_version}/inv_only_aligned_VPOD_1.2_het.fasta",
-        "wildtype-vert": f"{data_dir}/fasta/{model_version}/wt_vert_aligned_VPOD_1.2_het.fasta",
+        "whole-dataset": f"{data_dir}/fasta/{model_version}/wds_aligned_VPOD_1.3_het.fasta",
+        "wildtype": f"{data_dir}/fasta/{model_version}/wt_aligned_VPOD_1.3_het.fasta",
+        "vertebrate": f"{data_dir}/fasta/{model_version}/vert_aligned_VPOD_1.3_het.fasta",
+        "invertebrate": f"{data_dir}/fasta/{model_version}/inv_aligned_VPOD_1.3_het.fasta",
+        "wildtype-vert": f"{data_dir}/fasta/{model_version}/wt_vert_aligned_VPOD_1.3_het.fasta",
         "type-one": f"{data_dir}/fasta/{model_version}/Karyasuyama_T1_ops_aligned.fasta",
-        "whole-dataset-mnm": f"{data_dir}/fasta/{model_version}/wds_mnm_aligned_VPOD_1.2_het.fasta",
-        "wildtype-mnm": f"{data_dir}/fasta/{model_version}/wt_mnm_aligned_VPOD_1.2_het.fasta",
-        "vertebrate-mnm": f"{data_dir}/fasta/{model_version}/vert_mnm_aligned_VPOD_1.2_het.fasta",
-        "invertebrate-mnm": f"{data_dir}/fasta/{model_version}/inv_mnm_aligned_VPOD_1.2_het.fasta",
-        "wildtype-vert-mnm": f"{data_dir}/fasta/{model_version}/wt_vert_mnm_aligned_VPOD_1.2_het.fasta",
-        "wildtype-mut": f"{data_dir}/fasta/{model_version}/wt_mut_added_aligned_VPOD_1.2_het.fasta",
+        "whole-dataset-mnm": f"{data_dir}/fasta/{model_version}/wds_mnm_aligned_VPOD_1.3_het.fasta",
+        "wildtype-mnm": f"{data_dir}/fasta/{model_version}/wt_mnm_aligned_VPOD_1.3_het.fasta",
+        "vertebrate-mnm": f"{data_dir}/fasta/{model_version}/vert_mnm_aligned_VPOD_1.3_het.fasta",
+        "invertebrate-mnm": f"{data_dir}/fasta/{model_version}/inv_mnm_aligned_VPOD_1.3_het.fasta",
+        "wildtype-vert-mnm": f"{data_dir}/fasta/{model_version}/wt_vert_mnm_aligned_VPOD_1.3_het.fasta",
+        "wildtype-mut": f"{data_dir}/fasta/{model_version}/wt_mut_added_aligned_VPOD_1.3_het.fasta",
 
     }
 
