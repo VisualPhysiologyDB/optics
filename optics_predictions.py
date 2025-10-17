@@ -70,7 +70,9 @@ def filter_non_standard_aa(sequence: str) -> str:
     
     # Check if any non-standard amino acids were removed
     if len(filtered_sequence) != len(sequence) and not _non_standard_amino_acid_warning_shown:
-        warnings.warn("Warning: Non-standard amino acids were detected in your input. These have been removed for the prediction. Only the 20 standard amino acids are supported.")
+        #warnings.warn("Warning: Non-standard amino acids were detected in your input. These have been removed for the prediction. Only the 20 standard amino acids are supported.")
+        warnings.warn("Warning: Non-standard amino acids were detected in your input. These will be removed for the prediction. Only the 20 standard amino acids are supported.")
+
         _non_standard_amino_acid_warning_shown = True
         
     return filtered_sequence
@@ -210,7 +212,7 @@ def _worker_predict_sequence(name, sequence, selected_model, bootstrap, wrk_dir,
             os.remove(temp_ali_path)
 
 def process_sequences_from_file(file, selected_model, identity_report, blastp, refseq, reffile, 
-                                bootstrap, bootstrap_num, encoding_method, wrk_dir, model_version, preload_to_memory, n_jobs, tolerate_non_standard_aa=False):
+                                bootstrap, bootstrap_num, encoding_method, wrk_dir, model_version, preload_to_memory, n_jobs, tolerate_non_standard_aa=True):
     if file is None:
         raise ValueError('Error: No input file was provided.')
         
@@ -240,7 +242,8 @@ def process_sequences_from_file(file, selected_model, identity_report, blastp, r
             continue # Skip to the next sequence
             
         # If all checks pass, add it to our list of valid entries
-        all_valid_entries.append({'name': name, 'sequence': clean_seq_body})
+        # We add the original sequence since it will be cleaned in a similar way during the prediction pre-processing. 
+        all_valid_entries.append({'name': name, 'sequence': seq_body})
 
     if tolerate_non_standard_aa:
         print(f'\n{len(removed_sequences)} sequences were removed due to length constraints.')
@@ -498,7 +501,7 @@ def run_optics_predictions(input_sequence, pred_dir=None, output='optics_predict
                            model="whole-dataset", encoding_method='aa_prop', blastp=True,
                            iden_report='blastp_report.txt', refseq='bovine', reffile=None,
                            bootstrap=True, bootstrap_num = 100, visualize_bootstrap=True, bootstrap_viz_file='bootstrap_viz', save_as='svg', full_spectrum_xaxis=False,
-                           model_version='vpod_1.3', preload_to_memory=False, n_jobs=-1, tolerate_non_standard_aa=False):
+                           model_version='vpod_1.3', preload_to_memory=False, n_jobs=-1, tolerate_non_standard_aa=True):
 
     dt_label = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
     script_path = pathlib.Path(__file__).resolve()
@@ -660,7 +663,8 @@ if __name__ == '__main__':
                         required=False)
     parser.add_argument("--tolerate_non_standard_aa",
                             help="Allows OPTICS to run predictions on sequences with 'non-standard' amino-acids (e.g. - 'X','O','B', etc...)(optional)", 
-                            action="store_true")
+                            action="store_true",
+                            default=True)
     parser.add_argument("--n_jobs",
                         help="Number of parallel processes to run.\n-1 is the default, utilizing all avaiable processors.", 
                         type=int,

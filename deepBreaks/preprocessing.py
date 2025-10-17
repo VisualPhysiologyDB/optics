@@ -119,7 +119,7 @@ def read_data(file_path, seq_type=None, is_main=True, gap_threshold=0.7) -> pand
         if seq_type == 'nu':
             na_values = ['-', 'r', 'y', 'k', 'm', 's', 'w', 'b', 'd', 'h', 'v', 'n']
         else:
-            na_values = ['-', 'X', 'B', 'Z', 'J']
+            na_values = ['-', 'X', 'B', 'Z', 'J', 'O']
         to_replace = []
         for vl in na_values:
             to_replace.append(vl.upper())
