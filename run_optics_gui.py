@@ -277,7 +277,7 @@ class OpticsGUI(tk.Tk):
         
         # Allow predictions on non-standard AA option
         ttk.Label(scrollable_frame, font=("Century Gothic", 12), text="Tolerate Non-standard AAs:").grid(row=current_row, column=0, padx=5, pady=5, sticky=tk.W)
-        self.non_standard_aa_var = tk.BooleanVar(value=False) 
+        self.non_standard_aa_var = tk.BooleanVar(value=True) 
         self.non_standard_aa_check = ttk.Checkbutton(scrollable_frame, text="Enable to predict on sequences with non-standard amino-acids", variable=self.non_standard_aa_var)
         self.non_standard_aa_check.grid(row=current_row, column=1, columnspan=2, padx=5, pady=5, sticky=tk.EW)
         current_row += 1

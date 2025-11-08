@@ -372,11 +372,11 @@ def process_sequences_from_file(file, selected_model, identity_report, blastp, r
     bs_model_folder_path = model_bs_dirs.get(selected_model, '') # Use .get for safety
 
     # --- Caching Logic ---
-    cache_dir = f"{wrk_dir}/data/cached_predictions"
-    os.makedirs(cache_dir, exist_ok=True)
     model_type = 'bs_models' if bootstrap else 'reg_models'
-    cache_file = f"{cache_dir}/{model_type}/{model_version}/{encoding_method}/{selected_model}_pred_dict.json"
-
+    cache_dir = f"{wrk_dir}/data/cached_predictions/{model_type}/{model_version}/{encoding_method}"
+    os.makedirs(cache_dir, exist_ok=True)
+    cache_file = f"{cache_dir}/{selected_model}_pred_dict.json"
+    
     try:
         with open(cache_file, 'r') as f:
             cached_pred_dict = json.load(f)
