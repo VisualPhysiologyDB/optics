@@ -228,11 +228,12 @@ Optional Args:
 ### Example Command Line Usage vvv
 
 ```bash
-python optics_shap.py -i ./examples/optics_shap_ex.fasta -o ./examples -p ex_shap_test_aa_prop -m whole-dataset-mnm -e aa_prop --save_viz_as svg
+python optics_shap.py -i ./examples/optics_ex_short.fasta -o ./examples -p short_ex_test_aa_prop --mode both --use_reference_sites
 ```
 
 ### Input
-- **Unaligned** FASTA file containing **EXACTLY TWO** opsin amino-acid sequences for shap comparison.
+- **Unaligned** FASTA file containing any number of opsin amino-acid sequences for shap comparison.
+- Please note - if you are doing comparison mode (or both) this is combinatorial (so al sequences will be compaired to each-other) which can become computationally expensive if you are not careful.
 
 ### Output 
 

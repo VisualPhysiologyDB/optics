@@ -408,7 +408,7 @@ def save_single_plot(data, base_value, report_dir, save_as, encoding_method, sit
         })
     
     df['abs_shap'] = df['shap_effect'].abs()
-    df = df.sort_values(by='abs_shap', ascending=False).head(15) 
+    df = df.sort_values(by='abs_shap', ascending=False).head(10) 
     df = df.sort_values(by='shap_effect')
 
     plt.rcParams['font.family'] = 'sans-serif'

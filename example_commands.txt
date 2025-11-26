@@ -4,5 +4,4 @@ python optics_predictions.py -i ./examples/optics_ex_short.txt -o ./examples -p 
 
 
 # Example command for optics_shap.py
-
-optics_shap.py -i ./examples/optics_ex_short.fasta -o ./examples -p short_ex_test_aa_prop --mode both --use_reference_sites
+python optics_shap.py -i ./examples/optics_ex_short.fasta -o ./examples -p short_ex_test_aa_prop --mode both --use_reference_sites
