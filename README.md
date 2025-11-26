@@ -3,7 +3,7 @@
 
 # Opsin Phenotype Tool for Inference of Color Sensitivity (OPTICS) [v1.3]
 
-![](https://github.com/VisualPhysiologyDB/optics/blob/main/examples/optics_on_full_ex_test_of_optics_2025-07-28_14-18-29/bootstrap_viz_part4.svg?raw=true)
+![](https://github.com/VisualPhysiologyDB/optics/blob/main/data/logo/optics_bs_fig_ex.svg?raw=true)
 
   _Example Box Plot Output for Bootstrap Predictions of Opsin λmax by OPTICS_
 
@@ -194,13 +194,19 @@ The key difference between models with and without the ```-mnm``` suffix lies in
 ---
 
 ### Explaining Prediction Differences with SHAP (```optics_shap.py```)
-For users interested in the "nitty-gritty" of _why_ two sequences have different predicted λmax values, we provide a specialized script that uses *SHAP* (SHapley Additive exPlanations). This tool generates a plot and detailed data files that attribute the difference in prediction to specific features (i.e., amino acid sites and their properties).
+For users interested in the "nitty-gritty" of _why_ sequences have different predicted λmax values, we provide a specialized script that uses *SHAP* (SHapley Additive exPlanations). This tool generates a plot and detailed data files that attribute the difference in prediction to specific features (i.e., amino acid sites and their properties).
 
-![](https://github.com/VisualPhysiologyDB/optics/blob/main/examples/optics_shap_on_ex_shap_test_aa_prop_2025-08-29_09-50-13/ex_shap_test_aa_prop_viz_shap_comparison.svg?raw=true)
+![](https://github.com/VisualPhysiologyDB/optics/blob/main/examples/optics_shap_on_short_ex_test_aa_prop_2025-11-26_17-19-10/Bombus_impatiens_424_individual_shap.svg?raw=true)
 
-_Example SHAP comparison plot for explaining differences in predictions of Opsin λmax by OPTICS_
+_Example SHAP plot for explaining individual predictions of opsin λmax by OPTICS_
 
-This script requires a **FASTA file containing exactly two sequences**.
+![](https://github.com/VisualPhysiologyDB/optics/blob/main/examples/optics_shap_on_short_ex_test_aa_prop_2025-11-26_17-19-10/Bombus_impatiens_424_vs_Bombus_impatiens_347_viz.svg?raw=true)
+
+_Example SHAP comparison plot for explaining pair-wise differences in predictions of opsin λmax by OPTICS_
+
+This script requires a **FASTA file** 
+- File must contain at least **two or more sequences** if you are running a SHAP comparison.
+- Only a single sequence is needed for an individual SHAP explination
 
 ### SHAP Script Parameters
 Most parameters are identical to the main prediction script. Below are the key arguments:
@@ -212,9 +218,11 @@ Required Args:
 Optional Args:
   -o, --output_dir: Directory to save the SHAP analysis output folder.
   -p, --prediction_prefix: Base filename for the SHAP plot and data files.
+  --mode: Analysis mode: select 'comparison' for pairwise SHAP comparison of all sequence predictions, 'single' for individual SHAP explinations of all sequences, or 'both' for both outputs.
   -m, --model: Prediction model to use for the comparison.
   -e, --encoding: Encoding method to use.
   --save_viz_as: File type for the SHAP visualization (svg, png, or pdf).
+  --use_reference_sites : Enable to use reference site numbering (i.e. - Bovine or Squid Rhodopsin), instead of feature names. 
 ```
 
 ### Example Command Line Usage vvv

@@ -1,0 +1,145 @@
+<tool id="optics_shap_1" name="OPTICS SHAP Comparison" version="1.0">
+  <description>Explains prediction differences between two opsin sequences</description>
+  <requirements>
+      <requirement type="package" version="3.11">python</requirement>
+      <requirement type="package" version="1.84">biopython</requirement>
+      <requirement type="package" version="2.17.0">blast</requirement>
+      <requirement type="package" version="1.7.2">fpdf</requirement>
+      <requirement type="package" version="1.4.2">joblib</requirement>
+      <requirement type="package" version="3.9.2">matplotlib</requirement>
+      <requirement type="package" version="2.1.1">numpy</requirement>
+      <requirement type="package" version="2.2.2">pandas</requirement>
+      <requirement type="package" version="10.4.0">pillow</requirement>
+      <requirement type="package" version="1.5.1">scikit-learn</requirement>
+      <requirement type="package" version="1.14.1">scipy</requirement>
+      <requirement type="package" version="0.13.2">seaborn</requirement>
+      <requirement type="package" version="2.1.1">xgboost</requirement>
+      <requirement type="package" version="3.1.5">openpyxl</requirement>
+      <requirement type="package" version="4.67.1">tqdm</requirement>
+      <requirement type="package" version="4.5.0">progressbar2</requirement>
+      <requirement type="package" version="0.48.0">shap</requirement>
+  </requirements>
+
+  <command detect_errors="aggressive">
+  <![CDATA[
+  python '$__tool_directory__/shap_galaxy_wrapper.py' 
+    --input '$input' 
+    --prediction_prefix '$prediction_prefix'
+    --model '$model'
+    --encoding '$encoding'
+    --save_viz_as '$viz_format.save_viz_as'
+    
+    ## Output Files
+    --output_csv '$output_csv'
+    --output_viz '$output_viz'
+    --output_log '$output_log'
+  ]]>
+  </command>
+
+  <inputs>
+    <param format="fasta" name="input" type="data" label="Source FASTA file ⚠️ MUST contain exactly 2 sequences ⚠️" help="A FASTA file containing the two opsin sequences you want to compare."/>
+    
+    <param name="prediction_prefix" type="text" value="shap_comparison" label="Output file prefix" help="Specify a prefix for your output files."/>
+    
+    <param name="model" type="select" label="Select prediction model" help="Models trained on more specific datasets (e.g., Vertebrate) may perform better if your data fits that category. This MUST match the model used for your original predictions.">
+      <option value="whole-dataset" selected="true">Whole-Dataset Model</option>
+      <option value="wildtype">Wildtypes Only Model</option>
+      <option value="vertebrate">Vertebrate Only Model</option>
+      <option value="wildtype-vert">Wildtype Vertebrate Model</option>
+      <option value="type-one">Type 1 Opsin Model</option>
+      <option value="whole-dataset-mnm">Whole-Dataset-MNM (includes physiological data)</option>
+      <option value="wildtype-mnm">Wildtype-MNM</option>
+      <option value="vertebrate-mnm">Vertebrate-MNM</option>
+      <option value="wildtype-vert-mnm">Wildtype Vertebrate-MNM</option>
+    </param>
+
+    <param name="encoding" type="select" label="Select encoding method" help="This MUST match the encoding method used for your original predictions.">
+      <option value="aa_prop" selected="true">Amino-Acid Property Encoding</option>
+      <option value="one_hot">One-Hot Encoding</option>
+    </param>
+
+    <conditional name="viz_format">
+      <param name="save_viz_as" type="select" label="Visualization output format">
+        <option value="svg" selected="true">SVG (Vector)</option>
+        <option value="png">PNG (Image)</option>
+        <option value="pdf">PDF (Document)</option>
+      </param>
+    </conditional>
+
+  </inputs>
+
+  <outputs>
+    <data format="csv" name="output_csv" label="${prediction_prefix}_SHAP_Values.csv" help="A CSV file containing the SHAP values for all features that differ between the two sequences."/>
+    <data name="output_viz" label="${prediction_prefix}_SHAP_Plot">
+      <change_format>
+        <when input="viz_format.save_viz_as" value="svg" format="svg" />
+        <when input="viz_format.save_viz_as" value="png" format="png" />
+        <when input="viz_format.save_viz_as" value="pdf" format="pdf" />
+      </change_format>
+    </data>
+    <data format="txt" name="output_log" label="${prediction_prefix}_SHAP_Log.txt" />
+  </outputs>
+
+  <help>
+    **What it does**
+
+    This Galaxy tool uses **SHAP** (SHapley Additive exPlanations) to explain the difference in λmax predictions between **exactly two** opsin sequences.
+
+    It answers the question: "My two sequences have different predictions. Which amino acid sites are responsible for this difference, and by how much?"
+
+    The tool compares the two sequences and identifies all amino acid sites (or other features) that differ. It then calculates the individual contribution (the "SHAP value") of each differing feature to the final prediction difference.
+    
+    -----
+
+    ⚠️ **Input Requirements** ⚠️
+
+    This tool will **only** accept a FASTA file containing **exactly two** sequences. Providing more or fewer than two sequences will result in an error.
+
+    -----
+
+    **Inputs**
+
+    * **Source FASTA file:** A FASTA file containing the two unaligned opsin sequences you want to compare.
+    * **Prediction Model:** Select the *same* model you used to get your initial predictions (e.g., 'Whole-Dataset Model').
+    * **Encoding Method:** Select the *same* encoding method used for your initial predictions (e.g., 'Amino-Acid Property Encoding').
+    * **Visualization output format:** Choose the file type for the comparison plot (SVG, PNG, or PDF).
+
+    -----
+
+    **Outputs**
+
+    * **SHAP Values (CSV):** A CSV file listing *all* features that differ between the two sequences and their corresponding SHAP values. This is the raw data.
+    * **SHAP Plot (SVG/PNG/PDF):** A bar chart visualizing the **top 10** most impactful features. Features that push the prediction higher (more positive) are shown in one color, and features that push it lower (more negative) are in another. This plot gives you a quick, interpretable summary of the most important sites.
+    * **SHAP Log (TXT):** A log file from the script, useful for debugging if something goes wrong.
+
+    -----
+
+    **Additional Information**
+
+    This tool is part of the OPTICS (Opsin Phenotype Tool for Inference of Color Sensitivity) suite.
+
+    * VPOD GitHub: For those interested in VPOD and our pipeline for training ML models, visit our GitHub: https://github.com/VisualPhysiologyDB/visual-physiology-opsin-db
+    * OPTICS Github: For those interested in using OPTICS locally, visit our other dedicated GitHub: https://github.com/VisualPhysiologyDB/optics
+
+
+  </help>
+
+  <citations>
+      <citation type="bibtex">
+      @article{10.1093/gigascience/giae073,
+          author = {Frazer, Seth A and Baghbanzadeh, Mahdi and Rahnavard, Ali and Crandall, Keith A and Oakley, Todd H},
+          title = {Discovering genotype–phenotype relationships with machine learning and the Visual Physiology Opsin Database (VPOD)},
+          journal = {GigaScience},
+          volume = {13},
+          pages = {giae073},
+          year = {2024},
+          month = {10},
+          abstract = {Predicting phenotypes from genetic variation is foundational for fields as diverse as bioengineering and global change biology, highlighting the importance of efficient methods to predict gene functions. Linking genetic changes to phenotypic changes has been a goal of decades of experimental work, especially for some model gene families, including light-sensitive opsin proteins. Opsins can be expressed in vitro to measure light absorption parameters, including λmax—the wavelength of maximum absorbance—which strongly affects organismal phenotypes like color vision. Despite extensive research on opsins, the data remain dispersed, uncompiled, and often challenging to access, thereby precluding systematic and comprehensive analyses of the intricate relationships between genotype and phenotype.Here, we report a newly compiled database of all heterologously expressed opsin genes with λmax phenotypes that we call the Visual Physiology Opsin Database (VPOD). VPOD\_1.0 contains 864 unique opsin genotypes and corresponding λmax phenotypes collected across all animals from 73 separate publications. We use VPOD data and deepBreaks to show regression-based machine learning (ML) models often reliably predict λmax, account for nonadditive effects of mutations on function, and identify functionally critical amino acid sites.The ability to reliably predict functions from gene sequences alone using ML will allow robust exploration of molecular-evolutionary patterns governing phenotype, will inform functional and evolutionary connections to an organism’s ecological niche, and may be used more broadly for de novo protein design. Together, our database, phenotype predictions, and model comparisons lay the groundwork for future research applicable to families of genes with quantifiable and comparable phenotypes.},
+          issn = {2047-217X},
+          doi = {10.1093/gigascience/giae073},
+          url = {https://doi.org/10.1093/gigascience/giae073},
+          eprint = {https://academic.oup.com/gigascience/article-pdf/doi/10.1093/gigascience/giae073/60122488/giae073.pdf},
+      }
+      </citation>
+  </citations>
+</tool>

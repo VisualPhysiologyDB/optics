@@ -1,81 +1,226 @@
-<tool id="optics_1" name="OPTICS" version="1.1">
-  <description>Opsin Phenotype Tool for Inference of Color Sensitivity</description>
+<tool id="optics_1" name="Opsin Phenotype Tool for Inference of Color Sensitivity (OPTICS)" version="1.0">
+  <description>Predicts λmax (wavelength of maximum absorbance) of opsins based amino-acid sequences</description>
+  <requirements>
+      <requirement type="package" version="3.11">python</requirement>
+      <requirement type="package" version="1.84">biopython</requirement>
+      <requirement type="package" version="2.17.0">blast</requirement>
+      <requirement type="package" version="1.7.2">fpdf</requirement>
+      <requirement type="package" version="1.4.2">joblib</requirement>
+      <requirement type="package" version="3.9.2">matplotlib</requirement>
+      <requirement type="package" version="2.1.1">numpy</requirement>
+      <requirement type="package" version="2.2.2">pandas</requirement>
+      <requirement type="package" version="10.4.0">pillow</requirement>
+      <requirement type="package" version="1.5.1">scikit-learn</requirement>
+      <requirement type="package" version="1.14.1">scipy</requirement>
+      <requirement type="package" version="0.13.2">seaborn</requirement>
+      <requirement type="package" version="2.1.1">xgboost</requirement>
+      <requirement type="package" version="3.1.5">openpyxl</requirement>
+      <requirement type="package" version="4.67.1">tqdm</requirement>
+      <requirement type="package" version="4.5.0">progressbar2</requirement>
+      <requirement type="package" version="0.48.0">shap</requirement>
+  </requirements>
+
   <command detect_errors="aggressive">
-  python '$__tool_directory__/prediction_functions_galaxy.py' '$input' '$output' '$blast_report' '$boot_strap_file' -m '$model' -b '$blast_checkbox' -r '$ref_sequence' -f '$ref_seq_file' -s '$boot_strap' -e '$encode_method'
+  <![CDATA[
+  python '$__tool_directory__/optics_galaxy_wrapper.py' 
+    --input '$input' 
+    --prediction_prefix '$prediction_prefix'
+    --model '$model'
+    --encoding '$encoding'
+    --n_jobs '$advanced_options.n_jobs'
+    #if $advanced_options.tolerate_non_standard_aa
+      --tolerate_non_standard_aa
+    #end if
+
+    ## BLASTp Options
+    #if $blastp_group.blastp
+      --blastp
+      --refseq $blastp_group.refseq_conditional.refseq
+      #if str($blastp_group.refseq_conditional.refseq) == "custom"
+        --custom_ref_file '$blastp_group.refseq_conditional.ref_seq_file'
+      #end if
+      --output_blastp '$output_blastp'
+    #else
+      --output_blastp 'null'
+    #end if
+
+    ## Bootstrap Options
+    #if $bootstrap_group.bootstrap
+      --bootstrap
+      --bootstrap_num 100
+      
+      #if $bootstrap_group.viz_options.visualize_bootstrap
+        --visualize_bootstrap
+        --save_viz_as $bootstrap_group.viz_options.save_viz_as
+        #if $bootstrap_group.viz_options.full_spectrum_xaxis
+          --full_spectrum_xaxis
+        #end if
+        --output_bootstrap_viz '$output_bootstrap_viz'
+      #else
+        --output_bootstrap_viz 'null'
+      #end if
+    #else
+      --output_bootstrap_viz 'null'
+    #end if
+
+    ## Core Output Files
+    --output_tsv '$output_tsv'
+    --output_excel '$output_excel'
+    --output_removed_seqs '$output_removed_seqs'
+
+    ## Color Annotation Options
+    #if $advanced_options.color_annotations_conditional.color_annotations
+        #if $advanced_options.color_annotations_conditional.anno_type_conditional.annotation_type == 'FigTree' or $advanced_options.color_annotations_conditional.anno_type_conditional.annotation_type == 'both'
+            --output_fig_tree '$output_fig_tree'
+        #else
+            --output_fig_tree 'null'
+        #end if
+
+        #if $advanced_options.color_annotations_conditional.anno_type_conditional.annotation_type == 'iTol' or $advanced_options.color_annotations_conditional.anno_type_conditional.annotation_type == 'both'
+            --output_itol '$output_itol'
+        #else
+            --output_itol 'null'
+        #end if
+    #else
+        --output_fig_tree 'null'
+        --output_itol 'null'
+    #end if
+
+  ]]>
   </command>
 
   <inputs>
     <param format="fasta" name="input" type="data" label="Source file ⚠️Unaligned FASTA file⚠️"/>
-    <param name="model" type="select" optional="False" label="Select model used for predictions:" default="Vertebrate Model"> 
-        <options from_file="db_model_names.tsv">  
-            <column name="value" index="1"/>
-        </options>
+    
+    <param name="prediction_prefix" type="text" value="unnamed" label="Output file prefix" help="Specify a prefix for your output files. This will be used to name the datasets in your history."/>
+    
+    <param name="model" type="select" label="Select prediction model" help="Models trained on more specific datasets (e.g., Vertebrate) may perform better if your data fits that category.">
+      <option value="whole-dataset" selected="true">Whole-Dataset Model</option>
+      <option value="wildtype">Wildtypes Only Model</option>
+      <option value="vertebrate">Vertebrate Only Model</option>
+      <option value="wildtype-vert">Wildtype Vertebrate Model</option>
+      <option value="type-one">Type 1 Opsin Model</option>
+      <option value="whole-dataset-mnm">Whole-Dataset-MNM (includes physiological data)</option>
+      <option value="wildtype-mnm">Wildtype-MNM</option>
+      <option value="vertebrate-mnm">Vertebrate-MNM</option>
+      <option value="wildtype-vert-mnm">Wildtype Vertebrate-MNM</option>
     </param>
 
-    <param name="encode_method" type="select" 
-      label="Select preferred encoding method used to train model and make predictions ⚠️Models trained on Amino-Acid Property Enoding perform slightly better but predictions take longer!⚠️ " 
-      help="Choose between two avaliable encoding methods used during training of the selected model.">
+    <param name="encoding" type="select" label="Select encoding method" help="Models trained on Amino-Acid Property Encoding perform slightly better but predictions take longer.">
+      <option value="aa_prop" selected="true">Amino-Acid Property Encoding</option>
       <option value="one_hot">One-Hot Encoding</option>
-      <option value="aa_prop">Amino-Acid Property Encoding</option>
-    </param> 
-
-    <param name="boot_strap" type="boolean" optional = "True"
-    truevalue="yes" falsevalue="no" 
-    checked="true" 
-    label="Enable for boot-strap prediction of query sequences. ⚠️Only TEN sequencces allowed at a time for this function⚠️ " 
-    help="Enables or disables boot-strap predictions of query sequences against VPOD datasets"/> 
-
-    <conditional name="ref_options">
-      <param name="blast_checkbox" type="boolean" optional = "True"
-          truevalue="yes" falsevalue="no" 
-          checked="true" 
-          label="Enable for BLASTp analysis against corresponding model dataset" 
-          help="Enables or disables BLASTp analysis of query sequences against VPOD datasets"/> 
-          
-          <when value="no" ref="blast_checkbox">
-            <param name="ref_sequence" type="hidden" value="null"/>
-            <param name="ref_seq_file" type="hidden" value="null"/>
-          </when>
-
-          <when value="yes" ref = "blast_checkbox"> 
-            <conditional name = 'custom_ref_seq'>
-              <param name="ref_sequence" type="select" label="Select reference sequence">
-                <option value="Bovine">Bovine</option>
-                <option value="Squid">Squid</option>
-                <option value="Custom">Custom</option>
-              </param>
-                <when value = "Custom">
-                <param format="fasta" name="ref_seq_file" type="data" label="Source file for custom reference sequence. *SHOULD CONTAIN 1 SEQUENCE* - Otherwise first sequence in file will be used."/>
-                </when>
-                <when value = "Bovine" ref = "ref_sequence">
-                  <param name="ref_seq_file" type="hidden" value="null"/>
-                </when>
-                <when value = "Squid" ref = "ref_sequence">
-                  <param name="ref_seq_file" type="hidden" value="null"/>
-                </when>
-            </conditional>
-          </when>
+    </param>
+    
+    <conditional name="bootstrap_group">
+      <param name="bootstrap" type="boolean" checked="true" label="Enable bootstrap predictions?" help="Generates confidence intervals for predictions. This is highly recommended but is computationally intensive."/>
+      <when value="true">
+        <conditional name="viz_options">
+            <param name="visualize_bootstrap" type="boolean" checked="true" label="Generate bootstrap visualization plot?"/>
+            <when value="true">
+                <param name="save_viz_as" type="select" label="Plot output format. (For now, we only are outputing compiled PDFs of PNGs due to Galaxy limitations)">
+                    <option value="png">PDF (Document)</option>
+                </param>
+                <param name="full_spectrum_xaxis" type="boolean" checked="false" label="Use full spectrum (300-650nm) x-axis?" help="If 'No' (default), the plot's x-axis will be scaled to fit the predictions. If 'Yes', it will span the full 300-650nm range."/>
+            </when>
+            <when value="false" />
+        </conditional>
+      </when>
+      <when value="false" />
     </conditional>
+
+
+    <conditional name="blastp_group">
+      <param name="blastp" type="boolean" checked="true" label="Run BLASTp analysis against model dataset?"/>
+      <when value="true">
+        <conditional name="refseq_conditional">
+          <param name="refseq" type="select" label="Reference sequence for BLASTp" help="Select a standard reference or provide your own.">
+            <option value="bovine" selected="true">Bovine</option>
+            <option value="squid">Squid</option>
+            <option value="microbe">Microbe</option>
+            <option value="custom">Custom</option>
+          </param>
+          <when value="bovine" />
+          <when value="squid" />
+          <when value="microbe" />
+          <when value="custom">
+            <param format="fasta" name="ref_seq_file" type="data" label="Source file for custom reference sequence. *SHOULD CONTAIN 1 SEQUENCE* - Otherwise first sequence in file will be used."/>
+          </when>
+        </conditional>
+      </when>
+      <when value="false" />
+    </conditional>
+
+    <section name="advanced_options" title="Click here for advanced options: [For most people, you can just leave these as their default values]" >
+
+      <param name="tolerate_non_standard_aa" type="boolean" checked="true" label="Tolerate non-standard amino acids (X, B, Z, etc.)?" help="If 'Yes', non-standard amino acids will be removed and sequences will be processed. If 'No', sequences containing them will be skipped."/>
+      
+      <param name="n_jobs" type="integer" value="5" min="1" max="10" label="Number of parallel processes (CPUs) to use" help="We limit this from 1-10 processes since we are running a public server."/>
+
+      <conditional name="color_annotations_conditional">
+        <param name="color_annotations" type="boolean" checked="False" label="Return iTol and/or FigTree tree-tip color annotations for opsin sequences? (Colors correspond to the predicted λmax converted to closest hex-code)"/>
+        <when value="true">
+          <conditional name="anno_type_conditional">
+            <param name="annotation_type" type="select" label="Desired color annotation output" help="Select iTol, FigTree or both!">
+              <option value="iTol" selected="true">iTol</option>
+              <option value="FigTree">FigTree</option>
+              <option value="both">Both</option>
+            </param>  
+          </conditional>
+        </when>
+        <when value="false"/>
+      </conditional>
+    </section>
   </inputs>
-  
+
   <outputs>
-    <data format="tsv" name="output" label ="OPTICS λmax prediction on ${input.name}"/>
-    <data format="txt" name="blast_report" label ="OPTICS blastp analysis on ${input.name}"/>
-    <data format="pdf" name="boot_strap_file" label ="OPTICS boot-strap prediction visualization on ${input.name}"/>
+    <data format="tsv" name="output_tsv" label="${prediction_prefix}_predictions_TSV"/>
+    <data format="xlsx" name="output_excel" label="${prediction_prefix}_Predictions_Excel"/>
+    <data format="csv" name="output_blastp" label="${prediction_prefix}_BLASTp_Report">
+      <filter>blastp_group['blastp']</filter>
+    </data>
+    <data name="output_bootstrap_viz" label="${prediction_prefix}_Bootstrap_Viz">
+      <filter>bootstrap_group['bootstrap'] and bootstrap_group['viz_options']['visualize_bootstrap']</filter>
+      <change_format>
+        <when input="bootstrap_group.viz_options.save_viz_as" value="png" format="pdf" />
+      </change_format>
+    </data>
+    <data format="txt" name="output_removed_seqs" label="${prediction_prefix}_Removed_Seq_Log" />
+    <data format="txt" name="output_fig_tree" label="${prediction_prefix}_FigTree_Color_Annotations">
+      <filter>advanced_options['color_annotations_conditional']['color_annotations'] and (advanced_options['color_annotations_conditional']['anno_type_conditional']['annotation_type'] == 'FigTree' or advanced_options['color_annotations_conditional']['anno_type_conditional']['annotation_type'] == 'both')</filter>
+    </data>
+    <data format="txt" name="output_itol" label="${prediction_prefix}_iTOL_Color_Annotations">
+      <filter>advanced_options['color_annotations_conditional']['color_annotations'] and (advanced_options['color_annotations_conditional']['anno_type_conditional']['annotation_type'] == 'iTol' or advanced_options['color_annotations_conditional']['anno_type_conditional']['annotation_type'] == 'both')</filter>
+    </data>
   </outputs>
 
   <help>
     **What it does**
 
-    This Galaxy tool predicts the Opsin Phenotype (λmax) from an input file of UNALIGNED opsin amino-acid sequences in FASTA format. 
+    This Galaxy tool predicts the Opsin Phenotype (λmax, the wavelength of maximum absorbance) from an input file of UNALIGNED opsin amino-acid sequences in FASTA format, using the OPTICS prediction models.
+
+    -----
+
+    ⚠️ **Public Server Resource Warning** ⚠️
+
+    This public Galaxy server has limited computing resources. OPTICS, especially with **bootstrap predictions** enabled, can be computationally intensive.
+
+    If you plan to analyze a large number of sequences:
+
+    1.  Please be considerate and use the **"Number of parallel processes"** option to set a reasonable CPU limit (e.g. 5-7) instead of using the maximum.
+    
+    2.  For very large jobs, please consider downloading the command-line or GUI version of OPTICS to run locally or on your own cluster (https://github.com/VisualPhysiologyDB/optics).
 
     -----
 
     **Inputs**
 
-    The tool requires the following input:
-
-    * Input Dataset (FASTA): A FASTA file containing unaligned opsin amino-acid sequences. Ensure your file adheres to the FASTA format. 
+    * **Unaligned opsin FASTA file:** A FASTA file containing one or more unaligned opsin amino-acid sequences.
+    * **Prediction Model:** Select the model trained on the dataset most relevant to your sequences. The 'whole-dataset' models are good general-purpose choices. 'MNM' models include additional physiological data and may be more accurate.
+    * **Encoding Method:** 'Amino-Acid Property' is slightly more accurate but slower. 'One-Hot' is faster.
+    * **Tolerate non-standard AAs:** If 'Yes' (default), non-standard amino acids (X, B, Z) are stripped. If 'No', sequences containing them are skipped.
+    * **BLASTp analysis:** If 'Yes', runs BLASTp for each sequence against the model's training dataset to find the nearest neighbor and its percent identity.
+    * **Bootstrap predictions:** If 'Yes', runs multiple bootstrap-resampled models to generate confidence intervals (e.g., 95% CI) for each prediction. This is highly recommended for robust analysis but is much slower.
+    * **Bootstrap visualization:** If 'Yes', generates a PDF, PNG, or SVG plot visualizing the bootstrap prediction distributions.
 
     -----
 
@@ -83,15 +228,12 @@
 
     The tool generates the following outputs:
 
-    * Predictions (TSV): A TSV file containing predicted λmax values for each sequence, along with the model used and sequence encoding method.
-    * BLAST Results (TXT, optional): A TXT file showing BLAST results of each query sequence against the model dataset, highlighting differences (enabled optionally).
-    * Bootstrap Graphs (PDF, optional): A PDF file containing graphs generated from bootstrap predictions (enabled optionally).
-
-    -----
-
-    **Important Notes**
-
-    * FASTA Format: It's crucial that your input file is in proper FASTA format; otherwise, the tool may not function correctly. See the example below for correct formatting.
+    * **OPTICS Predictions (TSV):** The main results file with λmax predictions. Includes bootstrap confidence intervals if enabled.
+    * **OPTICS Predictions for Excel (XLSX):** The same results, formatted with λmax-to-color highlighting for easy viewing in Excel.
+    * **BLASTp Report (CSV):** (Optional) A CSV file showing BLASTp results for each query sequence.
+    * **Bootstrap Visualization (PDF/PNG/SVG):** (Optional) A plot showing the distribution of bootstrap predictions for each sequence.
+    * **Removed Sequences Log (TXT):** A list of any sequence IDs that were skipped due to length constraints or non-standard amino acids.
+    * **FigTree/iTOL Color Annotations (TXT):** Helper files to easily color-code your sequences by predicted λmax in phylogenetic tree viewers.
 
     -----
 
@@ -109,27 +251,29 @@
 
     **Additional Information**
 
-    This version of OPTICS (v1.1) uses the Visual Physiology Opsin Database (VPOD) v1.2 for training.
+    This version of OPTICS (v1.3) uses the Visual Physiology Opsin Database (VPOD) v1.3 for training.
 
-    * VPOD Bibliography: For publications used in VPOD_1.2, see: https://tinyurl.com/u7hn9adm
-    * Contribute to VPOD: To suggest publications for future VPOD versions, use this form: https://tinyurl.com/29afaxyr
-    * VPOD GitHub: For those interested in VPOD and our pipeline for training ML models, visit our GitHub: https://github.com/VisualPhysiologyDB/visual-physiology-opsin-db
+    * VPOD GitHub: For those interested in VPOD and our pipeline for training ML models, visit its dedicated GitHub: https://github.com/VisualPhysiologyDB/visual-physiology-opsin-db
+    * OPTICS Github: For those interested in using OPTICS locally, visit our other dedicated GitHub: https://github.com/VisualPhysiologyDB/optics
 
   </help>
 
   <citations>
       <citation type="bibtex">
-          @article{Frazer2024.02.12.579993,
-              author = {Frazer, Seth A. and Baghbanzadeh, Mahdi and Rahnavard, Ali and Crandall, Keith A. and Oakley, Todd H.},
-              title = {Discovering genotype-phenotype relationships with machine learning and the Visual Physiology Opsin Database (VPOD)},
-              elocation-id = {2024.02.12.579993},
-              year = {2024},
-              doi = {10.1101/2024.02.12.579993},
-              publisher = {Cold Spring Harbor Laboratory},
-              URL = {https://www.biorxiv.org/content/early/2024/02/14/2024.02.12.579993},
-              eprint = {https://www.biorxiv.org/content/early/2024/02/14/2024.02.12.579993.full.pdf},
-              journal = {bioRxiv}
-              }
-      </citation> 
+      @article{10.1093/gigascience/giae073,
+          author = {Frazer, Seth A and Baghbanzadeh, Mahdi and Rahnavard, Ali and Crandall, Keith A and Oakley, Todd H},
+          title = {Discovering genotype–phenotype relationships with machine learning and the Visual Physiology Opsin Database (VPOD)},
+          journal = {GigaScience},
+          volume = {13},
+          pages = {giae073},
+          year = {2024},
+          month = {10},
+          abstract = {Predicting phenotypes from genetic variation is foundational for fields as diverse as bioengineering and global change biology, highlighting the importance of efficient methods to predict gene functions. Linking genetic changes to phenotypic changes has been a goal of decades of experimental work, especially for some model gene families, including light-sensitive opsin proteins. Opsins can be expressed in vitro to measure light absorption parameters, including λmax—the wavelength of maximum absorbance—which strongly affects organismal phenotypes like color vision. Despite extensive research on opsins, the data remain dispersed, uncompiled, and often challenging to access, thereby precluding systematic and comprehensive analyses of the intricate relationships between genotype and phenotype.Here, we report a newly compiled database of all heterologously expressed opsin genes with λmax phenotypes that we call the Visual Physiology Opsin Database (VPOD). VPOD\_1.0 contains 864 unique opsin genotypes and corresponding λmax phenotypes collected across all animals from 73 separate publications. We use VPOD data and deepBreaks to show regression-based machine learning (ML) models often reliably predict λmax, account for nonadditive effects of mutations on function, and identify functionally critical amino acid sites.The ability to reliably predict functions from gene sequences alone using ML will allow robust exploration of molecular-evolutionary patterns governing phenotype, will inform functional and evolutionary connections to an organism’s ecological niche, and may be used more broadly for de novo protein design. Together, our database, phenotype predictions, and model comparisons lay the groundwork for future research applicable to families of genes with quantifiable and comparable phenotypes.},
+          issn = {2047-217X},
+          doi = {10.1093/gigascience/giae073},
+          url = {https://doi.org/10.1093/gigascience/giae073},
+          eprint = {https://academic.oup.com/gigascience/article-pdf/doi/10.1093/gigascience/giae073/60122488/giae073.pdf},
+      }
+      </citation>
   </citations>
 </tool>

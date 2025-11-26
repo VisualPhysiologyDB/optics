@@ -1,0 +1,34 @@
+Command executed:
+optics_shap.py -i ./examples/optics_ex_short.fasta -o ./examples -p short_ex_test_one_hot --encoding one_hot --mode both --use_reference_sites
+
+
+SHAP Comparison: Neogonodactylus_oerstedii|334 vs Neogonodactylus_oerstedii|383
+	Sum SHAP diff: 67.04nm
+	Actual Pred diff: 67.00nm
+SHAP Comparison: Neogonodactylus_oerstedii|334 vs Bombus_impatiens|539
+	Sum SHAP diff: -49.05nm
+	Actual Pred diff: -49.10nm
+SHAP Comparison: Neogonodactylus_oerstedii|334 vs Bombus_impatiens|424
+	Sum SHAP diff: 71.70nm
+	Actual Pred diff: 71.70nm
+SHAP Comparison: Neogonodactylus_oerstedii|334 vs Bombus_impatiens|347
+	Sum SHAP diff: 150.09nm
+	Actual Pred diff: 150.10nm
+SHAP Comparison: Neogonodactylus_oerstedii|383 vs Bombus_impatiens|539
+	Sum SHAP diff: -116.09nm
+	Actual Pred diff: -116.10nm
+SHAP Comparison: Neogonodactylus_oerstedii|383 vs Bombus_impatiens|424
+	Sum SHAP diff: 4.66nm
+	Actual Pred diff: 4.70nm
+SHAP Comparison: Neogonodactylus_oerstedii|383 vs Bombus_impatiens|347
+	Sum SHAP diff: 83.05nm
+	Actual Pred diff: 83.10nm
+SHAP Comparison: Bombus_impatiens|539 vs Bombus_impatiens|424
+	Sum SHAP diff: 120.75nm
+	Actual Pred diff: 120.80nm
+SHAP Comparison: Bombus_impatiens|539 vs Bombus_impatiens|347
+	Sum SHAP diff: 199.14nm
+	Actual Pred diff: 199.20nm
+SHAP Comparison: Bombus_impatiens|424 vs Bombus_impatiens|347
+	Sum SHAP diff: 78.39nm
+	Actual Pred diff: 78.40nm

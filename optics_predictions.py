@@ -77,9 +77,7 @@ def filter_non_standard_aa(sequence: str) -> str:
         
     return filtered_sequence
 
-### REFACTOR NOTE: This new worker function is designed to be self-contained.
-### It loads its own models, preventing the memory duplication that caused crashes.
-### It no longer uses Manager.dict(), instead returning a simple dictionary.
+#   This new worker function is designed to be self-contained.
 def _worker_predict_sequence(name, sequence, selected_model, bootstrap, wrk_dir, model_version, model_path, bs_model_folder_path, bootstrap_num, preload_to_memory):
     """
     Worker function executed by each parallel process.
@@ -189,7 +187,7 @@ def _worker_predict_sequence(name, sequence, selected_model, bootstrap, wrk_dir,
         }
 
         if bootstrap:
-            ### We pass the loaded bootstrap_models list here.
+            # We pass the loaded bootstrap_models list here.
             mean_pred, ci_low, ci_up, median_pred, std_dev, all_preds = calculate_ensemble_CI(
                 prediction, bootstrap_models, new_seq_test, name, bootstrap_num, bs_model_folder_path
             )
@@ -199,7 +197,8 @@ def _worker_predict_sequence(name, sequence, selected_model, bootstrap, wrk_dir,
                 'ci_upper': round(float(ci_up), 1),
                 'median_prediction': round(float(median_pred), 1),
                 'std_deviation': round(float(std_dev), 1),
-                'all_bs_predictions': all_preds.tolist()
+                'all_bs_predictions': all_preds.tolist(),
+                'bootstrap_num': bootstrap_num
             })
         
         return sequence, result_dict
@@ -369,8 +368,7 @@ def process_sequences_from_file(file, selected_model, identity_report, blastp, r
         }
     
     model_path = model_directories[selected_model]
-    bs_model_folder_path = model_bs_dirs.get(selected_model, '') # Use .get for safety
-
+    bs_model_folder_path = model_bs_dirs.get(selected_model, '')
     # --- Caching Logic ---
     model_type = 'bs_models' if bootstrap else 'reg_models'
     cache_dir = f"{wrk_dir}/data/cached_predictions/{model_type}/{model_version}/{encoding_method}"
@@ -391,7 +389,19 @@ def process_sequences_from_file(file, selected_model, identity_report, blastp, r
 
     # Iterate through the unique sequences using the new map
     for seq, name in unique_seq_to_name_map.items():
+        hit = False
         if seq in cached_pred_dict:
+            entry = cached_pred_dict[seq]
+            if bootstrap:
+                # In bootstrap mode, we must ensure the cached entry used the same number of replicates
+                # we're gonna assume old entries were 100 since we only recently added this option
+                if entry.get('bootstrap_num', 100) == bootstrap_num:
+                    hit = True
+            else:
+                # In non-bootstrap mode, any valid entry (even one with extra bootstrap info) is fine
+                hit = True
+
+        if hit:
             prediction_results[seq] = cached_pred_dict[seq]
         else:
             # Add the real name and sequence to the list for the worker
@@ -401,7 +411,7 @@ def process_sequences_from_file(file, selected_model, identity_report, blastp, r
 
     if sequences_for_mp:
         try:
-            with tqdm_joblib(tqdm(total=len(sequences_for_mp), desc="Processing New Sequences", bar_format="{l_bar}{bar:25}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}{postfix}]")) as pbar:
+            with tqdm_joblib(tqdm(total=len(sequences_for_mp), desc="Processing New Sequences", unit="seq", bar_format="{l_bar}{bar:25}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}{postfix}]")) as pbar:
                 # The worker now gets the real name and the sequence.
                 # IMPORTANT: The worker MUST return the sequence as the first element in the tuple,
                 # as the sequence is our unique key for mapping results back.
