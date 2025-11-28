@@ -1,5 +1,5 @@
-<tool id="optics_shap_1" name="OPTICS SHAP Comparison" version="1.0">
-  <description>Explains prediction differences between two opsin sequences</description>
+<tool id="optics_shap_1" name="OPTICS SHAP Explanations" version="1.0">
+  <description>Site based explanations and comparisons for predictions of opsin λmax</description>
   <requirements>
       <requirement type="package" version="3.11">python</requirement>
       <requirement type="package" version="1.84">biopython</requirement>
@@ -28,7 +28,12 @@
     --model '$model'
     --encoding '$encoding'
     --save_viz_as '$viz_format.save_viz_as'
-    
+    --mode '$shap_mode'
+
+    #if $use_reference_sites
+      --use_reference_sites
+    #end if
+
     ## Output Files
     --output_csv '$output_csv'
     --output_viz '$output_viz'
@@ -37,10 +42,16 @@
   </command>
 
   <inputs>
-    <param format="fasta" name="input" type="data" label="Source FASTA file ⚠️ MUST contain exactly 2 sequences ⚠️" help="A FASTA file containing the two opsin sequences you want to compare."/>
+    <param format="fasta" name="input" type="data" optional="false" label="Source ⚠️Unaligned FASTA file⚠️" help="A FASTA file containing any number of unaligned opsin amino-acid sequences."/>
     
-    <param name="prediction_prefix" type="text" value="shap_comparison" label="Output file prefix" help="Specify a prefix for your output files."/>
-    
+    <param name="prediction_prefix" type="text" value="example_name" label="Output file prefix" help="Specify a prefix for your output files."/>
+
+    <param name="shap_mode" type="select" label="Select SHAP mode" help="Analysis modes: 'comparison' (pairwise), 'single' (individual), or 'both'.">
+      <option value="comparison" selected="true">Pairwise SHAP comparison</option>
+      <option value="single">Individual SHAP explainations</option>
+      <option value="both">Both (comparison and individual)</option>
+    </param>
+
     <param name="model" type="select" label="Select prediction model" help="Models trained on more specific datasets (e.g., Vertebrate) may perform better if your data fits that category. This MUST match the model used for your original predictions.">
       <option value="whole-dataset" selected="true">Whole-Dataset Model</option>
       <option value="wildtype">Wildtypes Only Model</option>
@@ -59,12 +70,12 @@
     </param>
 
     <conditional name="viz_format">
-      <param name="save_viz_as" type="select" label="Visualization output format">
-        <option value="svg" selected="true">SVG (Vector)</option>
-        <option value="png">PNG (Image)</option>
-        <option value="pdf">PDF (Document)</option>
+      <param name="save_viz_as" type="select" label="Visualization output format" help="For now, we only are outputing compiled PDFs of PNGs due to Galaxy limitations...">
+        <option value="png">PDF (Document)</option>
       </param>
     </conditional>
+
+    <param name="use_reference_sites" type="boolean" checked="true" label="Use reference site numbering, instead of feature names?" help="If checked, plots will use reference site numbering (Bovine rhodopsin numbering for all models except Inverebrate and T1; which use Squid and Microbial numbering respectively)."/>
 
   </inputs>
 
@@ -72,9 +83,7 @@
     <data format="csv" name="output_csv" label="${prediction_prefix}_SHAP_Values.csv" help="A CSV file containing the SHAP values for all features that differ between the two sequences."/>
     <data name="output_viz" label="${prediction_prefix}_SHAP_Plot">
       <change_format>
-        <when input="viz_format.save_viz_as" value="svg" format="svg" />
-        <when input="viz_format.save_viz_as" value="png" format="png" />
-        <when input="viz_format.save_viz_as" value="pdf" format="pdf" />
+        <when input="viz_format.save_viz_as" value="png" format="pdf" />
       </change_format>
     </data>
     <data format="txt" name="output_log" label="${prediction_prefix}_SHAP_Log.txt" />
@@ -93,7 +102,8 @@
 
     ⚠️ **Input Requirements** ⚠️
 
-    This tool will **only** accept a FASTA file containing **exactly two** sequences. Providing more or fewer than two sequences will result in an error.
+    This tool will noq accept a FASTA file containing any number of sequences! 
+    * **Please note** - if you are doing comparison mode (or both) this is combinatorial (so all sequences will be ccompared in pairwise fashion) which can become computationally expensive.
 
     -----
 

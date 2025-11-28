@@ -233,7 +233,7 @@ python optics_shap.py -i ./examples/optics_ex_short.fasta -o ./examples -p short
 
 ### Input
 - **Unaligned** FASTA file containing any number of opsin amino-acid sequences for shap comparison.
-- Please note - if you are doing comparison mode (or both) this is combinatorial (so al sequences will be compaired to each-other) which can become computationally expensive if you are not careful.
+- Please note - if you are doing comparison mode (or both) this is combinatorial (so all sequences will be ccompared in pairwise fashion) which can become computationally expensive.
 
 ### Output 
 

@@ -5,6 +5,7 @@ import shutil
 import tempfile
 import glob
 import logging
+from PIL import Image
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -38,6 +39,11 @@ def main():
     parser.add_argument("--model", default="whole-dataset", help="Prediction model to use.")
     parser.add_argument("--encoding", default="aa_prop", help="Encoding method.")
     parser.add_argument("--save_viz_as", default="svg", help="Format for SHAP visualization (svg, png, pdf).")
+    parser.add_argument("--mode", 
+                        help="Analysis mode: 'comparison' (pairwise), 'single' (individual), or 'both'.", 
+                        type=str, default="both", choices=['comparison', 'single', 'both'])
+    parser.add_argument("--use_reference_sites", help="Use reference site numbering, instead of feature names", action="store_true")
+
 
     args = parser.parse_args()
 
@@ -59,7 +65,10 @@ def main():
             model=args.model,
             encoding_method=args.encoding,
             model_version=args.model_version,
-            cmd_line=cmd_line
+            cmd_line=cmd_line,
+            mode=args.mode,
+            use_reference_sites=args.use_reference_sites,
+            n_jobs=-1
         )
         log.info("optics_shap.generate_shap_explanation finished.")
 
@@ -113,8 +122,44 @@ def main():
         # --- Move files to final Galaxy paths ---
         log.info("Copying generated files to final Galaxy paths...")
         copy_file(gen_csv, args.output_csv)
-        copy_file(gen_viz, args.output_viz)
         copy_file(gen_log, args.output_log)
+        
+        # --- New logic for compiling PNGs into a single PDF ---
+        # We replace the direct copy of gen_viz with this conditional block.
+        if args.save_viz_as == 'png':
+            # Target files by the '.png' extension as requested, ignoring prefix patterns
+            viz_files = sorted(glob.glob(os.path.join(actual_report_dir, "*.png")))
+            
+            if not viz_files:
+                log.warning(f"Visualization was set to PNG, but no .png files were found in {actual_report_dir}")
+                # Fallback to creating an empty file if needed to satisfy Galaxy
+                if args.output_viz in always_expected_outputs:
+                     open(args.output_viz, 'a').close()
+            else:
+                try:
+                    # Open all PNGs found
+                    image_list = [Image.open(f).convert('RGB') for f in viz_files]
+                    if image_list:
+                        temp_pdf_name = os.path.join(actual_report_dir, 'compiled_shap_viz.pdf')
+                        image_list[0].save(
+                            temp_pdf_name, 
+                            save_all=True, 
+                            append_images=image_list[1:],
+                            title="SHAP Comparison Visualizations"
+                        )
+                        copy_file(temp_pdf_name, args.output_viz)
+                        log.info(f"Successfully compiled {len(image_list)} PNGs into single PDF: {args.output_viz}")
+                    else:
+                         log.warning("Found PNG files but failed to open them with Pillow.")
+                         open(args.output_viz, 'a').close()
+
+                except Exception as e:
+                    log.error(f"Error compiling PNGs into PDF: {e}")
+                    # Fallback: Just copy the first part found to avoid a crash
+                    copy_file(viz_files[0], args.output_viz)
+        else:
+            # For SVG or PDF, direct copy of the main expected file
+            copy_file(gen_viz, args.output_viz)
 
     except Exception as e:
         log.error(f"An error occurred during the OPTICS SHAP run: {e}")

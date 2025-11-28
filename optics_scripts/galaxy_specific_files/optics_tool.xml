@@ -1,5 +1,5 @@
 <tool id="optics_1" name="Opsin Phenotype Tool for Inference of Color Sensitivity (OPTICS)" version="1.0">
-  <description>Predicts λmax (wavelength of maximum absorbance) of opsins based amino-acid sequences</description>
+  <description>Predicts λmax of opsins based amino-acid sequences</description>
   <requirements>
       <requirement type="package" version="3.11">python</requirement>
       <requirement type="package" version="1.84">biopython</requirement>
@@ -90,7 +90,7 @@
   </command>
 
   <inputs>
-    <param format="fasta" name="input" type="data" label="Source file ⚠️Unaligned FASTA file⚠️"/>
+    <param format="fasta" name="input" type="data" optional="false" label="Source ⚠️Unaligned FASTA file⚠️" help="A FASTA file containing any number of unaligned opsin amino-acid sequences."/>
     
     <param name="prediction_prefix" type="text" value="unnamed" label="Output file prefix" help="Specify a prefix for your output files. This will be used to name the datasets in your history."/>
     
@@ -117,7 +117,7 @@
         <conditional name="viz_options">
             <param name="visualize_bootstrap" type="boolean" checked="true" label="Generate bootstrap visualization plot?"/>
             <when value="true">
-                <param name="save_viz_as" type="select" label="Plot output format. (For now, we only are outputing compiled PDFs of PNGs due to Galaxy limitations)">
+                <param name="save_viz_as" type="select" label="Plot output format." help="For now, we only are outputing compiled PDFs of PNGs due to Galaxy limitations...">
                     <option value="png">PDF (Document)</option>
                 </param>
                 <param name="full_spectrum_xaxis" type="boolean" checked="false" label="Use full spectrum (300-650nm) x-axis?" help="If 'No' (default), the plot's x-axis will be scaled to fit the predictions. If 'Yes', it will span the full 300-650nm range."/>
