@@ -233,8 +233,8 @@ def process_sequences_from_file(file, selected_model, identity_report, blastp, r
             continue # Skip to the next sequence
 
         # Condition 2: Check for valid length
-        if not (300 <= len(clean_seq_body) <= 600):
-            print(f'WARNING: Sequence {name} (length {len(clean_seq_body)}) is outside the 300-600 aa range and will be skipped.')
+        if not (250 <= len(clean_seq_body) <= 650):
+            print(f'WARNING: Sequence {name} (length {len(clean_seq_body)}) is outside the 250-650 aa range and will be skipped.')
             if seq_body != clean_seq_body:
                 print(f'NOTE: This sequence was originally {len(seq_body)} aa but was cleaned to {len(clean_seq_body)} aa.')
             removed_sequences.append(name)

@@ -196,11 +196,11 @@ The key difference between models with and without the ```-mnm``` suffix lies in
 ### Explaining Prediction Differences with SHAP (```optics_shap.py```)
 For users interested in the "nitty-gritty" of _why_ sequences have different predicted λmax values, we provide a specialized script that uses *SHAP* (SHapley Additive exPlanations). This tool generates a plot and detailed data files that attribute the difference in prediction to specific features (i.e., amino acid sites and their properties).
 
-![](https://github.com/VisualPhysiologyDB/optics/blob/main/examples/optics_shap_on_short_ex_test_aa_prop_2025-11-26_17-19-10/Bombus_impatiens_424_individual_shap.svg?raw=true)
+![](https://github.com/VisualPhysiologyDB/optics/blob/main/examples/optics_shap_on_short_ex_test_aa_prop_2026-01-09_02-28-40/Bombus_impatiens_424_individual_shap.svg?raw=true)
 
 _Example SHAP plot for explaining individual predictions of opsin λmax by OPTICS_
 
-![](https://github.com/VisualPhysiologyDB/optics/blob/main/examples/optics_shap_on_short_ex_test_aa_prop_2025-11-26_17-19-10/Bombus_impatiens_424_vs_Bombus_impatiens_347_viz.svg?raw=true)
+![](https://github.com/VisualPhysiologyDB/optics/blob/main/examples/optics_shap_on_short_ex_test_aa_prop_2026-01-09_02-28-40/Bombus_impatiens_424_vs_Bombus_impatiens_347_viz.svg?raw=true)
 
 _Example SHAP comparison plot for explaining pair-wise differences in predictions of opsin λmax by OPTICS_
 
@@ -221,6 +221,7 @@ Optional Args:
   --mode: Analysis mode: select 'comparison' for pairwise SHAP comparison of all sequence predictions, 'single' for individual SHAP explinations of all sequences, or 'both' for both outputs.
   -m, --model: Prediction model to use for the comparison.
   -e, --encoding: Encoding method to use.
+  --n_positions: Number of positions to show on SHAP explanation graphs. Default=10 to limit noisiness.
   --save_viz_as: File type for the SHAP visualization (svg, png, or pdf).
   --use_reference_sites : Enable to use reference site numbering (i.e. - Bovine or Squid Rhodopsin), instead of feature names. 
 ```
