@@ -21,7 +21,7 @@
 - **Model Selection**: Choose from different pre-trained models for prediction.
 - **Encoding Methods**: Select between one-hot encoding or amino-acid property encoding for model training and prediction.
 - **BLAST Analysis**: Optionally perform BLASTp analysis to compare query sequences against reference datasets.
-- **Bootstrap Predictions**: Optionally enable bootstrap predictions for enhanced accuracy assessment (suggested limit to 10 sequences for bootstrap visulzations).
+- **Bootstrap Predictions**: Optionally enable bootstrap predictions for enhanced accuracy assessment.
 - **Prediction Explanation**: Utilizes SHAP to explain the key features driving the λmax difference between any two sequences.
 
 ## Table of Contents
@@ -97,7 +97,10 @@ General Optional Args:
 
   -e, --encoding: Encoding method to use (optional). Options: one_hot, aa_prop. Default: aa_prop
 
-  --tolerate_non_standard_aa: Allows OPTICS to run predictions on sequences with 'non-standard' amino-acids (e.g. - 'X','O','B', etc...)(optional). Default: False
+  --tolerate_non_standard_aa: Allows OPTICS to run predictions on sequences with 'non-standard' amino-acids (e.g. - 'X','O','B', etc...)(optional). Default: True
+
+  --tolerate_incomplete_seqs: Allows OPTICS to run predictions on sequences outside the predefined limits of 250-650 amino-acids. (optional) Default: False 
+                              NOTE - if you enable this option, then you may have predictions on incomplete sequences, which should be treated as less accurate.
 
   --n_jobs: Number of parallel processes to run (optional). -1 is the default, utilizing all avaiable processors., 
 
@@ -130,7 +133,7 @@ Bootstrap Analysis Args (optional):
   ### Example Command Line Usage vvv
   
   ```bash
-  python optics_predictions.py -i ./examples/optics_ex_short.txt -o ex_test_of_optics -p ex_predictions -m wildtype -e aa_prop --blastp -blastp_report blastp_report.txt --refseq squid --bootstrap --visualize_bootstrap --bootstrap_viz_file bootstrap_viz --save_viz_as SVG
+  python optics_predictions.py -i ./examples/optics_ex_short.txt -o ./examples -p ex_predictions -m wildtype -e aa_prop --blastp --blastp_report blastp_report_ex --refseq squid --bootstrap --visualize_bootstrap --bootstrap_viz_file bootstrap_viz --save_viz_as svg
   ```
 
 ### Input

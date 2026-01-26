@@ -165,7 +165,7 @@ class OpticsGUI(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("OPTICS")
-        self.geometry("900x825") 
+        self.geometry("1000x950") 
         
         # --- Add a reference for the loading screen ---
         self.loading_screen = None
@@ -282,6 +282,13 @@ class OpticsGUI(tk.Tk):
         self.non_standard_aa_check.grid(row=current_row, column=1, columnspan=2, padx=5, pady=5, sticky=tk.EW)
         current_row += 1
         
+        # Allow predictions on non-standard AA option
+        ttk.Label(scrollable_frame, font=("Century Gothic", 12), text="Tolerate Potential Incomplete Sequences:").grid(row=current_row, column=0, padx=5, pady=5, sticky=tk.W)
+        self.incomp_seqs_var = tk.BooleanVar(value=False) 
+        self.incomp_seqs_check = ttk.Checkbutton(scrollable_frame, text="Enable to predict on sequences outside range of 250-650 amino-acids", variable=self.incomp_seqs_var)
+        self.incomp_seqs_check.grid(row=current_row, column=1, columnspan=2, padx=5, pady=5, sticky=tk.EW)
+        current_row += 1
+                
         # --- BLASTp Options Frame ---
         blastp_frame = ttk.LabelFrame(scrollable_frame, text="BLASTp Options", padding="10")
         blastp_frame.grid(row=current_row, column=0, columnspan=3, padx=5, pady=10, sticky=tk.EW)
@@ -473,7 +480,8 @@ class OpticsGUI(tk.Tk):
             model_val = self.model_var.get()
             encoding_val = self.encoding_var.get()
             tol_non_stan_aa = self.non_standard_aa_var.get()
-            
+            tol_incomp_seqs = self.incomp_seqs_var.get()
+
             blastp_val = self.blastp_enabled_var.get()
             iden_report_val = self.blastp_report_var.get() if blastp_val else None
             refseq_val = self.refseq_var.get() if blastp_val else "bovine" 
@@ -501,7 +509,8 @@ class OpticsGUI(tk.Tk):
                 save_as=viz_ftyp_val,
                 full_spectrum_xaxis=xaxis_val,
                 model_version=version_val,
-                tolerate_non_standard_aa=tol_non_stan_aa
+                tolerate_non_standard_aa=tol_non_stan_aa,
+                tolerate_incomplete_seqs=tol_incomp_seqs
             )
             
             self.log_message(f"\n--- Predictions Complete ---")

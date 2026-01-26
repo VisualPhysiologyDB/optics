@@ -1,12 +1,12 @@
 import subprocess 
 import os
+import sys
 import json
 import argparse
 import time
 import datetime
 import tempfile
 import pathlib
-from multiprocessing import Manager
 from joblib import Parallel, delayed
 import pandas as pd
 import numpy as np
@@ -211,7 +211,7 @@ def _worker_predict_sequence(name, sequence, selected_model, bootstrap, wrk_dir,
             os.remove(temp_ali_path)
 
 def process_sequences_from_file(file, selected_model, identity_report, blastp, refseq, reffile, 
-                                bootstrap, bootstrap_num, encoding_method, wrk_dir, model_version, preload_to_memory, n_jobs, tolerate_non_standard_aa=True):
+                                bootstrap, bootstrap_num, encoding_method, wrk_dir, model_version, preload_to_memory, n_jobs, tolerate_non_standard_aa=True, tolerate_incomplete_seqs=False):
     if file is None:
         raise ValueError('Error: No input file was provided.')
         
@@ -233,12 +233,15 @@ def process_sequences_from_file(file, selected_model, identity_report, blastp, r
             continue # Skip to the next sequence
 
         # Condition 2: Check for valid length
-        if not (250 <= len(clean_seq_body) <= 650):
-            print(f'WARNING: Sequence {name} (length {len(clean_seq_body)}) is outside the 250-650 aa range and will be skipped.')
+        if not (250 <= len(clean_seq_body) <= 650) and tolerate_incomplete_seqs:
+            print(f'WARNING: Sequence {name} (length {len(clean_seq_body)}) is outside the 250-650 aa range and will be skipped as it is likely an incomplete sequence.\n')
             if seq_body != clean_seq_body:
-                print(f'NOTE: This sequence was originally {len(seq_body)} aa but was cleaned to {len(clean_seq_body)} aa.')
+                print(f'NOTE: This sequence was originally {len(seq_body)} aa but was cleaned to {len(clean_seq_body)} aa.\n')
             removed_sequences.append(name)
             continue # Skip to the next sequence
+        
+        if len(removed_sequences)>0:
+            print(f'If you still wish to predict on sequences outside our predefined range (250-650 aa), then enable the "--tolerate_incomplete_seqs" flag\n')
             
         # If all checks pass, add it to our list of valid entries
         # We add the original sequence since it will be cleaned in a similar way during the prediction pre-processing. 
@@ -511,7 +514,7 @@ def run_optics_predictions(input_sequence, pred_dir=None, output='optics_predict
                            model="whole-dataset", encoding_method='aa_prop', blastp=True,
                            iden_report='blastp_report.txt', refseq='bovine', reffile=None,
                            bootstrap=True, bootstrap_num = 100, visualize_bootstrap=True, bootstrap_viz_file='bootstrap_viz', save_as='svg', full_spectrum_xaxis=False,
-                           model_version='vpod_1.3', preload_to_memory=False, n_jobs=-1, tolerate_non_standard_aa=True):
+                           model_version='vpod_1.3', preload_to_memory=False, n_jobs=-1, tolerate_non_standard_aa=True, tolerate_incomplete_seqs=False, command_run=None):
 
     dt_label = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
     script_path = pathlib.Path(__file__).resolve()
@@ -541,6 +544,22 @@ def run_optics_predictions(input_sequence, pred_dir=None, output='optics_predict
     blastp_file = f'{report_dir}/{iden_report}'.replace('.tsv', '').replace('.txt', '') + '.csv'
     bootstrap_file_path = f'{report_dir}/{bootstrap_viz_file}'
     log_file = f'{report_dir}/arg_log.txt'
+    
+    # Logging
+    with open(log_file, 'w') as f:        
+        if command_run:
+            f.write(f"Command executed:\n{command_run}\n\n")
+    
+        arg_string = (f"input_sequence: {input_sequence}\nreport_dir: {report_dir}\n"
+                    f"output_file: {output}\nmodel: {model}\nencoding_method: {encoding_method}\n"
+                    f"tolerate_non_standard_aa: {tolerate_non_standard_aa}\ntolerate_incomplete_seqs: {tolerate_incomplete_seqs}\n"
+                    f"blastp: {blastp}\n\tblastp_report: {iden_report}\n\trefseq: {refseq}\n"
+                    f"\tcustom_ref_file: {reffile}\nbootstrap: {bootstrap}\n"
+                    f"\tvisualize_bootstrap: {visualize_bootstrap}\n\t\tbootstrap_viz_file: {bootstrap_viz_file}\n\t\tsave_as: {save_as}\n\t\tfull_spectrum_xaxis: {full_spectrum_xaxis}")
+
+        f.write(f"Selected Options...\n{arg_string}\n")
+        
+        print(f"\nModel Used:\t{model}\nEncoding Method:\t{encoding_method}\nBootstrap:\t{str(bootstrap)}\n")
 
     temp_input_file_path = None
     if not os.path.isfile(input_sequence):
@@ -556,7 +575,8 @@ def run_optics_predictions(input_sequence, pred_dir=None, output='optics_predict
     try:
         names, mean_preds, ci_lows, ci_ups, pred_dict, preds, median_preds, iden_list, std_devs, seq_lens_list, removed = process_sequences_from_file(
             input_sequence_path, model, blastp_file, blastp, refseq, reffile, bootstrap, 
-            bootstrap_num, encoding_method, wrk_dir, model_version, preload_to_memory, n_jobs, tolerate_non_standard_aa
+            bootstrap_num, encoding_method, wrk_dir, model_version, preload_to_memory, n_jobs, 
+            tolerate_non_standard_aa, tolerate_incomplete_seqs
         )
 
         output_path = f'{report_dir}/{output_prefix}_predictions.tsv'
@@ -607,16 +627,8 @@ def run_optics_predictions(input_sequence, pred_dir=None, output='optics_predict
                 for seq_name in removed:
                     f.write(f"{seq_name}\n")
 
-        # Write log file and color annotations...
-        with open(log_file, 'w') as f:
-            arg_string = (f"input_sequence: {input_sequence}\nreport_dir: {report_dir}\n"
-                        f"output_file: {output}\nmodel: {model}\nencoding_method: {encoding_method}\n"
-                        f"blastp: {blastp}\nblastp_report: {iden_report}\nrefseq: {refseq}\n"
-                        f"custom_ref_file: {reffile}\nbootstrap: {bootstrap}\n"
-                        f"\tvisualize_bootstrap: {visualize_bootstrap}\n\t\tbootstrap_viz_file: {bootstrap_viz_file}\n\t\tsave_as: {save_as}\n\t\tfull_spectrum_xaxis: {full_spectrum_xaxis}")
-            f.write(f"Selected Options...\n{arg_string}\n")
-            print(f"\nModel Used:\t{model}\nEncoding Method:\t{encoding_method}\n")
-        
+
+        # Color annotations for phylo-trees        
         if 'hex_color_list' in locals() and hex_color_list:
             with open(f'{report_dir}/fig_tree_color_annotation.txt', 'w') as g:
                 g.write("Name\t!color\n")
@@ -675,6 +687,10 @@ if __name__ == '__main__':
                             help="Allows OPTICS to run predictions on sequences with 'non-standard' amino-acids (e.g. - 'X','O','B', etc...)(optional)", 
                             action="store_true",
                             default=True)
+    parser.add_argument("--tolerate_incomplete_seqs",
+                            help="Allows OPTICS to run predictions on sequences outside the predefined limits of 250-650 amino-acids. (optional) NOTE - if you enable this option, then you may get predictions on incomplete sequences, which may not be accurate.", 
+                            action="store_true",
+                            default=False)
     parser.add_argument("--n_jobs",
                         help="Number of parallel processes to run.\n-1 is the default, utilizing all avaiable processors.", 
                         type=int,
@@ -721,8 +737,10 @@ if __name__ == '__main__':
     
     args = parser.parse_args()
 
+    command_run = " ".join(sys.argv)
+    
     run_optics_predictions(args.input, args.output_dir,
                         args.prediction_prefix, args.model, args.encoding,
                         args.blastp, args.blastp_report, args.refseq, args.custom_ref_file,
                         args.bootstrap, args.bootstrap_num, args.visualize_bootstrap, args.bootstrap_viz_file, args.save_viz_as, 
-                        args.full_spectrum_xaxis, args.model_version, False, args.n_jobs, args.tolerate_non_standard_aa)
+                        args.full_spectrum_xaxis, args.model_version, False, args.n_jobs, args.tolerate_non_standard_aa, args.tolerate_incomplete_seqs, command_run)
