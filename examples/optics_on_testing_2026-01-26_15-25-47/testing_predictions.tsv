@@ -1,0 +1,6 @@
+Names	Single_Prediction	Prediction_Means	Prediction_Medians	Prediction_Lower_Bounds	Prediction_Upper_Bounds	Std_Deviation	%Identity_Nearest_VPOD_Sequence	Sequence_Length	Lmax_Hex_Color
+Neogonodactylus_oerstedii|334	388.6	397.0	388.1	387.2	447.9	17.7	100.0	349	#700092
+Neogonodactylus_oerstedii|383	381.7	392.8	384.1	370.4	435.1	18.6	100.0	405	#6f0086
+Bombus_impatiens|539	538.1	538.8	538.4	532.2	548.3	3.7	88.889	377	#7dff00
+Bombus_impatiens|424	443.5	440.0	439.5	429.6	454.4	7.1	87.302	379	#0000ff
+Bombus_impatiens|347	350.4	349.8	350.0	346.5	352.8	1.6	100.0	371	#610061

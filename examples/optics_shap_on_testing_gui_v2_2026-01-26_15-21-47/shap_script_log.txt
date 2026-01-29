@@ -1,0 +1,53 @@
+Command executed:
+GUI_Execution
+
+
+SHAP Comparison: Neogonodactylus_oerstedii|334 vs Neogonodactylus_oerstedii|383
+	Neogonodactylus_oerstedii|334 Prediction: 388.6nm || Neogonodactylus_oerstedii|383 Prediction: 381.7nm
+	Actual Pred difference: 6.90nm
+	Sum of SHAP difference: 6.91nm
+
+SHAP Comparison: Neogonodactylus_oerstedii|334 vs Bombus_impatiens|539
+	Neogonodactylus_oerstedii|334 Prediction: 388.6nm || Bombus_impatiens|539 Prediction: 538.1nm
+	Actual Pred difference: -149.50nm
+	Sum of SHAP difference: -149.55nm
+
+SHAP Comparison: Neogonodactylus_oerstedii|334 vs Bombus_impatiens|424
+	Neogonodactylus_oerstedii|334 Prediction: 388.6nm || Bombus_impatiens|424 Prediction: 443.5nm
+	Actual Pred difference: -54.90nm
+	Sum of SHAP difference: -54.89nm
+
+SHAP Comparison: Neogonodactylus_oerstedii|334 vs Bombus_impatiens|347
+	Neogonodactylus_oerstedii|334 Prediction: 388.6nm || Bombus_impatiens|347 Prediction: 350.4nm
+	Actual Pred difference: 38.20nm
+	Sum of SHAP difference: 38.21nm
+
+SHAP Comparison: Neogonodactylus_oerstedii|383 vs Bombus_impatiens|539
+	Neogonodactylus_oerstedii|383 Prediction: 381.7nm || Bombus_impatiens|539 Prediction: 538.1nm
+	Actual Pred difference: -156.40nm
+	Sum of SHAP difference: -156.46nm
+
+SHAP Comparison: Neogonodactylus_oerstedii|383 vs Bombus_impatiens|424
+	Neogonodactylus_oerstedii|383 Prediction: 381.7nm || Bombus_impatiens|424 Prediction: 443.5nm
+	Actual Pred difference: -61.80nm
+	Sum of SHAP difference: -61.80nm
+
+SHAP Comparison: Neogonodactylus_oerstedii|383 vs Bombus_impatiens|347
+	Neogonodactylus_oerstedii|383 Prediction: 381.7nm || Bombus_impatiens|347 Prediction: 350.4nm
+	Actual Pred difference: 31.30nm
+	Sum of SHAP difference: 31.30nm
+
+SHAP Comparison: Bombus_impatiens|539 vs Bombus_impatiens|424
+	Bombus_impatiens|539 Prediction: 538.1nm || Bombus_impatiens|424 Prediction: 443.5nm
+	Actual Pred difference: 94.60nm
+	Sum of SHAP difference: 94.66nm
+
+SHAP Comparison: Bombus_impatiens|539 vs Bombus_impatiens|347
+	Bombus_impatiens|539 Prediction: 538.1nm || Bombus_impatiens|347 Prediction: 350.4nm
+	Actual Pred difference: 187.70nm
+	Sum of SHAP difference: 187.76nm
+
+SHAP Comparison: Bombus_impatiens|424 vs Bombus_impatiens|347
+	Bombus_impatiens|424 Prediction: 443.5nm || Bombus_impatiens|347 Prediction: 350.4nm
+	Actual Pred difference: 93.10nm
+	Sum of SHAP difference: 93.10nm

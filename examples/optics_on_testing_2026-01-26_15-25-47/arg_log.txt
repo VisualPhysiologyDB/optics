@@ -1,0 +1,17 @@
+Selected Options...
+input_sequence: D:/safra/Github/optics/examples/optics_ex_short.fasta
+report_dir: D:/safra/Github/optics/examples/optics_on_testing_2026-01-26_15-25-47
+output_file: testing
+model: whole-dataset-mnm
+encoding_method: aa_prop
+tolerate_non_standard_aa: True
+tolerate_incomplete_seqs: False
+blastp: True
+	blastp_report: blastp_report.txt
+	refseq: bovine
+	custom_ref_file: None
+bootstrap: True
+	visualize_bootstrap: True
+		bootstrap_viz_file: bootstrap_viz
+		save_as: svg
+		full_spectrum_xaxis: False

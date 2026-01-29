@@ -1,0 +1,6 @@
+query_id,status,closest_match_id,match_species,match_opsin_family,match_accession,match_lambda_max,percent_identity,alignment_length,mismatches,gap_opens,e_value,differences_from_match
+Bombus_impatiens|347,Success,MNM1655,Bombus_ impatiens,"opsin, ultraviolet-sensitive [Bombus impatiens]",NP_001267052.1,352.0,100.0,371,0,0,0.0,No Differences
+Bombus_impatiens|424,Success,S801,Apis_cerana,,AB355817,430.0,87.302,378,47,1,0.0,E3K; H13Y; G23A; I25P; Y30H; W35F; F39L; V52L; P67S; A71P; M100I; A112V; A114S; S125A; F178Y; L183F; E194D; Q196E; M205T; S206C; T217I; V220I; Y221L; Q225R; Q228N; R235K; V246A; L248V; M273L; A276V; F277Y; I286V; L293V; H335S; S337A; A338T; V340A; S347T
+Bombus_impatiens|539,Success,MNM1706,Apis_mellifera,,U26026,529.0,88.889,378,40,2,0.0,S3A; A4V; L5S; A14N; H33N; F37Y; L49M; I53V; D83N; T149S; L155I; L158I; G159A; I166G; S193N; D197G; I198L; V199L; V201A; I204L; L205V; L206C; S208G; F214V; W221Y; Y225F; W273F; S277N; Y287F; A328S; P329-; T330S; T334V; V337T
+Neogonodactylus_oerstedii|383,Success,MNM1565,Neogonodactylus_oerstedii,SWS/UVS,STO|Neoer|UVS|AIF73508,383.0,100.0,368,0,0,0.0,A348-
+Neogonodactylus_oerstedii|334,Success,MNM1700,Neogonodactylus_oerstedii,SWS/UVS,STO|Neoer|UVS|AIF73507,388.0,100.0,349,0,0,0.0,No Differences
