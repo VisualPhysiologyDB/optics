@@ -1,4 +1,4 @@
-load Bombus_impatiens_347_structure_heatmap.pdb
+load U57536_structure_heatmap.pdb
 hide everything
 show cartoon
 spectrum b, blue_white_red, minimum=0, maximum=100

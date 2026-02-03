@@ -17,12 +17,17 @@ import shap
 import xgboost
 import pandas as pd
 import numpy as np
+
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 from matplotlib.offsetbox import AnchoredText
 from tqdm import tqdm
 from openpyxl import Workbook
 from openpyxl.styles import PatternFill
+
+
 
 from deepBreaks.utils import load_obj
 from deepBreaks.preprocessing import read_data
@@ -135,6 +140,20 @@ def _worker_process_shap_sequence(name, sequence, model_path, alignment_data, wr
         encoded_test = None
         new_seq_test = None
         
+        ali_names, ali_seqs = extract_fasta_entries(temp_ali_path)
+        if ali_seqs:
+            aligned_query_string = str(ali_seqs[-1]).split('\n')[1]
+            aligned_ref_string = str(ali_seqs[0]).split('\n')[1]
+
+            # Find the equivalent position in the aligned sequence
+            ref_to_query_mapping = {}
+            for aligned_idx, char in enumerate(aligned_ref_string):
+                if (char != '-' and aligned_query_string[aligned_idx] != '-'):
+                    ref_gaps = aligned_ref_string[:aligned_idx+1].count('-')                        
+                    query_gaps = aligned_query_string[:aligned_idx+1].count('-')
+                    ref_to_query_mapping.update({(aligned_idx+1-ref_gaps):(aligned_idx+1-query_gaps)})
+                        
+        
         # Load reference just to get the shape for slicing (optimization: could pass length, but this is safe)
         ref_copy = read_data(alignment_data, seq_type=seq_type, is_main=True, gap_threshold=0.50)
         last_seq = int(ref_copy.shape[0])
@@ -166,14 +185,12 @@ def _worker_process_shap_sequence(name, sequence, model_path, alignment_data, wr
             return sequence, None
 
         # Return format: (sequence_key, data_dict)
-        # We include 'encoded_seq' here which is NOT in the standard cache, 
-        # but is needed for SHAP. We will separate them later.
-        # UPDATE: We now also include 'aligned_seq_df' to retrieve original Amino Acids.
         return sequence, {
             'name': name,
             'prediction': round(float(prediction[0]), 1),
             'encoded_seq': encoded_test,
             'aligned_seq_df': new_seq_test,  # Raw aligned sequence (dataframe) for AA extraction
+            'ref_to_query_map': ref_to_query_mapping,
             'len': len(sequence)
         }
 
@@ -323,7 +340,6 @@ def generate_shap_explanation(
         raise Exception("No sequences found in input file.")
 
     # --- Caching Setup ---
-    # We use 'reg_models' type for SHAP usually, matching the model dict
     model_type = 'reg_models' 
     cache_dir = f"{wrk_dir}/data/cached_predictions/{model_type}/{model_version}/{encoding_method}"
     os.makedirs(cache_dir, exist_ok=True)
@@ -341,18 +357,12 @@ def generate_shap_explanation(
     alignment_data = model_datasets[model]
     model_path = model_directories[model]
     
-     # Prepare list of sequences to process
-    # We create a tuple: (name, sequence, cached_prediction_value_or_None)
     sequences_to_process = []
-    
-    # Track how many we found in cache for the user's info
     cached_count = 0
     
     for name, seq in zip(names, sequences):
         cached_val = None
         if seq in cached_pred_dict:
-            # Retrieve the 'single_prediction' from the cache dict
-            # Expected format: {'len': 500, 'single_prediction': 495.2, ...}
             cached_val = cached_pred_dict[seq].get('single_prediction')
             cached_count += 1
         
@@ -366,20 +376,18 @@ def generate_shap_explanation(
     print(f"Processing {len(sequences_to_process)} sequences (alignment & encoding required for all)...\n")
         
     with tqdm_joblib(tqdm(total=len(sequences_to_process), desc="Processing Sequences", unit="seq", bar_format="{l_bar}{bar:25}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}{postfix}]")) as pbar:
-        # We pass the cached_val to the worker
         mp_results = Parallel(n_jobs=n_jobs, backend='loky')(
             delayed(_worker_process_shap_sequence)(
                 name, seq, model_path, alignment_data, wrk_dir, cached_val
             ) for name, seq, cached_val in sequences_to_process
         )    
     
-    # Process results from workers
     newly_predicted_count = 0
     valid_processed_data = []
     names = []
     predictions = []
     seq_lens_list = []
-    
+        
     for seq_key, result_data in mp_results:
         if result_data:
             valid_processed_data.append(result_data)
@@ -388,7 +396,6 @@ def generate_shap_explanation(
             predictions.append(result_data['prediction'])
             seq_lens_list.append(result_data['len'])
             
-            # Update cache only if it wasn't there before
             if seq_key not in cached_pred_dict:
                 cached_pred_dict[seq_key] = {
                     'len': result_data['len'],
@@ -398,7 +405,6 @@ def generate_shap_explanation(
         else:
             print(f"Failed to process sequence: {seq_key[:20]}...")
     
-    # Update Cache File
     if newly_predicted_count > 0:
         print(f"Saving {newly_predicted_count} new predictions to cache file...")
         try:
@@ -412,11 +418,8 @@ def generate_shap_explanation(
 
     # --- Setup SHAP Explainer (Once) ---
     print("\nInitializing SHAP Explainer (Loading reference dataset)...")
-    # Load the model in main thread for SHAP
     loaded_mod = load_obj(model_path)
     
-    # We must load the background data for the TreeExplainer
-    # We do this once here instead of inside the loop
     ref_seq_type = 'aa'
     ref_df = read_data(alignment_data, seq_type=ref_seq_type, is_main=True, gap_threshold=0.50)
     encoded_refs = loaded_mod[0].transform(ref_df)
@@ -425,10 +428,20 @@ def generate_shap_explanation(
     base_value = explainer.expected_value
     print(f"SHAP Base Value (Average Predicted λmax): {float(base_value):.1f} nm")
 
+    # --- Load Translation Dictionary (Mandatory for True Positions) ---
+    # We load this even if use_reference_sites is False for plotting, 
+    # because we need it for the output CSV column.
+    try:
+        site_translation_df = pd.read_csv(imp_report_directory)
+        site_translation_dict = dict(zip(site_translation_df['feature'], site_translation_df['true_position']))
+        print("Site translation dictionary loaded for 'reference_position' mapping.")
+    except Exception as e:
+        print(f"Warning: Could not load site translation file ({imp_report_directory}). 'true_position' column will default to feature names.")
+        site_translation_dict = None
+
     # --- Calculate SHAP Values ---
     print(f"Calculating SHAP values for {len(valid_processed_data)} sequences...")
     
-    # We iterate and calculate SHAP.
     final_data_for_plotting = []
     shap_value_pred_list = []
     
@@ -440,7 +453,8 @@ def generate_shap_explanation(
             'name': item['name'],
             'prediction': item['prediction'],
             'encoded_seq': encoded_seq,
-            'aligned_seq_df': item['aligned_seq_df'], # Include aligned DF for AA extraction
+            'aligned_seq_df': item['aligned_seq_df'],
+            'ref_to_query_map': item['ref_to_query_map'],
             'shap_values': shap_values
         })
 
@@ -450,112 +464,30 @@ def generate_shap_explanation(
         'SHAP_Prediction': shap_value_pred_list,
         'Sequence_Length': seq_lens_list,
     })
-    # Write the prediction resultss to csv file for good posterity of the user
     just_prediction_data.to_csv(f'{report_dir}/{clean_output_name}_predictions.csv', sep=',', index=False)
     
-    # --- Prediction Matrix Generation (All-to-All Top Triangle) ---
+    # --- Prediction Matrix Generation ---
     if len(final_data_for_plotting) > 1:
-        print("\nCalculating All-to-All Prediction Differences Matrix...")
+        # (Same matrix logic as original)
         names_list = [d['name'] for d in final_data_for_plotting]
         preds_list = [d['prediction'] for d in final_data_for_plotting]
         n_seqs = len(names_list)
-        
-        # Initialize matrix with NaNs
         diff_matrix = np.full((n_seqs, n_seqs), np.nan)
-        
         for i in range(n_seqs):
             for j in range(n_seqs):
-                # Calculate difference for top triangle (including diagonal)
-                # Matrix[i, j] = Pred[i] - Pred[j]
                 if i <= j:
                     diff_matrix[i, j] = preds_list[i] - preds_list[j]
-        
         diff_df = pd.DataFrame(diff_matrix, index=names_list, columns=names_list)
-        
-        # Save standard CSV
         diff_df.to_csv(f'{report_dir}/{clean_output_name}_prediction_diff_matrix.csv')
-        
-        # Save Excel with color coding (Heatmap style)
-        try:
-            #print(f"Generating color-coded Excel matrix...")
-            excel_path = f'{report_dir}/{clean_output_name}_prediction_diff_matrix_for_excel.xlsx'
-            
-            # Use matplotlib to generate colors map
-            
-            # Flatten values to find min/max for color scaling, ignoring NaNs
-            valid_vals = diff_matrix[~np.isnan(diff_matrix)]
-            
-            if len(valid_vals) > 0:
-                # Center colormap at 0 (white) for difference matrix logic
-                # Find largest absolute deviation to make scale symmetric
-                max_abs = np.max(np.abs(valid_vals))
-                if max_abs == 0: max_abs = 1.0 # Avoid division by zero
-                
-                norm = mcolors.Normalize(vmin=-max_abs, vmax=max_abs)
-                cmap = plt.get_cmap('coolwarm')
-                
-                wb = Workbook()
-                ws = wb.active
-                ws.title = "Prediction Differences"
-                
-                # Write Header Row
-                ws.append([''] + names_list)
-                
-                for i in range(n_seqs):
-                    row_name = names_list[i]
-                    
-                    # Prepare row values. Convert np.nan to "" for cleaner Excel
-                    row_data_cleaned = []
-                    for j in range(n_seqs):
-                        val = diff_matrix[i, j]
-                        if np.isnan(val):
-                            row_data_cleaned.append("")
-                        else:
-                            row_data_cleaned.append(val)
-                    
-                    # Append Row
-                    ws.append([row_name] + row_data_cleaned)
-                    
-                    # Apply Colors
-                    for j in range(n_seqs):
-                        val = diff_matrix[i, j]
-                        if not np.isnan(val):
-                            # Get RGBA from cmap
-                            rgba = cmap(norm(val))
-                            # Convert to Hex (remove #)
-                            hex_color = mcolors.to_hex(rgba).replace('#', '')
-                            
-                            # Apply Fill
-                            # Row: i + 2 (1-based index: +1 for 0-idx, +1 for header)
-                            # Col: j + 2 (1-based index: +1 for 0-idx, +1 for Name column)
-                            ws.cell(row=i+2, column=j+2).fill = PatternFill(
-                                start_color=hex_color, 
-                                end_color=hex_color, 
-                                fill_type="solid"
-                            )
-                            
-                wb.save(excel_path)
-                #print(f"Saved color-coded prediction matrix to: {excel_path}")
 
-        except Exception as e:
-            print(f"Could not save formatted Excel matrix (requires openpyxl): {e}")
-            import traceback
-            traceback.print_exc()
-            print(f"Standard CSV matrix saved.")
-
-    # --- Visualization Modes ---
-    if use_reference_sites == True and model!="type-one":
-        site_translation_df = pd.read_csv(imp_report_directory)
-        site_translation_dict = dict(zip(site_translation_df['feature'],site_translation_df['true_position']))
-    else:
-        site_translation_dict = None
-
+    # --- Visualization & Data Saving ---
     # MODE: SINGLE
     if mode in ['single', 'both']:
         print("\n--- Generating Individual SHAP Explanations ---")
         for data in final_data_for_plotting:
             save_single_plot(
-                data, base_value, report_dir, save_as, encoding_method, site_translation_dict, ref_seq_name, n_positions
+                data, base_value, report_dir, save_as, encoding_method, 
+                site_translation_dict, ref_seq_name, n_positions, use_reference_sites
             )
 
     # MODE: COMPARISON
@@ -565,17 +497,17 @@ def generate_shap_explanation(
         else:
             pairs = list(itertools.combinations(final_data_for_plotting, 2))
             print(f"\n--- Generating Pairwise Comparisons ({len(pairs)} pairs) ---")
-            
             for seq1_data, seq2_data in pairs:
                 save_comparison_plot(
                     seq1_data, seq2_data, report_dir, save_as, encoding_method, 
-                    cmd_line, log_file_path if cmd_line else None, site_translation_dict, ref_seq_name, n_positions
+                    cmd_line, log_file_path if cmd_line else None, 
+                    site_translation_dict, ref_seq_name, n_positions, use_reference_sites
                 )
 
     print(f"\nAnalysis complete. Results saved to: {report_dir}")
 
 
-def save_single_plot(data, base_value, report_dir, save_as, encoding_method, site_translation_dict, ref_seq_name, n_positions):
+def save_single_plot(data, base_value, report_dir, save_as, encoding_method, site_translation_dict, ref_seq_name, n_positions, use_reference_sites_for_plot):
     """Generates and saves a bar plot explaining the prediction of a single sequence."""
     
     name = data['name']
@@ -583,32 +515,65 @@ def save_single_plot(data, base_value, report_dir, save_as, encoding_method, sit
     shap_vals = data['shap_values'][0]
     features = data['encoded_seq']
     aligned_df = data['aligned_seq_df']
+    ref_to_query_dict = data['ref_to_query_map']
+    
+    # 1. Generate the 'reference_position' list (Reference Numbering)
+    # This is critical for structure mapping, so we do it even if not plotting it.
+    reference_position_col = []
+    query_position_col = []
     
     if isinstance(site_translation_dict, dict):
         if encoding_method == "one_hot":
-            trans_site_list = []
             for feature in features.columns:
                 try:
-                    trans_site_list.append(f"{site_translation_dict[int(feature.split('_')[0][1:])]:.0f}_{feature.split('_')[1]}")
+                    # Extract numeric part P123_H -> 123
+                    pos_idx = int(feature[1:].split('_')[0])
+                    mapped_pos = site_translation_dict.get(pos_idx, feature)
+                    query_pos = ref_to_query_dict.get(mapped_pos,'NA')
+                    query_position_col.append(query_pos)
+                    
+                    # Format: 123_H
+                    if isinstance(mapped_pos, (int, float)):
+                         reference_position_col.append(f"{mapped_pos:.0f}_{feature.split('_')[1]}")
+                    else:
+                         reference_position_col.append(str(mapped_pos))
                 except:
-                    #print(f'Exception was triggered for {feature}')
-                    trans_site_list.append(feature)
+                    reference_position_col.append(feature)
+                    query_position_col.append('NA')
+
         else:
-            trans_site_list = [f"{site_translation_dict[feature[1:]]:.0f}_{feature.split('_')[1]}" for feature in features.columns]
-        
-        df = pd.DataFrame({
-            'feature': features.columns,
-            'state': features.values[0],
-            'shap_effect': shap_vals,
-            'true_position': trans_site_list
-        })
+            # AA Prop: P123_Hydrophobicity
+            for feature in features.columns:
+                try:
+                    pos_idx = feature[1:] # P123 -> 123
+                    mapped_pos = site_translation_dict.get(pos_idx, feature)
+                    #print(f'this is the mapped poistion...{mapped_pos}')
+                    query_pos = ref_to_query_dict.get(int(mapped_pos),'NA')
+                    #print(f'this is the query position...{query_pos}')
+                    query_position_col.append(query_pos)
+                    
+                     # Format: 123_Hydrophobicity
+                    if isinstance(mapped_pos, (int, float)):
+                        reference_position_col.append(f"{mapped_pos:.0f}_{feature.split('_')[1]}")
+                    else:
+                        reference_position_col.append(str(mapped_pos))
+                except:
+                    reference_position_col.append(feature)
+                    query_position_col.append('NA')
+
     else:
-        df = pd.DataFrame({
-            'feature': features.columns,
-            'state': features.values[0],
-            'shap_effect': shap_vals,
-            'true_position': features.columns # Fallback
-        })
+        reference_position_col = features.columns.tolist()
+        query_position_col.append('NA' for feats in reference_position_col)
+        print('Site translation not working...')
+
+    # Create DataFrame
+    df = pd.DataFrame({
+        'feature': features.columns,
+        'state': features.values[0],
+        'shap_effect': shap_vals,
+        'reference_position': reference_position_col,
+        'query_position': query_position_col
+    })
     
     # Add Observed Amino Acid Column
     obs_aas = []
@@ -616,7 +581,7 @@ def save_single_plot(data, base_value, report_dir, save_as, encoding_method, sit
         obs_aas.append(get_obs_aa(feat, aligned_df, encoding_method))
     df['observed_aa'] = obs_aas
     
-    # Add display values (non-scaled for aa_prop, original for one_hot)
+    # Add display values
     display_values = []
     for idx, row in df.iterrows():
         display_val = get_property_display_value(row['feature'], row['state'], row['observed_aa'], encoding_method)
@@ -625,7 +590,7 @@ def save_single_plot(data, base_value, report_dir, save_as, encoding_method, sit
 
     df['abs_shap'] = df['shap_effect'].abs()
     
-    # Save full data to CSV with observed AA
+    # Save full data to CSV with observed AA and TRUE POSITIONS
     safe_name = name.replace('|', '_').replace('/', '_')
     df.sort_values(by='abs_shap', ascending=False).to_csv(f'{report_dir}/{safe_name}_shap_analysis.csv', index=False)
 
@@ -639,29 +604,29 @@ def save_single_plot(data, base_value, report_dir, save_as, encoding_method, sit
     
     colors = ["#30c898d9" if x < 0 else "#f4a365ec" for x in df['shap_effect']]
     
-    if isinstance(site_translation_dict, dict):
-        bars = ax.barh(df['true_position'], df['shap_effect'], color=colors)
+    # Select Y-axis labels based on user preference
+    if use_reference_sites_for_plot and isinstance(site_translation_dict, dict):
+        y_labels = df['reference_position']
+        y_axis_title = f'Amino Acid Position ({ref_seq_name} Reference)'
     else:
-        bars = ax.barh(df['feature'], df['shap_effect'], color=colors)
+        y_labels = df['feature']
+        y_axis_title = 'Feature'
+
+    bars = ax.barh(y_labels, df['shap_effect'], color=colors)
 
     for i, bar in enumerate(bars):
         display_val = df['display_value'].iloc[i]
         obs_aa = df['observed_aa'].iloc[i]
         
-        # Format label: Display Value (AA)
-        if encoding_method == 'aa_prop' and 'SCT' not in df['feature']:
-            # For aa_prop, format as float with appropriate precision
+        if encoding_method == 'aa_prop' and 'SCT' not in df['feature'].iloc[i]:
             try:
-                # Check if it's a number that can be formatted
                 float_val = float(display_val)
-                val_str = f"{float_val:.2f}"  # Always 2 decimal places for properties
+                val_str = f"{float_val:.2f}"
             except:
                 val_str = str(display_val)
         else:
-            # For one_hot, just show as integer
             val_str = f"{int(display_val)}"
         
-        # Add AA if successfully retrieved
         label_str = f" {val_str} ({obs_aa}) " if obs_aa != "?" else f" {val_str} "
 
         ax.text(0, bar.get_y() + bar.get_height()/2, label_str,
@@ -670,13 +635,8 @@ def save_single_plot(data, base_value, report_dir, save_as, encoding_method, sit
 
     ax.axvline(0, color='grey', linewidth=2, linestyle='--')
     ax.set_xlabel(r'Impact on Predicted $λ_{max}$ (nm)', fontsize=13)
-    
-    if isinstance(site_translation_dict, dict):
-        ax.set_ylabel(f'Amino Acid Position ({ref_seq_name} Reference)', fontsize=13)
-    else: 
-        ax.set_ylabel('Feature', fontsize=13)
+    ax.set_ylabel(y_axis_title, fontsize=13)
 
-    #ax.set_title(f'SHAP Explanation: {name}\nPrediction: {prediction:.2f}nm | Base Shap Value: {float(base_value):.2f}nm', fontsize=13)
     ymin, ymax = ax.get_ylim()
     xmin, xmax = ax.get_xlim()
 
@@ -691,7 +651,6 @@ def save_single_plot(data, base_value, report_dir, save_as, encoding_method, sit
     
     if encoding_method == 'one_hot':
         legend_text = "1 = Present // 0 = Absent"
-
         anchored_text = AnchoredText(legend_text, loc='lower right',
                                     prop=dict(size=10, ha='right'), frameon=True,
                                     pad=0.5, borderpad=0.5)
@@ -707,31 +666,45 @@ def save_single_plot(data, base_value, report_dir, save_as, encoding_method, sit
     plt.close()
 
 
-def save_comparison_plot(seq1, seq2, report_dir, save_as, encoding_method, cmd_line=None, log_path=None, site_translation_dict=None, ref_seq_name="Bovine", n_positions=10):
-    """Generates and saves a comparative SHAP plot (Sequence 1 vs Sequence 2)."""    
+def save_comparison_plot(seq1, seq2, report_dir, save_as, encoding_method, cmd_line=None, log_path=None, site_translation_dict=None, ref_seq_name="Bovine", n_positions=10, use_reference_sites_for_plot=False):
+    """Generates and saves a comparative SHAP plot."""    
     
     name1 = seq1['name']
     name2 = seq2['name']
-
     shap_diff = seq1['shap_values'][0] - seq2['shap_values'][0]
     
     feat1_vals = seq1['encoded_seq'].values[0]
     feat2_vals = seq2['encoded_seq'].values[0]
     cols = seq1['encoded_seq'].columns
-    
     mask = (feat1_vals != feat2_vals)
     
+    # Generate True Positions for masking
+    masked_true_pos = []
+    
     if isinstance(site_translation_dict, dict):
+        masked_cols = np.array(cols)[mask]
         if encoding_method == "one_hot":
-            trans_site_list = []
-            for feature in np.array(cols)[mask]:
+            for feature in masked_cols:
                 try:
-                    trans_site_list.append(f"{site_translation_dict[int(feature.split('_')[0][1:])]:.0f}_{feature.split('_')[1]}")
+                    pos_idx = int(feature[1:].split('_')[0])
+                    mapped_pos = site_translation_dict.get(pos_idx, feature)
+                    if isinstance(mapped_pos, (int, float)):
+                        masked_true_pos.append(f"{mapped_pos:.0f}_{feature.split('_')[1]}")
+                    else:
+                        masked_true_pos.append(str(mapped_pos))
                 except:
-                    print(f'Exception was triggered for {feature}')
-                    trans_site_list.append(feature)          
+                    masked_true_pos.append(feature)          
         else:
-            trans_site_list = [f"{site_translation_dict[feature[1:]]:.0f}_{feature.split('_')[1]}" for feature in np.array(cols)[mask]]
+            for feature in masked_cols:
+                try:
+                    pos_idx = feature[1:]
+                    mapped_pos = site_translation_dict.get(pos_idx, feature)
+                    if isinstance(mapped_pos, (int, float)):
+                         masked_true_pos.append(f"{mapped_pos:.0f}_{feature.split('_')[1]}")
+                    else:
+                         masked_true_pos.append(str(mapped_pos))
+                except:
+                    masked_true_pos.append(feature)
         
         comparison_df = pd.DataFrame({
             'feature': np.array(cols)[mask],
@@ -740,7 +713,7 @@ def save_comparison_plot(seq1, seq2, report_dir, save_as, encoding_method, cmd_l
             f'{name1}_shap': seq1['shap_values'][0][mask],
             f'{name2}_shap': seq2['shap_values'][0][mask],
             'shap_difference': shap_diff[mask], 
-            'true_position': trans_site_list
+            'reference_position': masked_true_pos
         })
     else:
         comparison_df = pd.DataFrame({
@@ -749,17 +722,17 @@ def save_comparison_plot(seq1, seq2, report_dir, save_as, encoding_method, cmd_l
             f'{name2}_states': feat2_vals[mask],
             f'{name1}_shap': seq1['shap_values'][0][mask],
             f'{name2}_shap': seq2['shap_values'][0][mask],
-            'shap_difference': shap_diff[mask]
+            'shap_difference': shap_diff[mask],
+            'reference_position': np.array(cols)[mask] # Fallback
         })
 
     if encoding_method == 'one_hot':
         comparison_df[f'{name1}_states'] = comparison_df[f'{name1}_states'].astype(int)
         comparison_df[f'{name2}_states'] = comparison_df[f'{name2}_states'].astype(int)
 
-    # Get Observed Amino Acids for both sequences
+    # Get Observed Amino Acids
     obs_aa_1 = []
     obs_aa_2 = []
-    
     for feat in comparison_df['feature']:
         obs_aa_1.append(get_obs_aa(feat, seq1['aligned_seq_df'], encoding_method))
         obs_aa_2.append(get_obs_aa(feat, seq2['aligned_seq_df'], encoding_method))
@@ -767,17 +740,15 @@ def save_comparison_plot(seq1, seq2, report_dir, save_as, encoding_method, cmd_l
     comparison_df[f'{name1}_obs_aa'] = obs_aa_1
     comparison_df[f'{name2}_obs_aa'] = obs_aa_2
     
-    # Add display values for both sequences
+    # Display values
     display_vals_1 = []
     display_vals_2 = []
-    
     for idx, row in comparison_df.iterrows():
         display_vals_1.append(get_property_display_value(row['feature'], row[f'{name1}_states'], row[f'{name1}_obs_aa'], encoding_method))
         display_vals_2.append(get_property_display_value(row['feature'], row[f'{name2}_states'], row[f'{name2}_obs_aa'], encoding_method))
     
     comparison_df[f'{name1}_display'] = display_vals_1
     comparison_df[f'{name2}_display'] = display_vals_2
-
     comparison_df['abs_shap_diff'] = comparison_df['shap_difference'].abs()
     
     safe_n1 = name1.replace('|', '_')
@@ -785,70 +756,55 @@ def save_comparison_plot(seq1, seq2, report_dir, save_as, encoding_method, cmd_l
     csv_name = f'{safe_n1}_vs_{safe_n2}_shap_data.csv'
     comparison_df.sort_values(by='abs_shap_diff', ascending=False).to_csv(f'{report_dir}/{csv_name}', index=False)
     
-    pred_diff = seq1['prediction'] - seq2['prediction']
-    log_msg = (f"\nSHAP Comparison: {name1} vs {name2}\n"
-               f"\t{name1} Prediction: {seq1['prediction']}nm || {name2} Prediction: {seq2['prediction']}nm\n"
-               f"\tActual Pred difference: {pred_diff:.2f}nm\n"
-               f"\tSum of SHAP difference: {shap_diff.sum():.2f}nm\n")
-    print(log_msg)
-    if log_path:
-        with open(log_path, 'a') as f:
-            f.write(log_msg)
-
     comparison_df = comparison_df.sort_values(by='abs_shap_diff', ascending=False).head(n_positions)
     comparison_df = comparison_df.sort_values(by='shap_difference')
 
     if comparison_df.empty:
         return
+    
     plt.rcParams['font.family'] = 'sans-serif'
     plt.rcParams['font.sans-serif'] = ['Century Gothic', 'Avenir', 'Helvetica', 'DejaVu Sans', 'Arial']
     fig, ax = plt.subplots(figsize=(12, 6))
     colors = ["#30c898d9" if x < 0 else "#f4a365ec" for x in comparison_df['shap_difference']]
     
-    # changing the amino acid change effects to the inverse sign, so that a transition from state 1 -> state 2 will reflect a decrease in predicted lmax if seq 1 > seq 2
-    if isinstance(site_translation_dict, dict):
-        bars = ax.barh(comparison_df['true_position'], -comparison_df['shap_difference'], color=colors)
+    # Plotting Axis selection
+    if use_reference_sites_for_plot and isinstance(site_translation_dict, dict):
+        bars = ax.barh(comparison_df['reference_position'], -comparison_df['shap_difference'], color=colors)
+        y_label = f'Amino Acid Position ({ref_seq_name} Reference)'
     else:
         bars = ax.barh(comparison_df['feature'], -comparison_df['shap_difference'], color=colors)
-
+        y_label = 'Feature'
 
     for i, bar in enumerate(bars):
         display_a = comparison_df[f'{name1}_display'].iloc[i]
         display_b = comparison_df[f'{name2}_display'].iloc[i]
-        
         obs_a = comparison_df[f'{name1}_obs_aa'].iloc[i]
         obs_b = comparison_df[f'{name2}_obs_aa'].iloc[i]
 
-        # Format display values based on encoding method
         if encoding_method == 'aa_prop' and 'SCT' not in comparison_df['feature'].iloc[i]:
             try:
                 val_str_a = f"{float(display_a):.2f}"
-            except:
-                val_str_a = str(display_a)
+            except: val_str_a = str(display_a)
             try:
                 val_str_b = f"{float(display_b):.2f}"
-            except:
-                val_str_b = str(display_b)
+            except: val_str_b = str(display_b)
         else:
             val_str_a = f"{int(display_a):.0f}"
             val_str_b = f"{int(display_b):.0f}"
         
         label = f" {val_str_a} ({obs_a}) → {val_str_b} ({obs_b}) "
-        
         ax.text(0, bar.get_y() + bar.get_height()/2, label,
                 va='center', ha='right' if bar.get_width() < 0 else 'left',
                 color='black', fontweight='bold', fontsize=10)
 
     ax.axvline(0, color='grey', linewidth=2, linestyle='--')
     ax.set_xlabel(r'Contribution to Difference in Predicted $λ_{max}$ (nm)', fontsize=13)
-    if isinstance(site_translation_dict, dict):
-        ax.set_ylabel(f'Amino Acid Position ({ref_seq_name} Reference)', fontsize=13)
-    else:
-        ax.set_ylabel('Feature', fontsize=12)
+    ax.set_ylabel(y_label, fontsize=12)
     
     ymin, ymax = ax.get_ylim()
     xmin, xmax = ax.get_xlim()
-
+    pred_diff = seq1['prediction'] - seq2['prediction']
+    
     ax.set_ylim(ymin, ymax + 0.80)
     ax.text((xmin + xmax)/2, ymax + 0.55,
             f"{name1} ({seq1['prediction']}) → {name2} ({seq2['prediction']})\n({pred_diff:.1f}nm Difference in Predicted " + r"$λ_{max}$)",
@@ -858,10 +814,8 @@ def save_comparison_plot(seq1, seq2, report_dir, save_as, encoding_method, cmd_l
     ax.tick_params(axis='y', labelrotation=45, labelsize=12)
     ax.tick_params(axis='x', labelsize=12)
 
-
     if encoding_method == 'one_hot':
         legend_text = "1 = Present // 0 = Absent"
-
         anchored_text = AnchoredText(legend_text, loc='lower right',
                                     prop=dict(size=10, ha='right'), frameon=True,
                                     pad=0.5, borderpad=0.5)
@@ -882,21 +836,14 @@ if __name__ == '__main__':
     parser.add_argument("-i", "--input", help="Path to FASTA file", type=str, required=True)
     parser.add_argument("-o", "--output_dir", help="Directory to save output", type=str, default=None)
     parser.add_argument("-p", "--prediction_prefix", help="Prefix for filenames", type=str, default="unnamed")
-    parser.add_argument("--mode", 
-                        help="Analysis mode: 'comparison' (pairwise), 'single' (individual), or 'both'.", 
-                        type=str, default="both", choices=['comparison', 'single', 'both'])
-
+    parser.add_argument("--mode", help="Analysis mode: 'comparison', 'single', 'both'.", type=str, default="both", choices=['comparison', 'single', 'both'])
     parser.add_argument("-v", "--model_version", help="Model version", type=str, default="vpod_1.3", choices=['vpod_1.3'])
     parser.add_argument("-m", "--model", help="Prediction model", type=str, default="whole-dataset")
     parser.add_argument("-e", "--encoding", help="Encoding method", type=str, default="aa_prop", choices=['one_hot', 'aa_prop'])
-    parser.add_argument("--n_positions", help="Number of positions to show on SHAP explanation graphs. Default=10 to limit noisiness.", type=int, default=10)
+    parser.add_argument("--n_positions", help="Number of positions to show on SHAP explanation graphs.", type=int, default=10)
     parser.add_argument("--save_viz_as", help="File type", type=str, default="svg", choices=['svg','png','pdf'])
-    parser.add_argument("--use_reference_sites", help="Use reference site numbering, instead of feature names", action="store_true")
-    
-    parser.add_argument("--n_jobs",
-                        help="Number of parallel processes to run. -1 (default) uses all available.", 
-                        type=int,
-                        default=-1)
+    parser.add_argument("--use_reference_sites", help="Use reference site numbering on plots", action="store_true")
+    parser.add_argument("--n_jobs", help="Number of parallel processes.", type=int, default=-1)
 
     args = parser.parse_args()
     command_run = " ".join(sys.argv)
