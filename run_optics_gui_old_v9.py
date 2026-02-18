@@ -8,8 +8,6 @@ import os
 import math
 import random
 import queue # Import queue for thread-safe logging
-import webbrowser 
-import platform
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -31,14 +29,8 @@ except ImportError:
 # Attempt to import the run_structural_mapping function
 try:
     from optics_structure_map import run_structural_mapping
-except ImportError:
+except:
     print("Warning: Could not import 'run_structural_mapping'. Structure Mapping mode will fail if selected.")
-
-# Attempt to import the run_structure_annotation function
-try:
-    from optics_structure_annotations import run_structure_annotation
-except ImportError:
-    print("Warning: Could not import 'run_structure_annotation'. Annotation mode will fail if selected.")
 
 
 # --- Eye Animation Class ---
@@ -216,14 +208,9 @@ class ModeSelectorFrame(ttk.Frame):
                             command=lambda: self.controller.show_optics_gui('shap'))
         shap_btn.pack(fill=tk.X, pady=10, ipady=10)
 
-        struct_btn = ttk.Button(main_frame, text="Structure SHAP Mapping\n(3D Visualization of SHAP)", style="Big.TButton", 
+        struct_btn = ttk.Button(main_frame, text="Structure Mapping\n(3D Visualization of SHAP)", style="Big.TButton", 
                               command=lambda: self.controller.show_optics_gui('structure'))
         struct_btn.pack(fill=tk.X, pady=10, ipady=10)
-
-        # New Button for Structure Annotations
-        annot_btn = ttk.Button(main_frame, text="Structure Annotations\n(Custom 3D Visualization)", style="Big.TButton", 
-                              command=lambda: self.controller.show_optics_gui('annotations'))
-        annot_btn.pack(fill=tk.X, pady=10, ipady=10)
 
 
 # --- Main Logic Frame ---
@@ -238,10 +225,8 @@ class OpticsGUIFrame(ttk.Frame):
             self.title_suffix = "Predictions"
         elif self.mode == 'shap':
             self.title_suffix = "SHAP Analysis"
-        elif self.mode == 'structure':
+        else:
             self.title_suffix = "Structure Mapping"
-        else: # annotations
-            self.title_suffix = "Structure Annotations"
         
         # --- Choices ---
         self.version_choices = ['vpod_1.3']
@@ -252,7 +237,6 @@ class OpticsGUIFrame(ttk.Frame):
         self.encoding_choices = ['one_hot', 'aa_prop']
         self.refseq_choices = ['bovine', 'squid', 'microbe', 'custom']
         self.viz_ftyp_choices = ['svg', 'png', 'pdf']
-        self.software_choices = ['PyMOL', 'ChimeraX'] # New software choices
         
         # SHAP specific choices
         self.shap_mode_choices = ['both', 'comparison', 'single']
@@ -357,46 +341,12 @@ class OpticsGUIFrame(ttk.Frame):
             ttk.Entry(scrollable_frame, textvariable=self.chain_var, width=60).grid(row=current_row, column=1, padx=5, pady=5, sticky=tk.EW)
             current_row += 1
             
-            self.use_query_pos_var = tk.BooleanVar(value=True)
+            self.use_query_pos_var = tk.BooleanVar(value=False)
             self.query_pos_check = ttk.Checkbutton(scrollable_frame, text="Use Query/Target Sequence Numbering", variable=self.use_query_pos_var)
             self.query_pos_check.grid(row=current_row, column=1, columnspan=2, padx=5, pady=5, sticky=tk.W)
             current_row += 1
             
             ttk.Label(scrollable_frame, text="(If unchecked, defaults to Reference/Bovine numbering from SHAP file)", font=("Century Gothic", 9)).grid(row=current_row, column=1, padx=5, pady=0, sticky=tk.W)
-            current_row += 1
-
-            # New: Map to Bovine Also Checkbox
-            self.map_bovine_also_var = tk.BooleanVar(value=False)
-            self.map_bovine_also_check = ttk.Checkbutton(scrollable_frame, text="Also map to Bovine Rhodopsin (1U19)", variable=self.map_bovine_also_var)
-            self.map_bovine_also_check.grid(row=current_row, column=1, columnspan=2, padx=5, pady=5, sticky=tk.W)
-            current_row += 1
-        
-        elif self.mode == 'annotations':
-            # -- Structure Annotation Inputs --
-            ttk.Label(scrollable_frame, font=("Century Gothic", 12), text="Annotation CSV File:").grid(row=current_row, column=0, padx=5, pady=5, sticky=tk.W)
-            self.annotation_csv_var = tk.StringVar()
-            ttk.Entry(scrollable_frame, textvariable=self.annotation_csv_var, width=60).grid(row=current_row, column=1, padx=5, pady=5, sticky=tk.EW)
-            ttk.Button(scrollable_frame, text="Browse...", command=self.browse_annotation_csv).grid(row=current_row, column=2, padx=5, pady=5)
-            current_row += 1
-            
-            ttk.Label(scrollable_frame, text="(Columns required: 'position'. Optional: 'color', 'style', 'label')", font=("Century Gothic", 9)).grid(row=current_row, column=1, padx=5, pady=0, sticky=tk.W)
-            current_row += 1
-
-            ttk.Label(scrollable_frame, font=("Century Gothic", 12), text="PDB File or ID (e.g. 1U19):").grid(row=current_row, column=0, padx=5, pady=5, sticky=tk.W)
-            self.pdb_input_var = tk.StringVar()
-            ttk.Entry(scrollable_frame, textvariable=self.pdb_input_var, width=60).grid(row=current_row, column=1, padx=5, pady=5, sticky=tk.EW)
-            ttk.Button(scrollable_frame, text="Browse File...", command=self.browse_pdb_file).grid(row=current_row, column=2, padx=5, pady=5)
-            current_row += 1
-            
-            ttk.Label(scrollable_frame, font=("Century Gothic", 12), text="Chain ID:").grid(row=current_row, column=0, padx=5, pady=5, sticky=tk.W)
-            self.chain_var = tk.StringVar(value="A")
-            ttk.Entry(scrollable_frame, textvariable=self.chain_var, width=60).grid(row=current_row, column=1, padx=5, pady=5, sticky=tk.EW)
-            current_row += 1
-
-            # New Software Selection Dropdown
-            ttk.Label(scrollable_frame, font=("Century Gothic", 12), text="Visualization Software:").grid(row=current_row, column=0, padx=5, pady=5, sticky=tk.W)
-            self.software_var = tk.StringVar(value=self.software_choices[1])
-            ttk.Combobox(scrollable_frame, textvariable=self.software_var, values=self.software_choices, state="readonly", width=57).grid(row=current_row, column=1, padx=5, pady=5, sticky=tk.EW)
             current_row += 1
 
         
@@ -506,10 +456,8 @@ class OpticsGUIFrame(ttk.Frame):
              btn_text = "Run OPTICS Predictions"
         elif self.mode == 'shap':
              btn_text = "Run SHAP Analysis"
-        elif self.mode == 'structure':
-             btn_text = "Run Structure Mapping"
         else:
-             btn_text = "Run Structure Annotation"
+             btn_text = "Run Structure Mapping"
 
         self.run_button = ttk.Button(scrollable_frame, text=btn_text, command=self.start_run_thread)
         self.run_button.grid(row=current_row, column=0, columnspan=3, padx=5, pady=20)
@@ -521,73 +469,17 @@ class OpticsGUIFrame(ttk.Frame):
         self.output_text = scrolledtext.ScrolledText(scrollable_frame, wrap=tk.WORD, height=15, width=80, font=("Century Gothic", 10))
         self.output_text.grid(row=current_row, column=0, columnspan=3, padx=5, pady=5, sticky=tk.NSEW)
         self.output_text.configure(state='disabled') 
-
-        # Setup Hyperlink Tags for Output Log
-        self.output_text.tag_config("hyperlink", foreground="#3498db", underline=1)
-        self.output_text.tag_bind("hyperlink", "<Button-1>", self.open_hyperlink)
-        self.output_text.tag_bind("hyperlink", "<Enter>", lambda e: self.output_text.config(cursor="hand2"))
-        self.output_text.tag_bind("hyperlink", "<Leave>", lambda e: self.output_text.config(cursor=""))
         
         scrollable_frame.columnconfigure(1, weight=1) 
         
         # Loading Screen placeholder
         self.loading_screen = None
 
-    def open_hyperlink(self, event):
-        """Opens the directory linked in the text widget."""
-        try:
-            index = self.output_text.index(f"@{event.x},{event.y}")
-            # Get the text range of the tag at this index
-            tags = self.output_text.tag_names(index)
-            if "hyperlink" in tags:
-                # Find the bounds of the current hyperlink
-                start = self.output_text.index(f"{index} wordstart")
-                # Adjust start if needed to capture full path including slashes/colons
-                # Simple approach: grab the whole line and extract the path we inserted
-                line_idx = index.split('.')[0]
-                line_text = self.output_text.get(f"{line_idx}.0", f"{line_idx}.end")
-                
-                # In write_to_log, we strip the prefix. Let's rely on the text content.
-                # Since we insert just the path with the tag, we can try to extract it.
-                # Better: The 'current' index points to the char.
-                # Let's just grab the whole tagged range.
-                ranges = self.output_text.tag_ranges("hyperlink")
-                for start_idx, end_idx in zip(ranges[0::2], ranges[1::2]):
-                    if self.output_text.compare(start_idx, "<=", index) and self.output_text.compare(index, "<", end_idx):
-                        path_to_open = self.output_text.get(start_idx, end_idx).strip()
-                        # Handle potential file:/// prefix if we added it, though os.startfile usually handles paths
-                        if path_to_open.startswith("file:///"):
-                             path_to_open = path_to_open[8:]
-                        
-                        if platform.system() == "Windows":
-                            os.startfile(path_to_open)
-                        elif platform.system() == "Darwin":
-                            subprocess.call(["open", path_to_open])
-                        else:
-                            subprocess.call(["xdg-open", path_to_open])
-                        return
-        except Exception as e:
-            messagebox.showerror("Error", f"Could not open path: {e}")
-
     def write_to_log(self, message, tag):
         """Called by the main controller to update the log widget."""
         try:
             self.output_text.configure(state='normal')
-            
-            # Check for special Link Token
-            link_token = ">>>LINK<<<"
-            if link_token in message:
-                parts = message.split(link_token)
-                # Insert pre-text
-                if parts[0]:
-                    self.output_text.insert(tk.END, parts[0], (tag,))
-                # Insert Link
-                link_path = parts[1].strip()
-                self.output_text.insert(tk.END, link_path, ("hyperlink",))
-                self.output_text.insert(tk.END, "\n") # Ensure newline after link
-            else:
-                self.output_text.insert(tk.END, message, (tag,))
-                
+            self.output_text.insert(tk.END, message, (tag,))
             self.output_text.see(tk.END)
             self.output_text.configure(state='disabled')
         except Exception:
@@ -623,13 +515,6 @@ class OpticsGUIFrame(ttk.Frame):
                                                           ("All files", "*.*")))
         if filename:
             self.shap_csv_var.set(filename)
-    
-    def browse_annotation_csv(self):
-        filename = filedialog.askopenfilename(title="Select Annotation CSV/TSV",
-                                               filetypes=(("CSV/TSV files", "*.csv *.tsv *.txt"),
-                                                          ("All files", "*.*")))
-        if filename:
-            self.annotation_csv_var.set(filename)
 
     def browse_pdb_file(self):
         filename = filedialog.askopenfilename(title="Select PDB File",
@@ -687,13 +572,6 @@ class OpticsGUIFrame(ttk.Frame):
             if not self.pdb_input_var.get():
                 messagebox.showerror("Input Error", "Please specify a PDB file path or ID.")
                 return
-        elif self.mode == 'annotations':
-            if not self.annotation_csv_var.get():
-                messagebox.showerror("Input Error", "Please specify the Annotation CSV file.")
-                return
-            if not self.pdb_input_var.get():
-                messagebox.showerror("Input Error", "Please specify a PDB file path or ID.")
-                return
 
         # Create default output dir if not specified
         if not self.output_dir_var.get():
@@ -708,10 +586,8 @@ class OpticsGUIFrame(ttk.Frame):
             log_txt = "Starting OPTICS Predictions..."
         elif self.mode == 'shap':
             log_txt = "Starting SHAP Analysis..."
-        elif self.mode == 'structure':
-            log_txt = "Starting Structure Mapping..."
         else:
-            log_txt = "Starting Structure Annotation..."
+            log_txt = "Starting Structure Mapping..."
 
         self.log_message(log_txt)
 
@@ -726,9 +602,6 @@ class OpticsGUIFrame(ttk.Frame):
             # Common arguments
             pred_dir_val = self.output_dir_var.get()
             
-            # Ensure path is absolute for linking
-            pred_dir_val = os.path.abspath(pred_dir_val)
-
             if self.mode == 'predictions':
                 input_val = self.input_file_var.get()
                 output_val = self.prediction_prefix_var.get()
@@ -772,9 +645,7 @@ class OpticsGUIFrame(ttk.Frame):
                 
                 self.log_message(f"\n--- Predictions Complete ---")
                 if output_file_path:
-                    final_dir = os.path.dirname(os.path.abspath(output_file_path))
-                    self.log_message(f"Results located at: >>>LINK<<<{final_dir}")
-                    self.controller.after(0, lambda: messagebox.showinfo("Success", f"OPTICS predictions completed successfully!\nResults are in: {final_dir}"))
+                    self.controller.after(0, lambda: messagebox.showinfo("Success", f"OPTICS predictions completed successfully!\nResults are in: {os.path.dirname(output_file_path)}"))
                 
             elif self.mode == 'shap':
                 input_val = self.input_file_var.get()
@@ -792,7 +663,7 @@ class OpticsGUIFrame(ttk.Frame):
                     input_file=input_val, 
                     pred_dir=pred_dir_val, 
                     output=output_val, 
-                    save_as=save_as, 
+                    save_as=save_as,
                     model=model_val, 
                     encoding_method=encoding_val, 
                     model_version=version_val, 
@@ -802,7 +673,6 @@ class OpticsGUIFrame(ttk.Frame):
                     use_reference_sites=use_ref
                 )
                 self.log_message(f"\n--- SHAP Analysis Complete ---")
-                self.log_message(f"Results located at: >>>LINK<<<{pred_dir_val}")
                 self.controller.after(0, lambda: messagebox.showinfo("Success", f"SHAP analysis completed successfully!\nResults are in: {pred_dir_val}"))
 
             elif self.mode == 'structure':
@@ -810,43 +680,21 @@ class OpticsGUIFrame(ttk.Frame):
                 pdb_input = self.pdb_input_var.get()
                 chain_val = self.chain_var.get()
                 use_query_pos = self.use_query_pos_var.get()
-                map_bovine_also = self.map_bovine_also_var.get()
 
                 pdb_out = run_structural_mapping(
                     shap_csv=csv_path,
                     pdb_input=pdb_input,
                     output_dir=pred_dir_val,
                     use_query_position=use_query_pos,
-                    chain=chain_val,
-                    map_to_bovine_also=map_bovine_also
+                    chain=chain_val
                 )
                 
                 self.log_message(f"\n--- Structure Mapping Complete ---")
                 if pdb_out:
                     self.log_message(f"PDB Saved to: {pdb_out}")
-                    self.log_message(f"Results located at: >>>LINK<<<{pred_dir_val}")
                     self.controller.after(0, lambda: messagebox.showinfo("Success", f"Mapping completed successfully!\nSaved PDB to: {pdb_out}"))
                 else:
                     self.controller.after(0, lambda: messagebox.showerror("Error", "Structure mapping failed. Check log for details."))
-            
-            elif self.mode == 'annotations':
-                csv_path = self.annotation_csv_var.get()
-                pdb_input = self.pdb_input_var.get()
-                chain_val = self.chain_var.get()
-                software_val = self.software_var.get().lower()
-                
-                run_structure_annotation(
-                    annotation_file=csv_path,
-                    pdb_input=pdb_input,
-                    output_dir=pred_dir_val,
-                    chain=chain_val,
-                    software=software_val
-                )
-                
-                ext = ".cxc" if software_val == 'chimerax' else ".pml"
-                self.log_message(f"\n--- Structure Annotation Complete ---")
-                self.log_message(f"Results located at: >>>LINK<<<{pred_dir_val}")
-                self.controller.after(0, lambda: messagebox.showinfo("Success", f"Annotation script created successfully!\nCheck output directory for {ext} file."))
 
 
         except Exception as e:

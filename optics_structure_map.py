@@ -159,61 +159,56 @@ def map_importance_to_pdb(pdb_input_path, output_path, importance_map, chain_id=
 
     print(f"Successfully created structural heatmap: {output_path}")
 
-def run_structural_mapping(shap_csv, pdb_input=None, output_dir=None, use_query_position=False, chain='A'):
+def _execute_mapping(shap_csv, pdb_input, output_dir, use_query_position, chain, suffix=""):
     """
-    Main orchestration function.
-    
-    Args:
-        shap_csv (str): Path to CSV data.
-        pdb_input (str): Path to local PDB OR a PDB ID. If None, defaults to '1U19'.
-        output_dir (str): Destination for outputs.
-        use_query_position (bool): Map to query/target sequence if True (requires SHAP CSV to have query_position column), otherwise, map to Bovine.
-        chain (str): Chain to map to (Default 'A').
+    Internal function to execute the mapping logic for a specific PDB target.
+    Allows for multiple calls (e.g. Custom PDB + Bovine Default).
     """
-    if output_dir is None:
-        output_dir = os.path.dirname(shap_csv)
-    
-    if not os.path.isdir(output_dir):
-        os.makedirs(output_dir, exist_ok=True)
-
     script_path = pathlib.Path(__file__).resolve()
     wrk_dir = str(script_path.parent).replace('\\', '/')
-        
-    print(f"\n--- Starting Structural Importance Mapping ---")
     
-    # --- PDB Resolution Logic ---
     pdb_file_path = None
     
-    # 1. Default Logic (No PDB provided)
+    # 1. PDB Resolution Logic
     if (not pdb_input or pdb_input.upper() == "1U19"):
-        print("   - No PDB provided. Defaulting to Bovine Rhodopsin (1U19).")
-        print("   - WARNING: Mapping SHAP values to the 1U19 structure. This assumes your sequence aligns with Bovine Rhodopsin.")
+        print("   - Using Bovine Rhodopsin (1U19) logic.")
+        if pdb_input and pdb_input.upper() == "1U19":
+             print("   - 1U19 explicitly requested.")
+        else:
+             print("   - No PDB provided. Defaulting to 1U19.")
+        
         pdb_input = "1U19"
         pdb_file_path = f"{wrk_dir}/data/cached_structures/1U19.pdb"
-        if use_query_position==True:
-            print('Cannot use query positions to map SHAP values onto Bovine Rho\nInstead, we will default back to using Bovine numbering...')
-            use_query_position=False
-        # If defaulting to 1U19, we likely want Chain A (Inactive)
-        if not chain: 
-            chain = 'A'
+        
+        # When mapping to 1U19, we MUST use reference positions (unless user has pre-mapped SHAP data)
+        # Usually, SHAP on query seq -> Query Position. 
+        # SHAP on Ref Seq or alignment -> Ref Position (which matches 1U19).
+        if use_query_position:
+            print('   - Note: Cannot use Query Positions to map onto standard Bovine Rho (1U19).')
+            print('   - Switching to Reference Numbering (assuming SHAP file contains reference_position column).')
+            use_query_position = False
+            
+        if not chain: chain = 'A'
+
     else:
-        # 2. Local File or RCSB Download
+        # Local File or RCSB Download
         if os.path.isfile(pdb_input):
             print(f"1. Using local PDB file: {pdb_input}")
-            if use_query_position==False:
-                print('Cannot use Bovine Rho positions to map SHAP values onto query sequence\nInstead, we will assume the input PDB corresponds to the query sequence and map those positions to the structure...')
-                use_query_position=True
+            if not use_query_position:
+                print('   - Note: Mapping to custom PDB usually requires mapping Query Positions.')
+                print('   - Enabling Use Query Position mode.')
+                use_query_position = True
             pdb_file_path = pdb_input
         else:
-            # Check if input looks like a PDB ID
             if len(pdb_input) == 4 and pdb_input.isalnum():
                 print(f"1. '{pdb_input}' is not a local file. Checking online databases...")
                 downloaded = fetch_pdb_from_rcsb(pdb_input, output_dir)
                 if downloaded:
                     pdb_file_path = downloaded
-                    if use_query_position==False:
-                        print('Cannot use Bovine Rho positions to map SHAP values onto query sequence\nInstead, we will assume the input PDB corresponds to the query sequence and map those positions to the structure...')
-                        use_query_position=True
+                    if not use_query_position:
+                        print('   - Note: Mapping to fetched PDB usually requires mapping Query Positions.')
+                        print('   - Enabling Use Query Position mode.')
+                        use_query_position = True
                 else:
                     print("   - FATAL: Could not retrieve PDB file.")
                     return None
@@ -223,7 +218,9 @@ def run_structural_mapping(shap_csv, pdb_input=None, output_dir=None, use_query_
 
     base_name = os.path.splitext(os.path.basename(shap_csv))[0]
     base_name = base_name.replace('_shap_analysis', '')
-    output_pdb = os.path.join(output_dir, f"{base_name}_structure_heatmap.pdb")
+    
+    # Add suffix if provided (e.g. "_bovine")
+    output_pdb = os.path.join(output_dir, f"{base_name}_structure_heatmap{suffix}.pdb")
     
     print(f"2. Parsing SHAP data from: {os.path.basename(shap_csv)}")
     
@@ -251,7 +248,7 @@ def run_structural_mapping(shap_csv, pdb_input=None, output_dir=None, use_query_
         map_importance_to_pdb(pdb_file_path, output_pdb, norm_importance, chain_id=chain)
         
         # PyMOL Script
-        pymol_script = os.path.join(output_dir, f"visualize_{base_name}.pml")
+        pymol_script = os.path.join(output_dir, f"visualize_{base_name}{suffix}.pml")
         with open(pymol_script, 'w') as pml:
             pml.write(f"load {os.path.basename(output_pdb)}\n")
             pml.write("hide everything\n")
@@ -268,6 +265,56 @@ def run_structural_mapping(shap_csv, pdb_input=None, output_dir=None, use_query_
         print(f"   - Error writing PDB: {e}")
         return None
 
+def run_structural_mapping(shap_csv, pdb_input=None, output_dir=None, use_query_position=False, chain='A', map_to_bovine_also=False):
+    """
+    Main orchestration function.
+    
+    Args:
+        shap_csv (str): Path to CSV data.
+        pdb_input (str): Path to local PDB OR a PDB ID. If None, defaults to '1U19'.
+        output_dir (str): Destination for outputs.
+        use_query_position (bool): Map to query/target sequence if True (requires SHAP CSV to have query_position column), otherwise, map to Bovine.
+        chain (str): Chain to map to (Default 'A').
+        map_to_bovine_also (bool): If True, runs a second pass mapping to 1U19 using reference numbering.
+    """
+    if output_dir is None:
+        output_dir = os.path.dirname(shap_csv)
+    
+    if not os.path.isdir(output_dir):
+        os.makedirs(output_dir, exist_ok=True)
+
+    print(f"\n--- Starting Structural Importance Mapping ---")
+    
+    primary_pdb = None
+    
+    # Pass 1: Primary Requested PDB
+    primary_pdb = _execute_mapping(
+        shap_csv, 
+        pdb_input, 
+        output_dir, 
+        use_query_position, 
+        chain
+    )
+    
+    # Pass 2: Secondary Bovine Mapping (if requested and primary wasn't already 1U19)
+    if map_to_bovine_also:
+        is_already_bovine = (pdb_input and pdb_input.upper() == "1U19") or (not pdb_input)
+        
+        if not is_already_bovine:
+            print(f"\n--- Starting Secondary Mapping: Bovine Rhodopsin (1U19) ---")
+            _execute_mapping(
+                shap_csv,
+                "1U19",
+                output_dir,
+                use_query_position=False, # Force Reference Numbering for Bovine
+                chain='A', # Usually Chain A for 1U19
+                suffix="_1U19_ref"
+            )
+        else:
+            print("\n--- Secondary Mapping Skipped: Primary selection was already Bovine/1U19 ---")
+
+    return primary_pdb
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Map OPTICS SHAP importance values onto a 3D PDB structure.")
     
@@ -276,10 +323,11 @@ if __name__ == '__main__':
     parser.add_argument("-o", "--output_dir", help="Output directory", default=None)
     parser.add_argument("--chain", help="Chain to map to. Default: A", type=str, default='A')
     parser.add_argument("--use_query_position", help="Map using Reference/Bovine numbering column in CSV", action="store_true")
+    parser.add_argument("--map_bovine_also", help="Also generate a map for standard Bovine (1U19)", action="store_true")
 
     args = parser.parse_args()
     
     run_structural_mapping(
         args.shap_csv, args.pdb_file, args.output_dir, 
-        args.use_query_position, args.chain
+        args.use_query_position, args.chain, args.map_bovine_also
     )
