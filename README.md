@@ -112,6 +112,8 @@ Installation
 
     -   You DO NOT need to download MAFFT; OPTICS includes a Windows-compatible version in the `optics_scripts/mafft` folder that it will try to use automatically.
 
+---
+
 Data File Structure
 -------------------
 
@@ -204,14 +206,28 @@ Bootstrap Analysis Args (optional):
   python optics_predictions.py -i ./examples/optics_ex_short.txt -o ./examples -p ex_predictions -m whole-dataset -e aa_prop --blastp --blastp_report blastp_report_ex --refseq squid --bootstrap --visualize_bootstrap --bootstrap_viz_file bootstrap_viz --save_viz_as svg
 ```
 
+### Input
+
+- **Unaligned** FASTA file containing opsin amino-acid sequences.
+- Example FASTA Entry:
+  ```
+    >NP_001014890.1_rhodopsin_Bos_taurus
+    MNGTEGPNFYVPFSNKTGVVRSPFEAPQYYLAEPWQFSMLAAYMFLLIMLGFPINFLTLYVTVQHKKLRT 
+    PLNYILLNLAVADLFMVFGGFTTTLYTSLHGYFVFGPTGCNLEGFFATLGGEIALWSLVVLAIERYVVVC 
+    KPMSNFRFGENHAIMGVAFTWVMALACAAPPLVGWSRYIPEGMQCSCGIDYYTPHEETNNESFVIYMFVV 
+    HFIIPLIVIFFCYGQLVFTVKEAAAQQQESATTQKAEKEVTRMVIIMVIAFLICWLPYAGVAFYIFTHQG 
+    SDFGPIFMTIPAFFAKTSAVYNPVIYIMMNKQFRNCMVTTLCCGKNPLGDDEASTTVSKTETSQVAPA   
+  ```
+  
 ### Output
 
-- Predictions (TSV): λmax values, model used, and encoding method.
+- Predictions (TSV, Excel): λmax values, BLASTp information, hex-codes (colors) corresponding to predicted λmax.
 - BLAST Results (TXT, optional): Comparison of query sequences to reference datasets.
 - Bootstrap Graphs (PDF, optional): Visualization of bootstrap prediction results.
 - Job Log (TXT): Log file containing input command to OPTICS, including encoding method and model used.
+- iTol & FigTree Annotation Files (TXT): Annotations for visualizing the λmax of opsins, with the hex-codes (colors) corresponding to predicted λmax.
 
-  **Note** - All outputs are written into subfolders generated based on your 'prediction-prefix' under your specified output directory, and are marked by time and date.
+  _**Note** - All outputs are written into subfolders generated based on your 'prediction-prefix' under your specified output directory, and are marked by time and date._
 
 ### 2\. Explaining Model Predictions with SHAP (`optics_shap.py`)
 
@@ -264,6 +280,16 @@ Optional Args:
 python optics_shap.py -i ./examples/optics_ex_short.fasta -o ./examples -p short_ex_test_aa_prop --mode both --use_reference_sites
 ```
 
+### Output
+
+- Predictions (TSV): Single (non-bootstrapped) λmax values 
+- SHAP Explanation Data (CSV): SHAP data for individual sequence explanations and/or pairwise SHAP comparisons for all sequences.
+- SHAP Graphs (SVG): Visualizations for individual sequence SHAP explanations and/or pairwise SHAP comparisons for all sequences.
+- Difference Matrix (CSV & Excel): An all-to-all λmax difference matrix for query sequences. The Excel version has a built in 'heat-map'.
+- Job Log (TXT): Log file containing input command to OPTICS, including encoding method and model used.
+
+_**WARNING** - Be cautious if you choose the 'comparison' or 'both' mode for SHAP with many sequences. Too many sequence can end up generating hundreds-to-thousands of comparison files (raw data and visualizations)._
+
 ### 3\. Mapping SHAP Importance to 3D Structure (`optics_structure_map.py`)
 
 This script takes the output CSVs from the SHAP analysis script and maps the importance values onto a 3D protein structure (PDB). 
@@ -293,7 +319,9 @@ Optional Args:
 python optics_structure_map.py -s ./examples/optics_shap_on_optics_structure_map_ex_2026-02-03_15-42-48/U57536_shap_analysis.csv -p ./examples/U57536_ex_struct.pdb --map_bovine_also
 ```
 
-*Output: Generates a `.pdb` file with importance scores in the B-factor column and a `.pml` script to automatically visualize it in PyMOL.*
+### Output
+
+- SHAP Annotated Structure File (PDB): Generates a `.pdb` file with importance scores in the B-factor column and a `.pml` script to automatically visualize it in PyMOL.*
 
 ### 4\. Generate Custom Structure Annotations (`optics_structure_annotations.py`)
 
@@ -320,15 +348,19 @@ Optional Args:
 python optics_structure_annotations.py -a ./examples/optics_custom_annotations_ex.csv -p 1U19 --software chimerax
 ```
 
+### Output
+
+- Custom Annotation Script (ChimeraX or PyMol): Generates a ChimeraX or PyMol specific visualization script. Typically you can just open these if your protein structure of interest is in the same folder.
+
 ### 5\. Using the OPTICS GUI
 
-OPTICS includes a graphical interface for users who prefer not to use the command line.
+That's right! No-need for command line, OPTICS can also be used as a GUI! 
+The usage is quite simple, just use the command below (with your OPTICS conda enviornment activated) and get to predicting. ;)
 
 **To run the GUI:**
 
 ```
 python run_optics_gui.py
-
 ```
 
 <img src="https://github.com/VisualPhysiologyDB/optics/blob/main/data/logo/optics_gui_ex.png?raw=true" alt="ex optics gui" style="width:50%; height:50%;">
@@ -342,6 +374,8 @@ The GUI provides tabs/buttons for all four major pipelines:
 3.  **Structure Mapping**: Map SHAP values to PDB files.
 
 4.  **Structure Annotations**: Visualize custom data on structures.
+
+---
 
 Understanding the λmax Prediction Models
 ----------------------------------------
@@ -365,7 +399,7 @@ Models ending in **-mnm** (e.g., `wildtype-mnm`) are trained on augmented datase
 -   **Standard models**: Trained *exclusively* on heterologous expression data (in-vitro).
 
 -   **-mnm models**: Trained on heterologous data *plus* data inferred via our **"Mine-n-Match"** procedure (in-vivo correlations). See [Frazer et al. 2025](https://doi.org/10.1101/2025.08.22.671864 "null") for details.
-
+  - _**Note** - These models should be treated as secondary to heterolgous models for now. The heterolgous models are the 'gold-standard' and MNM models are the 'silver-standard'. Still useful, but not equal._       
 ---
 ## License
 All data and code is covered under a GNU General Public License (GPL)(Version 3), in accordance with Open Source Initiative (OSI)-policies
