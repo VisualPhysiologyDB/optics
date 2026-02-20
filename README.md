@@ -11,9 +11,9 @@ Description
 
 -   **OPTICS** is an open-source tool that uses machine learning (ML) models to predict Opsin Phenotype (λmax) from unaligned opsin amino-acid sequences.
 
--   **OPTICS** leverages machine learning models trained on genotype-phenotype from the [**Visual Physiology Opsin Database (VPOD)**](https://github.com/VisualPhysiologyDB/visual-physiology-opsin-db).
+-   **OPTICS** leverages machine learning models trained on opsin genotype-phenotype data from the [**Visual Physiology Opsin Database (VPOD)**](https://github.com/VisualPhysiologyDB/visual-physiology-opsin-db).
 
--   **OPTICS** allows for **structural mapping** of sequence features important to model prediction (using SHAP), translating machine learning insights directly onto 3D protein structures (PDB).
+-   **OPTICS** allows for **structural mapping** of sequence features important to model prediction (using [SHAP](https://shap.readthedocs.io/en/latest/)), translating machine learning insights directly onto 3D protein structures (PDB).
 
 -   **OPTICS** can be downloaded and used as a command-line or GUI tool.
 
@@ -36,7 +36,7 @@ Key Features
 
 -   **Structure Mapping**: Project SHAP importance values onto 3D PDB structures to create "importance heatmaps."
 
--   **Structure Annotation**: Visualize custom annotations on 3D structures using automated PyMOL or ChimeraX scripting.
+-   **Custom Structure Annotation**: Visualize custom annotations on 3D structures using automated PyMOL or ChimeraX scripting.
 
 Table of Contents
 -----------------
@@ -53,7 +53,7 @@ Table of Contents
 
     -   [SHAP Structure Mapping: `optics_structure_map.py`](#3-mapping-shap-importance-to-3d-structure-optics_structure_mappy)
 
-    -   [Annotation: `optics_structure_annotations.py`](#4-generate-custom-structure-annotations-optics_structure_annotationspy)
+    -   [Custom Structure Annotation: `optics_structure_annotations.py`](#4-generate-custom-structure-annotations-optics_structure_annotationspy)
 
     -   [GUI: `run_optics_gui.py`](#5-using-the-optics-gui)
 
@@ -149,64 +149,124 @@ The main script for generating λmax predictions.
 
 ```
 Required Args:
-  -i, --input: Either a single sequence string or a path to a FASTA file.
+
+  -i, --input: Either a single sequence or a path to a FASTA file.
 
 General Optional Args:
-  -o, --output_dir: Desired directory to save output. Default: './prediction_outputs'
-  -p, --prediction_prefix: Base filename for prediction outputs.
-  -v, --model_version: Version of models (e.g., vpod_1.3).
-  -m, --model: Prediction model to use. Default: whole-dataset
-  -e, --encoding: Encoding method (one_hot, aa_prop). Default: aa_prop
-  --tolerate_non_standard_aa: Allow sequences with non-standard AAs (X, B, Z) by stripping them. Default: True
-  --tolerate_incomplete_seqs: Allow sequences outside 250-650aa range. Default: False
-  --n_jobs: Number of parallel processes. Default: -1 (all CPUs)
 
-BLASTp & Bootstrap Args (Optional):
+  -o, --output_dir: Desired directory to save output folder/files (optional). Default: './prediction_outputs'
+
+  -p, --prediction_prefix: Base filename for prediction outputs. Default: 'unnamed'
+
+  -v, --model_version: Version of models to use (optional). Based on the version of VPOD used to train models. Options/Default: vpod_1.3 (More version coming later)
+
+  -m, --model: Prediction model to use. Options: whole-dataset, wildtype, vertebrate, invertebrate, wildtype-vert, type-one, whole-dataset-mnm, wildtype-mnm, vertebrate-mnm, invertebrate-mnm, wildtype-vert-mnm. **Default: whole-dataset** 
+
+  -e, --encoding: Encoding method to use (optional). Options: one_hot, aa_prop. Default: aa_prop
+
+  --tolerate_non_standard_aa: Allows OPTICS to run predictions on sequences with 'non-standard' amino-acids (e.g. - 'X','O','B', etc...)(optional). Default: True
+
+  --tolerate_incomplete_seqs: Allows OPTICS to run predictions on sequences outside the predefined limits of 250-650 amino-acids. (optional) Default: False 
+                              NOTE - if you enable this option, then you may have predictions on incomplete sequences, which should be treated as less accurate.
+
+  --n_jobs: Number of parallel processes to run (optional). -1 is the default, utilizing all avaiable processors.
+
+
+BLASTp Analysis Args (optional):
+
   --blastp: Enable BLASTp analysis.
-  --blastp_report: Filename for BLASTp report.
-  --refseq: Reference sequence for BLAST (bovine, squid, microbe, custom).
-  --bootstrap: Enable bootstrap predictions (provides confidence intervals).
-  --bootstrap_num: Number of replicates (max 100).
-  --visualize_bootstrap: Generate box-plots for bootstrap results.
-  --full_spectrum_xaxis: Force x-axis to show 300-650nm range on plots.
+
+  --blastp_report: Filename for BLASTp report. Default: blastp_report.txt
+
+  --refseq: Reference sequence used for blastp analysis. Options: bovine, squid, microbe, custom. Default: bovine
+
+  --custom_ref_file: Path to a custom reference sequence file for BLASTp.  Required if --refseq custom is selected.
+
+Bootstrap Analysis Args (optional):
+
+  --bootstrap: Enable bootstrap predictions.
+
+  --visualize_bootstrap: Enable visualization of bootstrap predictions.
+
+  --bootstrap_num: Number of bootstrap models to load for prediction replicates. Default // Maximum: 100
+
+  --bootstrap_viz_file: Filename prefix for bootstrap visualization. Default: bootstrap_viz
+
+  --save_viz_as: File type for bootstrap visualizations. Options: svg, png, or pdf Default: svg
+  
+  --full_spectrum_xaxis: Enables visualization of predictions on a full spectrum x-axis (300-650nm). Otherwise, x-axis is scaled with predictions.
 
 ```
 
 **Example Command:**
 
 ```
-python optics_predictions.py -i ./examples/optics_ex_short.txt -p ex_pred -m wildtype --blastp --bootstrap --visualize_bootstrap
+  python optics_predictions.py -i ./examples/optics_ex_short.txt -o ./examples -p ex_predictions -m whole-dataset -e aa_prop --blastp --blastp_report blastp_report_ex --refseq squid --bootstrap --visualize_bootstrap --bootstrap_viz_file bootstrap_viz --save_viz_as svg
 ```
+
+### Output
+
+- Predictions (TSV): λmax values, model used, and encoding method.
+- BLAST Results (TXT, optional): Comparison of query sequences to reference datasets.
+- Bootstrap Graphs (PDF, optional): Visualization of bootstrap prediction results.
+- Job Log (TXT): Log file containing input command to OPTICS, including encoding method and model used.
+
+  **Note** - All outputs are written into subfolders generated based on your 'prediction-prefix' under your specified output directory, and are marked by time and date.
 
 ### 2\. Explaining Model Predictions with SHAP (`optics_shap.py`)
 
-For users interested in the "nitty-gritty" of _why_ sequences have different predicted λmax values, we provide a specialized script that uses *SHAP* (SHapley Additive exPlanations). 
+For users interested in the "nitty-gritty" of _why_ sequences have different predicted λmax values, we provide a specialized script that uses *SHAP* ([SHapley Additive exPlanations](https://shap.readthedocs.io/en/latest/)). 
 
 This tool generates detailed plots and reports that attribute the difference in prediction to specific features (i.e., amino acid sites and their properties).
+
+![](https://github.com/VisualPhysiologyDB/optics/blob/main/examples/optics_shap_on_short_ex_test_aa_prop_2026-01-09_02-28-40/Bombus_impatiens_424_individual_shap.svg?raw=true)
+
+_Example SHAP plot for explaining individual predictions of opsin λmax by OPTICS_
+
+![](https://github.com/VisualPhysiologyDB/optics/blob/main/examples/optics_shap_on_short_ex_test_aa_prop_2026-01-09_02-28-40/Bombus_impatiens_424_vs_Bombus_impatiens_347_viz.svg?raw=true)
+
+_Example SHAP comparison plot for explaining pair-wise differences in predictions of opsin λmax by OPTICS_
+
+This script requires a **FASTA file** 
+- File must contain at least **two or more sequences** if you are running a SHAP comparison.
+- Only a single sequence is needed for an individual SHAP explanation
+
 ```
 Required Args:
   -i, --input: Path to FASTA file (must contain at least 2 sequences for comparison mode).
 
 Optional Args:
-  -o, --output_dir: Directory to save results.
-  --mode: 'single' (explain one seq), 'comparison' (explain difference between two), or 'both'.
-  --n_positions: Number of top features to show on the graph. Default: 10.
-  --use_reference_sites: If set, plots use Reference Numbering (e.g., Bovine Rhodopsin sites) instead of alignment feature names.
-  --save_viz_as: File format (svg, png, pdf).
+  -o, --output_dir: Directory to save the SHAP analysis output folder.
+
+  -p, --prediction_prefix: Base filename for the SHAP plot and data files.
+
+  --mode: Analysis mode - 'single' (generate SHAP explanation for any number of individual sequences), 'comparison' (generate SHAP explanation for pairwise predictionn difference between any number of sequences), or 'both'. Default: 'both'
+
   -m, --model: Prediction model to use.
+
+  -v, --model_version: Version of models to use (optional). Based on the version of VPOD used to train models. Options/Default: vpod_1.3 (More version coming later)
+
+  -e, --encoding: Encoding method to use.
+
+  --n_positions: Number of positions to show on SHAP explanation graphs. Default: 10 (to limit noisiness)
+
+  --save_viz_as: File type for the SHAP visualization (svg, png, or pdf). Default: svg
+
+  --use_reference_sites : Enable to use reference site numbering (i.e. - Bovine or Squid Rhodopsin), instead of feature names.
+
+  --n_jobs: Number of parallel processes to run (optional). -1 is the default, utilizing all avaiable processors., 
 
 ```
 
 **Example Command:**
 
 ```
-python optics_shap.py -i ./examples/optics_ex_short.fasta -p shap_analysis --mode comparison --use_reference_sites
-
+python optics_shap.py -i ./examples/optics_ex_short.fasta -o ./examples -p short_ex_test_aa_prop --mode both --use_reference_sites
 ```
 
 ### 3\. Mapping SHAP Importance to 3D Structure (`optics_structure_map.py`)
 
-This script takes the output CSV from the SHAP analysis and maps the importance values onto a 3D protein structure (PDB). 
+This script takes the output CSVs from the SHAP analysis script and maps the importance values onto a 3D protein structure (PDB). 
 
 It modifies the B-factor column of the PDB file, allowing you to visualize "importance" as a heat map (Blue=Low, Red=High importance).
 
@@ -215,10 +275,14 @@ Required Args:
   -s, --shap_csv: Path to the SHAP analysis CSV file generated by optics_shap.py.
 
 Optional Args:
-  -p, --pdb_file: Path to a local PDB file OR a 4-letter PDB ID (e.g., 1U19). Default: 1U19 (Bovine Rhodopsin).
+  -p, --pdb_file: Path to a local PDB file OR a 4-letter PDB ID (e.g., 1U19) to retrieve. Default: 1U19 (Bovine Rhodopsin).
+
   -o, --output_dir: Output directory.
+
   --chain: Chain ID to map to. Default: A.
+
   --use_query_position: Check this if your CSV uses target sequence numbering rather than reference numbering.
+
   --map_bovine_also: If using a custom PDB, this flag forces a second output mapped to Bovine Rhodopsin (1U19) for comparison.
 
 ```
@@ -226,8 +290,7 @@ Optional Args:
 **Example Command:**
 
 ```
-python optics_structure_map.py -s ./examples/shap_output/my_seq_shap_analysis.csv -p 1U19 --map_bovine_also
-
+python optics_structure_map.py -s ./examples/optics_shap_on_optics_structure_map_ex_2026-02-03_15-42-48/U57536_shap_analysis.csv -p ./examples/U57536_ex_struct.pdb --map_bovine_also
 ```
 
 *Output: Generates a `.pdb` file with importance scores in the B-factor column and a `.pml` script to automatically visualize it in PyMOL.*
@@ -242,16 +305,19 @@ Required Args:
 
 Optional Args:
   -p, --pdb: PDB ID or path. Default: 1U19.
+
+  -o, --output_dir. Default: '.'
+
   --software: Target visualization software ('pymol' or 'chimerax'). Default: chimerax.
-  --chain: Chain identifier.
+
+  --chain: Chain identifier. Default: 'A'
 
 ```
 
 **Example Command:**
 
 ```
-python optics_structure_annotations.py -a ./examples/mutations.csv -p 1U19 --software pymol
-
+python optics_structure_annotations.py -a ./examples/optics_custom_annotations_ex.csv -p 1U19 --software chimerax
 ```
 
 ### 5\. Using the OPTICS GUI
@@ -300,23 +366,46 @@ Models ending in **-mnm** (e.g., `wildtype-mnm`) are trained on augmented datase
 
 -   **-mnm models**: Trained on heterologous data *plus* data inferred via our **"Mine-n-Match"** procedure (in-vivo correlations). See [Frazer et al. 2025](https://doi.org/10.1101/2025.08.22.671864 "null") for details.
 
-License
--------
+---
+## License
+All data and code is covered under a GNU General Public License (GPL)(Version 3), in accordance with Open Source Initiative (OSI)-policies
 
-All data and code is covered under a GNU General Public License (GPL)(Version 3).
+## Citation
 
-Citation
---------
+- **IF citing this GitHub and its contents use the following DOI provided by Zenodo...**
 
--   **Code/Repository:** 10.5281/zenodo.10667840
+      10.5281/zenodo.10667840
+    
+- **IF you use OPTICS in your research, please cite the following paper(s):**
 
--   **OPTICS Publication (Methodology & Tools):** Seth A. Frazer, Todd H. Oakley. Accessible and Robust Machine Learning Approaches to Improve the Opsin Genotype-Phenotype Map. bioRxiv, 2025.08.22.671864. https://doi.org/10.1101/2025.08.22.671864
+  - Our more recent publication directly on the making/utility of OPTICS.
 
--   **VPOD Publication (Database & Training Data):** Seth A. Frazer, Mahdi Baghbanzadeh, Ali Rahnavard, Keith A. Crandall, & Todd H Oakley. Discovering genotype-phenotype relationships with machine learning and the Visual Physiology Opsin Database (VPOD). GigaScience, 2024.09.01. https://doi.org/10.1093/gigascience/giae073
+        Seth A. Frazer, Todd H. Oakley. Accessible and Robust Machine Learning Approaches to Improve the Opsin Genotype-Phenotype Map. bioRxiv, 2025.08.22.671864. https://doi.org/10.1101/2025.08.22.671864
+    
+  - Our original paper on the development of VPOD; the opsin genotype-phenotype database backbone for training the ML models used in OPTICS. 
 
-Contact
--------
+        Seth A. Frazer, Mahdi Baghbanzadeh, Ali Rahnavard, Keith A. Crandall, & Todd H Oakley. Discovering genotype-phenotype relationships with machine learning and the Visual Physiology Opsin Database (VPOD). GigaScience, 2024.09.01. https://doi.org/10.1093/gigascience/giae073
 
-**Todd H. Oakley** - [ORCID](https://orcid.org/0000-0002-4478-915X "null") - oakley@ucsb.edu
+## Contact
+Contact information for author questions or feedback.
 
-**Seth A. Frazer** - [ORCID](https://orcid.org/0000-0002-3800-212X "null") - sethfrazer@ucsb.edu
+  **Todd H. Oakley** - [ORCID ID](https://orcid.org/0000-0002-4478-915X)
+    
+    oakley@ucsb.edu
+    
+**Seth A. Frazer** - [ORCID ID](https://orcid.org/0000-0002-3800-212X)
+
+    sethfrazer@ucsb.edu
+    
+---
+## Additional Notes/Resources
+
+- Want to use OPTICS without the hassle of the setup? -> [CLICK HERE](http://galaxy-dev.cnsi.ucsb.edu:8080/?tool_id=optics_1&version=latest) to visit our Galaxy Project server and use our tool!
+
+- *OPTICS v1.3 uses VPOD_v1.3 for training.*
+
+- **[Here](https://tinyurl.com/u7hn9adm)** is a link to a bibliography of the publications used to build VPOD_v1.2 (VPOD_v1.3 version not yet released)
+  
+- If you know of publications for training opsin ML models not included in the VPOD_v1.2 database, please send them to us through **[this form](https://tinyurl.com/29afaxyr)**
+  
+- Check out the **[VPOD GitHub](https://github.com/VisualPhysiologyDB/visual-physiology-opsin-db)** repository to learn more about our database and ML models!
