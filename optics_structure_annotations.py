@@ -166,7 +166,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Visualize arbitrary annotations on a protein structure.")
     parser.add_argument("-a", "--annotation_file", required=True, help="CSV/TSV file.")
     parser.add_argument("-p", "--pdb", default="1U19", help="PDB ID or path.")
-    parser.add_argument("-o", "--output_dir", default=None, help="Output directory.")
+    parser.add_argument("-o", "--output_dir", default='.', help="Output directory.")
     parser.add_argument("--chain", default="A", help="Chain identifier.")
     parser.add_argument("--software", default="chimerax", choices=['pymol', 'chimerax'], help="Target software.")
     
