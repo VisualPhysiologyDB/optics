@@ -9,11 +9,11 @@
 Description
 -----------
 
--   **OPTICS** is an open-source tool that predicts the Opsin Phenotype (λmax) from unaligned opsin amino-acid sequences.
+-   **OPTICS** is an open-source tool that uses machine learning (ML) models to predict Opsin Phenotype (λmax) from unaligned opsin amino-acid sequences.
 
--   **OPTICS** leverages machine learning models trained on the Visual Physiology Opsin Database (VPOD).
+-   **OPTICS** leverages machine learning models trained on genotype-phenotype from the [**Visual Physiology Opsin Database (VPOD)**](https://github.com/VisualPhysiologyDB/visual-physiology-opsin-db).
 
--   **OPTICS** allows for **structural mapping** of prediction features, translating machine learning insights directly onto 3D protein structures (PDB).
+-   **OPTICS** allows for **structural mapping** of sequence features important to model prediction (using SHAP), translating machine learning insights directly onto 3D protein structures (PDB).
 
 -   **OPTICS** can be downloaded and used as a command-line or GUI tool.
 
@@ -26,42 +26,46 @@ Key Features
 
 -   **λmax Prediction**: Predicts the peak light absorption wavelength (λmax) for opsin proteins.
 
--   **Model Selection**: Choose from different pre-trained models for prediction (e.g., vertebrate, invertebrate, wildtype).
-
--   **Encoding Methods**: Select between one-hot encoding or amino-acid property encoding.
+-   **Model Selection**: Choose from different pre-trained models for prediction.
 
 -   **BLAST Analysis**: Optionally perform BLASTp analysis to compare query sequences against reference datasets.
 
 -   **Bootstrap Predictions**: Enable bootstrap predictions for enhanced accuracy assessment with confidence intervals.
 
--   **Prediction Explanation (SHAP)**: Explains the key features driving the λmax difference between sequences using SHAP values.
+-   **Prediction Explanation (SHAP)**: Explains the key sequence features driving model predictions of λmax. This feature also allows for all-to-all pairwise comparisons of the features driving differences in predicted λmax between sequences using SHAP values.
 
--   **Structure Mapping (NEW)**: Project SHAP importance values onto 3D PDB structures to create "importance heatmaps."
+-   **Structure Mapping**: Project SHAP importance values onto 3D PDB structures to create "importance heatmaps."
 
--   **Structure Annotation (NEW)**: Visualize custom annotations on 3D structures using automated PyMOL or ChimeraX scripting.
+-   **Structure Annotation**: Visualize custom annotations on 3D structures using automated PyMOL or ChimeraX scripting.
 
 Table of Contents
 -----------------
 
-1.  [Installation](https://www.google.com/search?q=%23installation "null")
+1.  [Installation](#installation)
 
-2.  [Data File Structure](https://www.google.com/search?q=%23data-file-structure "null")
+2.  [Data File Structure](#data-file-structure)
 
-3.  [Usage](https://www.google.com/search?q=%23usage "null")
+3.  [Usage](#usage)
 
-    -   [Prediction: `optics_predictions.py`](https://www.google.com/search?q=%231-prediction-optics_predictionspy "null")
+    -   [Prediction: `optics_predictions.py`](#1-λmax-prediction-optics_predictionspy)
 
-    -   [Explanation: `optics_shap.py`](https://www.google.com/search?q=%232-explanation-optics_shappy "null")
+    -   [SHAP Explanation: `optics_shap.py`](#2-explaining-model-predictions-with-shap-optics_shappy)
 
-    -   [Structure Mapping: `optics_structure_map.py`](https://www.google.com/search?q=%233-structural-mapping-optics_structure_mappy "null")
+    -   [SHAP Structure Mapping: `optics_structure_map.py`](#3-mapping-shap-importance-to-3d-structure-optics_structure_mappy)
 
-    -   [Annotation: `optics_structure_annotations.py`](https://www.google.com/search?q=%234-structure-annotation-optics_structure_annotationspy "null")
+    -   [Annotation: `optics_structure_annotations.py`](#4-generate-custom-structure-annotations-optics_structure_annotationspy)
 
-    -   [GUI: `run_optics_gui.py`](https://www.google.com/search?q=%235-using-the-optics-gui "null")
+    -   [GUI: `run_optics_gui.py`](#5-using-the-optics-gui)
 
-4.  [Understanding Model Choice](https://www.google.com/search?q=%23understanding-the-%CE%BBmax-prediction-models "null")
+4.  [Understanding Model Choice](#understanding-the-λmax-prediction-models)
 
-5.  [License & Citation](https://www.google.com/search?q=%23license "null")
+5. [License](#license)
+
+6. [Citation](#citation)
+
+7. [Contact](#contact)
+
+8. [Additional Resources](#additional-notesresources)
 
 Installation
 ------------
@@ -69,8 +73,7 @@ Installation
 1.  **Clone the repository:**
 
     ```
-     git clone [https://github.com/VisualPhysiologyDB/optics.git](https://github.com/VisualPhysiologyDB/optics.git)
-
+     git clone https://github.com/VisualPhysiologyDB/optics.git
     ```
 
 2.  **Install dependencies:** [Make sure you are working in the repository directory from here-after]
@@ -79,21 +82,18 @@ Installation
 
     ```
     conda create --name optics_env python=3.11
-
     ```
 
     ### THEN
 
     ```
     conda activate optics_env
-
     ```
 
     B. Use the 'requirements.txt' file to download base package dependencies for OPTICS
 
     ```
     pip install -r requirements.txt
-
     ```
 
     C. **Download MAFFT and BLAST**
@@ -104,7 +104,6 @@ Installation
 
         ```
         conda install bioconda::blast bioconda::mafft
-
         ```
 
     IF working on WINDOWS device:
@@ -124,13 +123,15 @@ optics/
 │   ├── fasta/              # Alignment files for each model version (e.g., vpod_1.3)
 │   ├── blast_dbs/          # BLAST databases for sequence identity checks
 │   ├── aa_property_index/  # AA property values used for feature encoding
-│   ├── importance_reports/ # Site translation dictionaries (Feature Name -> True Position)
+│   ├── importance_reports/ # Feature importance data & site translation information (Feature Name -> True Position)
+│   ├── cached_structures/  # Stores downloaded PDB files (e.g., 1U19.pdb)
 │   ├── cached_predictions/ # Stores previous predictions (JSON) to speed up runtime
-│   └── cached_structures/  # Stores downloaded PDB files (e.g., 1U19.pdb)
+|   └── cached_blastp_analysis/ # Stores data from previous runs of BLASTp (JSON) to speed up runtime
 ├── models/
 │   ├── reg_models/         # Regression models (XGBoost/GradientBoosting) for point predictions
 │   └── bs_models/          # Bootstrap model ensembles for confidence intervals
 ├── optics_scripts/         # Helper modules (utils, blast, bootstrap, maft wrappers, etc.)
+├── deepBreaks/             # A key component of the OPTICS pipeline, this folder must stay here
 └── prediction_outputs/     # Default output directory for all runs
 
 ```
@@ -142,7 +143,7 @@ Usage
 
 **MAKE SURE YOU HAVE ALL DEPENDENCIES DOWNLOADED AND THAT YOU ARE IN THE FOLDER DIRECTORY FOR OPTICS (or have loaded it as a module) BEFORE RUNNING ANY SCRIPTS!**
 
-### 1\. Prediction (`optics_predictions.py`)
+### 1\. λmax Prediction (`optics_predictions.py`)
 
 The main script for generating λmax predictions.
 
@@ -175,13 +176,13 @@ BLASTp & Bootstrap Args (Optional):
 
 ```
 python optics_predictions.py -i ./examples/optics_ex_short.txt -p ex_pred -m wildtype --blastp --bootstrap --visualize_bootstrap
-
 ```
 
-### 2\. Explanation (`optics_shap.py`)
+### 2\. Explaining Model Predictions with SHAP (`optics_shap.py`)
 
-Generates SHAP (SHapley Additive exPlanations) plots to explain *why* a model predicted a specific value, or to attribute the difference between two sequences to specific amino acid sites.
+For users interested in the "nitty-gritty" of _why_ sequences have different predicted λmax values, we provide a specialized script that uses *SHAP* (SHapley Additive exPlanations). 
 
+This tool generates detailed plots and reports that attribute the difference in prediction to specific features (i.e., amino acid sites and their properties).
 ```
 Required Args:
   -i, --input: Path to FASTA file (must contain at least 2 sequences for comparison mode).
@@ -203,9 +204,11 @@ python optics_shap.py -i ./examples/optics_ex_short.fasta -p shap_analysis --mod
 
 ```
 
-### 3\. Structural Mapping (`optics_structure_map.py`)
+### 3\. Mapping SHAP Importance to 3D Structure (`optics_structure_map.py`)
 
-**NEW in v1.3!** This script takes the output CSV from the SHAP analysis and maps the importance values onto a 3D protein structure (PDB). It modifies the B-factor column of the PDB file, allowing you to visualize "importance" as a heat map (Blue=Low, Red=High importance).
+This script takes the output CSV from the SHAP analysis and maps the importance values onto a 3D protein structure (PDB). 
+
+It modifies the B-factor column of the PDB file, allowing you to visualize "importance" as a heat map (Blue=Low, Red=High importance).
 
 ```
 Required Args:
@@ -229,9 +232,9 @@ python optics_structure_map.py -s ./examples/shap_output/my_seq_shap_analysis.cs
 
 *Output: Generates a `.pdb` file with importance scores in the B-factor column and a `.pml` script to automatically visualize it in PyMOL.*
 
-### 4\. Structure Annotation (`optics_structure_annotations.py`)
+### 4\. Generate Custom Structure Annotations (`optics_structure_annotations.py`)
 
-**NEW in v1.3!** A general-purpose tool to visualize arbitrary annotations (e.g., mutation sites, binding pockets) on a structure. It takes a simple CSV and creates a runnable visualization script.
+A general-purpose tool to visualize arbitrary annotations (e.g., mutation sites, binding pockets) on a structure. It takes a simple CSV and creates a runnable visualization script.
 
 ```
 Required Args:
