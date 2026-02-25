@@ -110,7 +110,8 @@ Installation
 
     -   Manually install the Windows compatible [BLAST](https://blast.ncbi.nlm.nih.gov/doc/blast-help/downloadblastdata.html#downloadblastdata "null") executable on your system PATH.
 
-    -   You DO NOT need to download MAFFT; OPTICS includes a Windows-compatible version in the `optics_scripts/mafft` folder that it will try to use automatically.
+    -   DO NOT need to download MAFFT; OPTICS includes a Windows-compatible version in the `optics_scripts/mafft` folder that it will try to use automatically.
+      - You can download your own version of MAFFT but it must be executable on your system path. 
 
 ---
 
