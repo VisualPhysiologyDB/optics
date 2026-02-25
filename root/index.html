@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OPTICS: Opsin Phenotype Tool for Inference of Color Sensitivity</title>
+    <meta name="description" content="Predict Opsin Phenotype (&lambda;max) from unaligned amino-acid sequences using machine learning.">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            900: '#0c4a6e',
+                        },
+                        dark: '#0f172a'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        mono: ['Fira Code', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom scrollbar for code blocks */
+        .custom-scrollbar::-webkit-scrollbar {
+            height: 8px;
+            width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 font-sans antialiased selection:bg-primary-500 selection:text-white">
+
+    <!-- Navigation -->
+    <nav class="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="eye" class="text-primary-600 w-8 h-8"></i>
+                    <span class="font-bold text-xl tracking-tight text-slate-900">OPTICS <span class="text-xs font-medium bg-primary-100 text-primary-900 px-2 py-1 rounded-full ml-1">v1.3</span></span>
+                </div>
+                <div class="hidden md:flex gap-8">
+                    <a href="#features" class="text-sm font-medium text-slate-600 hover:text-primary-600 transition-colors">Features</a>
+                    <a href="#installation" class="text-sm font-medium text-slate-600 hover:text-primary-600 transition-colors">Installation</a>
+                    <a href="#usage" class="text-sm font-medium text-slate-600 hover:text-primary-600 transition-colors">Usage</a>
+                    <a href="#citation" class="text-sm font-medium text-slate-600 hover:text-primary-600 transition-colors">Citation</a>
+                </div>
+                <div class="flex gap-4">
+                    <a href="https://github.com/VisualPhysiologyDB/optics" target="_blank" class="text-slate-500 hover:text-slate-900 transition-colors">
+                        <i data-lucide="github" class="w-6 h-6"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="relative overflow-hidden bg-dark text-white pt-24 pb-32">
+        <div class="absolute inset-0 overflow-hidden pointer-events-none">
+            <!-- Decorative background elements -->
+            <div class="absolute -top-1/2 -right-1/2 w-full h-full bg-gradient-to-b from-primary-900/40 to-transparent rounded-full blur-3xl transform rotate-12 opacity-60"></div>
+            <div class="absolute -bottom-1/2 -left-1/2 w-full h-full bg-gradient-to-t from-primary-600/20 to-transparent rounded-full blur-3xl transform -rotate-12 opacity-60"></div>
+        </div>
+        
+        <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h1 class="text-4xl md:text-6xl font-extrabold tracking-tight mb-6">
+                Decode the Genotype-Phenotype Map
+            </h1>
+            <p class="mt-4 max-w-2xl mx-auto text-xl text-slate-300 mb-10">
+                Predict Opsin Phenotype (&lambda;<sub>max</sub>) directly from unaligned amino-acid sequences using machine learning models trained on the Visual Physiology Opsin Database (VPOD).
+            </p>
+            <div class="flex flex-col sm:flex-row justify-center gap-4">
+                <a href="#installation" class="inline-flex items-center justify-center px-8 py-3.5 border border-transparent text-base font-medium rounded-lg text-white bg-primary-600 hover:bg-primary-500 shadow-lg shadow-primary-600/30 transition-all hover:-translate-y-0.5">
+                    <i data-lucide="terminal" class="w-5 h-5 mr-2"></i> Get Started locally
+                </a>
+                <a href="http://galaxy-dev.cnsi.ucsb.edu:8080/?tool_id=optics_1&version=latest" target="_blank" class="inline-flex items-center justify-center px-8 py-3.5 border border-slate-700 text-base font-medium rounded-lg text-slate-300 bg-slate-800 hover:bg-slate-700 hover:text-white transition-all hover:-translate-y-0.5">
+                    <i data-lucide="globe" class="w-5 h-5 mr-2"></i> Use on Galaxy Server
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Features Section -->
+    <section id="features" class="py-24 bg-slate-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl font-bold text-slate-900 tracking-tight">Powerful Analytical Capabilities</h2>
+                <p class="mt-4 text-lg text-slate-600 max-w-3xl mx-auto">OPTICS goes beyond basic prediction, offering deep insights into the structural and feature-level drivers of color sensitivity.</p>
+            </div>
+
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <!-- Feature 1 -->
+                <div class="bg-white rounded-2xl p-8 shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+                    <div class="w-12 h-12 bg-primary-100 text-primary-600 rounded-xl flex items-center justify-center mb-6">
+                        <i data-lucide="activity" class="w-6 h-6"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-900 mb-3">&lambda;<sub>max</sub> Prediction</h3>
+                    <p class="text-slate-600">Predict the peak light absorption wavelength (&lambda;<sub>max</sub>) from unaligned sequences with confidence intervals using bootstrap ensembles.</p>
+                </div>
+
+                <!-- Feature 2 -->
+                <div class="bg-white rounded-2xl p-8 shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+                    <div class="w-12 h-12 bg-primary-100 text-primary-600 rounded-xl flex items-center justify-center mb-6">
+                        <i data-lucide="bar-chart-2" class="w-6 h-6"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-900 mb-3">SHAP Explanations</h3>
+                    <p class="text-slate-600">Interpret predictions using SHAP values. Identify exactly which amino acid sites and properties drive specific &lambda;<sub>max</sub> shifts.</p>
+                </div>
+
+                <!-- Feature 3 -->
+                <div class="bg-white rounded-2xl p-8 shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+                    <div class="w-12 h-12 bg-primary-100 text-primary-600 rounded-xl flex items-center justify-center mb-6">
+                        <i data-lucide="box" class="w-6 h-6"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-900 mb-3">3D Structure Mapping</h3>
+                    <p class="text-slate-600">Project SHAP importance values directly onto 3D PDB structures (like Bovine Rhodopsin) to create localized visual importance heatmaps.</p>
+                </div>
+
+                <!-- Feature 4 -->
+                <div class="bg-white rounded-2xl p-8 shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+                    <div class="w-12 h-12 bg-primary-100 text-primary-600 rounded-xl flex items-center justify-center mb-6">
+                        <i data-lucide="layers" class="w-6 h-6"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-900 mb-3">Multiple ML Models</h3>
+                    <p class="text-slate-600">Choose from specialized models trained on specific taxonomic subsets (vertebrate, invertebrate) or augmented "Mine-n-Match" datasets.</p>
+                </div>
+
+                <!-- Feature 5 -->
+                <div class="bg-white rounded-2xl p-8 shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+                    <div class="w-12 h-12 bg-primary-100 text-primary-600 rounded-xl flex items-center justify-center mb-6">
+                        <i data-lucide="search" class="w-6 h-6"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-900 mb-3">Integrated BLASTp</h3>
+                    <p class="text-slate-600">Automatically compare your query sequences against curated reference datasets (Bovine, Squid, Microbe) natively within the pipeline.</p>
+                </div>
+
+                <!-- Feature 6 -->
+                <div class="bg-white rounded-2xl p-8 shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+                    <div class="w-12 h-12 bg-primary-100 text-primary-600 rounded-xl flex items-center justify-center mb-6">
+                        <i data-lucide="mouse-pointer-2" class="w-6 h-6"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-900 mb-3">Interactive GUI</h3>
+                    <p class="text-slate-600">Not a fan of the command line? Use `run_optics_gui.py` for a sleek, dark-mode accessible graphical interface for all tools.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Installation Section -->
+    <section id="installation" class="py-24 bg-white border-t border-slate-100">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 class="text-3xl font-bold text-slate-900 tracking-tight mb-8">Installation</h2>
+            
+            <div class="bg-dark rounded-xl overflow-hidden shadow-xl mb-8">
+                <div class="flex items-center justify-between px-4 py-3 bg-slate-800 border-b border-slate-700">
+                    <div class="flex gap-2">
+                        <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                        <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                        <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                    </div>
+                    <span class="text-xs font-mono text-slate-400">terminal</span>
+                </div>
+                <div class="p-6 relative group">
+                    <button onclick="copyCode('install-code')" class="absolute top-4 right-4 p-2 rounded-lg bg-slate-800 text-slate-400 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity" title="Copy to clipboard">
+                        <i data-lucide="copy" class="w-4 h-4"></i>
+                    </button>
+                    <pre id="install-code" class="text-sm font-mono text-slate-300 overflow-x-auto custom-scrollbar leading-relaxed">
+<span class="text-slate-500"># 1. Clone the repository</span>
+git clone https://github.com/VisualPhysiologyDB/optics.git
+cd optics
+
+<span class="text-slate-500"># 2. Create and activate a Conda environment</span>
+conda create --name optics_env python=3.11
+conda activate optics_env
+
+<span class="text-slate-500"># 3. Install Python dependencies</span>
+pip install -r requirements.txt</pre>
+                </div>
+            </div>
+
+            <div class="bg-blue-50 border border-blue-100 rounded-xl p-6 flex gap-4">
+                <i data-lucide="info" class="w-6 h-6 text-blue-600 flex-shrink-0 mt-1"></i>
+                <div>
+                    <h4 class="font-bold text-blue-900 mb-2">External Dependencies Required</h4>
+                    <p class="text-blue-800 text-sm mb-3">OPTICS requires <strong>BLAST</strong> and <strong>MAFFT</strong> to align and compare sequences.</p>
+                    <div class="bg-white/60 rounded p-3 font-mono text-xs text-slate-700">
+                        <span class="block text-slate-500 mb-1"># For Mac / Linux:</span>
+                        conda install bioconda::blast bioconda::mafft
+                    </div>
+                    <p class="text-blue-800 text-sm mt-3"><em>Windows users:</em> MAFFT is bundled with OPTICS, but you must manually install the BLAST executable and add it to your PATH.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Usage Section -->
+    <section id="usage" class="py-24 bg-slate-50 border-t border-slate-100">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 class="text-3xl font-bold text-slate-900 tracking-tight mb-12 text-center">How to Use OPTICS</h2>
+
+            <div class="space-y-12">
+                <!-- CLI 1 -->
+                <div>
+                    <h3 class="text-xl font-bold text-slate-900 mb-2 flex items-center gap-2">
+                        <i data-lucide="terminal-square" class="text-primary-600 w-5 h-5"></i> 1. Standard Predictions
+                    </h3>
+                    <p class="text-slate-600 mb-4">Run the main &lambda;<sub>max</sub> prediction workflow on a FASTA file containing unaligned sequences.</p>
+                    <div class="bg-dark rounded-lg p-4 relative group">
+                        <button onclick="copyCode('usage-1')" class="absolute top-3 right-3 p-1.5 rounded-md bg-slate-800 text-slate-400 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                            <i data-lucide="copy" class="w-4 h-4"></i>
+                        </button>
+                        <code id="usage-1" class="text-sm font-mono text-green-400">python optics_predictions.py -i ./examples/optics_ex_short.txt -o ./outputs -p my_results -m whole-dataset --blastp --bootstrap</code>
+                    </div>
+                </div>
+
+                <!-- CLI 2 -->
+                <div>
+                    <h3 class="text-xl font-bold text-slate-900 mb-2 flex items-center gap-2">
+                        <i data-lucide="terminal-square" class="text-primary-600 w-5 h-5"></i> 2. SHAP Explanations
+                    </h3>
+                    <p class="text-slate-600 mb-4">Determine exactly <em>why</em> sequences have different predicted &lambda;<sub>max</sub> values using SHAP feature attribution.</p>
+                    <div class="bg-dark rounded-lg p-4 relative group">
+                        <button onclick="copyCode('usage-2')" class="absolute top-3 right-3 p-1.5 rounded-md bg-slate-800 text-slate-400 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                            <i data-lucide="copy" class="w-4 h-4"></i>
+                        </button>
+                        <code id="usage-2" class="text-sm font-mono text-green-400">python optics_shap.py -i ./examples/optics_ex_short.fasta -o ./outputs -p shap_test --mode both --use_reference_sites</code>
+                    </div>
+                </div>
+
+                <!-- CLI 3 -->
+                <div>
+                    <h3 class="text-xl font-bold text-slate-900 mb-2 flex items-center gap-2">
+                        <i data-lucide="terminal-square" class="text-primary-600 w-5 h-5"></i> 3. 3D Structure Mapping
+                    </h3>
+                    <p class="text-slate-600 mb-4">Map your SHAP importance outputs onto a 3D PDB structure (creates an annotated PDB with modified B-factors and a PyMOL script).</p>
+                    <div class="bg-dark rounded-lg p-4 relative group">
+                        <button onclick="copyCode('usage-3')" class="absolute top-3 right-3 p-1.5 rounded-md bg-slate-800 text-slate-400 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                            <i data-lucide="copy" class="w-4 h-4"></i>
+                        </button>
+                        <code id="usage-3" class="text-sm font-mono text-green-400">python optics_structure_map.py -s ./outputs/seq_shap_analysis.csv -p 1U19 --map_bovine_also</code>
+                    </div>
+                </div>
+
+                <div class="relative py-8">
+                    <div class="absolute inset-0 flex items-center" aria-hidden="true">
+                        <div class="w-full border-t border-slate-200"></div>
+                    </div>
+                    <div class="relative flex justify-center">
+                        <span class="px-4 bg-slate-50 text-sm font-medium text-slate-500 uppercase tracking-widest">OR</span>
+                    </div>
+                </div>
+
+                <!-- GUI -->
+                <div class="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm text-center">
+                    <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary-100 text-primary-600 mb-4">
+                        <i data-lucide="monitor" class="w-8 h-8"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-slate-900 mb-3">Launch the Graphical Interface</h3>
+                    <p class="text-slate-600 mb-6 max-w-2xl mx-auto">Skip the command line entirely. The built-in GUI provides access to all four analytical pipelines in an intuitive, dark-mode ready window.</p>
+                    <div class="inline-block text-left bg-dark rounded-lg p-4 relative group min-w-[300px]">
+                        <button onclick="copyCode('usage-gui')" class="absolute top-3 right-3 p-1.5 rounded-md bg-slate-800 text-slate-400 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                            <i data-lucide="copy" class="w-4 h-4"></i>
+                        </button>
+                        <code id="usage-gui" class="text-sm font-mono text-green-400">python run_optics_gui.py</code>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- Citation & Authors -->
+    <section id="citation" class="py-24 bg-white">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 class="text-3xl font-bold text-slate-900 tracking-tight mb-8">Citation & Credits</h2>
+            
+            <div class="space-y-6">
+                <div class="p-6 bg-slate-50 rounded-xl border border-slate-200">
+                    <h4 class="font-semibold text-slate-900 mb-2">If you use OPTICS in your research, please cite:</h4>
+                    <p class="text-slate-600 font-serif leading-relaxed text-sm">
+                        Seth A. Frazer, Todd H. Oakley. <strong>Accessible and Robust Machine Learning Approaches to Improve the Opsin Genotype-Phenotype Map.</strong> <em>bioRxiv</em>, 2025.08.22.671864. <br>
+                        <a href="https://doi.org/10.1101/2025.08.22.671864" target="_blank" class="text-primary-600 hover:underline mt-1 inline-block">https://doi.org/10.1101/2025.08.22.671864</a>
+                    </p>
+                </div>
+
+                <div class="p-6 bg-slate-50 rounded-xl border border-slate-200">
+                    <h4 class="font-semibold text-slate-900 mb-2">Original VPOD Development:</h4>
+                    <p class="text-slate-600 font-serif leading-relaxed text-sm">
+                        Seth A. Frazer, Mahdi Baghbanzadeh, Ali Rahnavard, Keith A. Crandall, & Todd H Oakley. <strong>Discovering genotype-phenotype relationships with machine learning and the Visual Physiology Opsin Database (VPOD).</strong> <em>GigaScience</em>, 2024.09.01. <br>
+                        <a href="https://doi.org/10.1093/gigascience/giae073" target="_blank" class="text-primary-600 hover:underline mt-1 inline-block">https://doi.org/10.1093/gigascience/giae073</a>
+                    </p>
+                </div>
+
+                <div class="flex flex-wrap gap-4 pt-4 border-t border-slate-200">
+                    <a href="https://zenodo.org/badge/DOI/10.5281/zenodo.12213246.svg" target="_blank" class="inline-flex items-center gap-2">
+                        <img src="https://zenodo.org/badge/DOI/10.5281/zenodo.12213246.svg" alt="DOI">
+                    </a>
+                    <a href="https://www.gnu.org/licenses/gpl-3.0" target="_blank">
+                        <img src="https://img.shields.io/badge/License-GPLv3-blue.svg" alt="License: GPL v3">
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-dark py-12 border-t border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <div class="flex items-center justify-center gap-2 mb-6">
+                <i data-lucide="eye" class="text-primary-500 w-6 h-6"></i>
+                <span class="font-bold text-xl tracking-tight text-white">OPTICS</span>
+            </div>
+            <p class="text-slate-400 text-sm mb-6 max-w-md mx-auto">
+                Maintained by Seth A. Frazer &amp; Todd H. Oakley <br>
+                University of California, Santa Barbara
+            </p>
+            <div class="flex justify-center gap-6">
+                <a href="https://github.com/VisualPhysiologyDB/optics" class="text-slate-400 hover:text-white transition-colors">
+                    <span class="sr-only">GitHub</span>
+                    <i data-lucide="github" class="w-6 h-6"></i>
+                </a>
+                <a href="https://github.com/VisualPhysiologyDB/visual-physiology-opsin-db" class="text-slate-400 hover:text-white transition-colors text-sm font-medium flex items-center">
+                    <i data-lucide="database" class="w-5 h-5 mr-2"></i> VPOD Database
+                </a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script>
+        // Initialize Lucide Icons
+        lucide.createIcons();
+
+        // Copy to clipboard function
+        function copyCode(elementId) {
+            const el = document.getElementById(elementId);
+            const text = el.innerText || el.textContent;
+            
+            navigator.clipboard.writeText(text).then(() => {
+                // Show brief success feedback
+                const btn = el.previousElementSibling;
+                const originalHTML = btn.innerHTML;
+                btn.innerHTML = '<i data-lucide="check" class="w-4 h-4 text-green-400"></i>';
+                lucide.createIcons();
+                
+                setTimeout(() => {
+                    btn.innerHTML = originalHTML;
+                    lucide.createIcons();
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy text: ', err);
+                // Fallback for older browsers
+                const textArea = document.createElement("textarea");
+                textArea.value = text;
+                document.body.appendChild(textArea);
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                } catch (err) {
+                    console.error('Fallback copy failed', err);
+                }
+                document.body.removeChild(textArea);
+            });
+        }
+    </script>
+</body>
+</html>
