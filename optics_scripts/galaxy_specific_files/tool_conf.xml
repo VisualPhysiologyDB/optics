@@ -1,8 +1,11 @@
 <?xml version='1.0' encoding='utf-8'?>
 <toolbox monitor="true">
-  <section name="Opsin Phenotyping OPTICS" id="oTools">
-     <tool file="optics/optics_tool.xml"> 
-     </tool>
+  <section name="Opsin Phenotyping: OPTICS" id="Opitcs_Tools">
+    <tool file="optics/shap_comp_tool.xml"/>
+    <tool file="optics/optics_tool.xml"/> 
+  </section>
+  <section name="Sequence Mutagenesis Tools" id="Seq_Muta_Tools">
+    <tool file="mutagenesis_tools/in_silico_mutagenesis_tool.xml"/>
   </section>
   <section name="Analyze Transcriptome Data LIT-PIA" id="PIA_tools">
     <tool file="pia/get_orfs_or_cdss.xml"/>
@@ -34,3 +37,23 @@
     <tool file="filters/secure_hash_message_digest.xml" />
   </section>
 </toolbox>
+  <!--
+  <section id="interactivetools" name="Interactive tools">
+    <tool file="interactive/interactivetool_askomics.xml" />
+    <tool file="interactive/interactivetool_bam_iobio.xml" />
+    <tool file="interactive/interactivetool_blobtoolkit.xml" />
+    <tool file="interactive/interactivetool_cellxgene_0.16.2.xml" />
+    <tool file="interactive/interactivetool_cellxgene_1.1.1.xml" />
+    <tool file="interactive/interactivetool_ethercalc.xml" />
+    <tool file="interactive/interactivetool_guacamole_desktop.xml" />
+    <tool file="interactive/interactivetool_hicbrowser.xml" />
+    <tool file="interactive/interactivetool_jupyter_notebook_1.0.1.xml" />
+    <tool file="interactive/interactivetool_jupyter_notebook_1.0.0.xml" />
+    <tool file="interactive/interactivetool_jupyter_notebook.xml" />
+    <tool file="interactive/interactivetool_neo4j.xml" />
+    <tool file="interactive/interactivetool_openrefine.xml" />
+    <tool file="interactive/interactivetool_phinch.xml" />
+    <tool file="interactive/interactivetool_rstudio.xml" />
+    <tool file="interactive/interactivetool_rstudio_bioc_3.20.xml" />
+  </section>
+  -->

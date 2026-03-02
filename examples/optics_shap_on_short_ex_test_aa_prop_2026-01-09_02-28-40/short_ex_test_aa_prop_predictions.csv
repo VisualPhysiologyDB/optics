@@ -1,0 +1,6 @@
+Names,Single_Prediction,SHAP_Prediction,Sequence_Length
+Neogonodactylus_oerstedii|334,388.6,-83.2066277164279,380
+Neogonodactylus_oerstedii|383,381.7,-90.11247229447588,436
+Bombus_impatiens|539,538.1,66.34461194183444,399
+Bombus_impatiens|424,443.5,-28.311978842762763,401
+Bombus_impatiens|347,350.4,-121.41171750853886,393
