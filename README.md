@@ -319,7 +319,7 @@ Optional Args:
 
   --map_bovine_also: If using a custom PDB, this flag forces a second output mapped to Bovine Rhodopsin (1U19) for comparison.
 
-  --top_n_labels: Number of top SHAP sites to automatically label in the generated visualization script. Default: 0.
+  --top_n_labels: Number of top SHAP sites to automatically label in the generated visualization script. Default: 10.
 
   --software: The target software for the visualization script output ('pymol' or 'chimerax'). Default: 'chimerax'.
 
@@ -328,13 +328,13 @@ Optional Args:
 **Example Command #1: SHAP Importance Structure Mapping For Single Sequence (no comparison metrics)**
 
 ```
-python optics_structure_map.py -s ./examples/optics_shap_on_optics_structure_map_ex_2026-02-03_15-42-48/U57536_shap_analysis.csv -p ./examples/U57536_ex_struct.pdb --top_n_labels 5 --software chimerax --map_bovine_also
+python optics_structure_map.py -s ./examples/optics_shap_on_structure_map_ex_2026-03-10_13-19-02/C_phantasticus_LWS1_shap_analysis.csv -p ./examples/ex_structures/C_phantasticus_LWS1_esmfold.pdb --top_n_labels 10 --software chimerax --map_bovine_also
 ```
 
 **Example Command #2: SHAP Comparison Mapping on Both Sequences with Top 5 Positions Labeled**
 
 ```
-python optics_structure_map.py -s ./examples/Bombus_vs_Apis_shap_data.csv -p ./examples/Bombus_struct.pdb,./examples/Apis_struct.pdb --use_query_position --comp_target both --top_n_labels 5 --software chimerax
+python optics_structure_map.py -s ./examples/optics_shap_on_structure_map_ex_2026-03-10_13-19-02/C_phantasticus_LWS1_vs_C_phantasticus_LWS2_shap_data.csv -p ./examples/ex_structures/C_phantasticus_LWS1_esmfold.pdb,./examples/ex_structures/C_phantasticus_LWS2_esmfold.pdb --use_query_position --comp_target both --top_n_labels 10 --software chimerax
 ```
 
 ### Output
