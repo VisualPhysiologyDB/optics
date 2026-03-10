@@ -1,0 +1,5 @@
+TREE_COLORS
+SEPARATOR TAB
+DATA
+C_phantasticus_LWS1	label_background	#b3ff00
+C_phantasticus_LWS2	label_background	#1eff00

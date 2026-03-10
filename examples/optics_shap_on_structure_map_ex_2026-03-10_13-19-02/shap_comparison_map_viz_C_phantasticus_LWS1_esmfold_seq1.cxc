@@ -1,0 +1,41 @@
+camera ortho
+open C_phantasticus_LWS1_esmfold_shap_mapped_seq1.pdb
+zoom 0.75
+move x -5
+hide atoms
+hide cartoons
+show /A cartoons
+light gentle
+graphics silhouettes true width 1.5
+color byattribute bfactor /A palette #5ab4ac:#f5f5f5:#ef8a62 range 0,100
+set bgColor black
+# Delete the next line if you don't wont the surface loaded...
+surface /A
+transparency 95 target s
+key #5ab4ac:0 #f5f5f5:50 #ef8a62:100 pos 0.85,0.2 size 0.035,0.55 justification left labelOffset 5
+2dlab text 'SHAP Importance' size 30 xpos .79 ypos .145
+# NOTE: B-factors now represent ML Feature Importance (0=Low, 100=High)
+
+# --- Top SHAP Site Labels ---
+label /A:283 text '283'
+show /A:283 atoms
+label /A:222 text '222'
+show /A:222 atoms
+label /A:275 text '275'
+show /A:275 atoms
+label /A:178 text '178'
+show /A:178 atoms
+label /A:44 text '44'
+show /A:44 atoms
+label /A:231 text '231'
+show /A:231 atoms
+label /A:180 text '180'
+show /A:180 atoms
+label /A:289 text '289'
+show /A:289 atoms
+label /A:109 text '109'
+show /A:109 atoms
+label /A:164 text '164'
+show /A:164 atoms
+label color white
+label height 3.0

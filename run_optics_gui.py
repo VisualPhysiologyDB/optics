@@ -5,10 +5,8 @@ from tkinter import ttk, filedialog, scrolledtext, messagebox
 import threading
 import sys
 import os
-import math
 import random
 import queue # Import queue for thread-safe logging
-import webbrowser 
 import platform
 
 import warnings
@@ -340,17 +338,41 @@ class OpticsGUIFrame(ttk.Frame):
 
         elif self.mode == 'structure':
             # -- Structure Mapping Inputs --
-            ttk.Label(scrollable_frame, font=("Century Gothic", 12), text="SHAP Analysis CSV File:").grid(row=current_row, column=0, padx=5, pady=5, sticky=tk.W)
+            ttk.Label(scrollable_frame, font=("Century Gothic", 12), text="SHAP Analysis CSV File (Single or Comparison):").grid(row=current_row, column=0, padx=5, pady=5, sticky=tk.W)
             self.shap_csv_var = tk.StringVar()
             ttk.Entry(scrollable_frame, textvariable=self.shap_csv_var, width=60).grid(row=current_row, column=1, padx=5, pady=5, sticky=tk.EW)
             ttk.Button(scrollable_frame, text="Browse...", command=self.browse_shap_csv).grid(row=current_row, column=2, padx=5, pady=5)
             current_row += 1
 
-            ttk.Label(scrollable_frame, font=("Century Gothic", 12), text="PDB File or ID (e.g. 1U19):").grid(row=current_row, column=0, padx=5, pady=5, sticky=tk.W)
-            self.pdb_input_var = tk.StringVar()
-            ttk.Entry(scrollable_frame, textvariable=self.pdb_input_var, width=60).grid(row=current_row, column=1, padx=5, pady=5, sticky=tk.EW)
-            ttk.Button(scrollable_frame, text="Browse File...", command=self.browse_pdb_file).grid(row=current_row, column=2, padx=5, pady=5)
+            # New: Pairwise sequence target mapping explicitly added
+            ttk.Label(scrollable_frame, font=("Century Gothic", 12), text="Comparison Target Seq:").grid(row=current_row, column=0, padx=5, pady=5, sticky=tk.W)
+            self.comp_target_var = tk.StringVar(value="1")
+            comp_target_frame = ttk.Frame(scrollable_frame)
+            comp_target_frame.grid(row=current_row, column=1, columnspan=2, sticky=tk.W, padx=5, pady=5)
+            ttk.Radiobutton(comp_target_frame, text="Sequence 1", variable=self.comp_target_var, value="1", command=self.toggle_pdb2_state).pack(side=tk.LEFT, padx=(0, 10))
+            ttk.Radiobutton(comp_target_frame, text="Sequence 2", variable=self.comp_target_var, value="2", command=self.toggle_pdb2_state).pack(side=tk.LEFT, padx=(0, 10))
+            ttk.Radiobutton(comp_target_frame, text="Both", variable=self.comp_target_var, value="both", command=self.toggle_pdb2_state).pack(side=tk.LEFT)
             current_row += 1
+            ttk.Label(scrollable_frame, text="(Only applies if mapping a Pairwise Comparison CSV using Query Positions)", font=("Century Gothic", 9)).grid(row=current_row, column=1, columnspan=2, padx=5, pady=0, sticky=tk.W)
+            current_row += 1
+
+            ttk.Label(scrollable_frame, font=("Century Gothic", 12), text="PDB File/ID 1 (Seq 1 or Default):").grid(row=current_row, column=0, padx=5, pady=5, sticky=tk.W)
+            self.pdb_input_var = tk.StringVar()
+            self.pdb1_entry = ttk.Entry(scrollable_frame, textvariable=self.pdb_input_var, width=60)
+            self.pdb1_entry.grid(row=current_row, column=1, padx=5, pady=5, sticky=tk.EW)
+            self.pdb1_btn = ttk.Button(scrollable_frame, text="Browse File...", command=self.browse_pdb_file)
+            self.pdb1_btn.grid(row=current_row, column=2, padx=5, pady=5)
+            current_row += 1
+            
+            ttk.Label(scrollable_frame, font=("Century Gothic", 12), text="PDB File/ID 2 (Optional, for Seq 2):").grid(row=current_row, column=0, padx=5, pady=5, sticky=tk.W)
+            self.pdb_input_2_var = tk.StringVar()
+            self.pdb2_entry = ttk.Entry(scrollable_frame, textvariable=self.pdb_input_2_var, width=60)
+            self.pdb2_entry.grid(row=current_row, column=1, padx=5, pady=5, sticky=tk.EW)
+            self.pdb2_btn = ttk.Button(scrollable_frame, text="Browse File...", command=self.browse_pdb_file_2)
+            self.pdb2_btn.grid(row=current_row, column=2, padx=5, pady=5)
+            current_row += 1
+            
+            self.toggle_pdb2_state() # Initialize the state
             
             ttk.Label(scrollable_frame, font=("Century Gothic", 12), text="Chain ID:").grid(row=current_row, column=0, padx=5, pady=5, sticky=tk.W)
             self.chain_var = tk.StringVar(value="A")
@@ -369,6 +391,17 @@ class OpticsGUIFrame(ttk.Frame):
             self.map_bovine_also_var = tk.BooleanVar(value=False)
             self.map_bovine_also_check = ttk.Checkbutton(scrollable_frame, text="Also map to Bovine Rhodopsin (1U19)", variable=self.map_bovine_also_var)
             self.map_bovine_also_check.grid(row=current_row, column=1, columnspan=2, padx=5, pady=5, sticky=tk.W)
+            current_row += 1
+            
+            # New: Top N Labels and Software choice for mapping
+            ttk.Label(scrollable_frame, font=("Century Gothic", 12), text="Top 'n' Sites to Label:").grid(row=current_row, column=0, padx=5, pady=5, sticky=tk.W)
+            self.top_n_labels_var = tk.IntVar(value=10)
+            ttk.Spinbox(scrollable_frame, from_=0, to=100, textvariable=self.top_n_labels_var, width=58).grid(row=current_row, column=1, padx=5, pady=5, sticky=tk.EW)
+            current_row += 1
+            
+            ttk.Label(scrollable_frame, font=("Century Gothic", 12), text="Visualization Software:").grid(row=current_row, column=0, padx=5, pady=5, sticky=tk.W)
+            self.struct_software_var = tk.StringVar(value=self.software_choices[1])
+            ttk.Combobox(scrollable_frame, textvariable=self.struct_software_var, values=self.software_choices, state="readonly", width=57).grid(row=current_row, column=1, padx=5, pady=5, sticky=tk.EW)
             current_row += 1
         
         elif self.mode == 'annotations':
@@ -507,7 +540,7 @@ class OpticsGUIFrame(ttk.Frame):
         elif self.mode == 'shap':
              btn_text = "Run SHAP Analysis"
         elif self.mode == 'structure':
-             btn_text = "Run Structure Mapping"
+             btn_text = "Run SHAP Structure Mapping"
         else:
              btn_text = "Run Structure Annotation"
 
@@ -533,6 +566,16 @@ class OpticsGUIFrame(ttk.Frame):
         # Loading Screen placeholder
         self.loading_screen = None
 
+    def toggle_pdb2_state(self, *args):
+        if hasattr(self, 'comp_target_var') and hasattr(self, 'pdb2_entry'):
+            target = self.comp_target_var.get()
+            if target in ["2", "both"]:
+                self.pdb2_entry.configure(state=tk.NORMAL)
+                self.pdb2_btn.configure(state=tk.NORMAL)
+            else:
+                self.pdb2_entry.configure(state=tk.DISABLED)
+                self.pdb2_btn.configure(state=tk.DISABLED)
+
     def open_hyperlink(self, event):
         """Opens the directory linked in the text widget."""
         try:
@@ -541,11 +584,11 @@ class OpticsGUIFrame(ttk.Frame):
             tags = self.output_text.tag_names(index)
             if "hyperlink" in tags:
                 # Find the bounds of the current hyperlink
-                start = self.output_text.index(f"{index} wordstart")
+                #start = self.output_text.index(f"{index} wordstart")
                 # Adjust start if needed to capture full path including slashes/colons
                 # Simple approach: grab the whole line and extract the path we inserted
-                line_idx = index.split('.')[0]
-                line_text = self.output_text.get(f"{line_idx}.0", f"{line_idx}.end")
+                #line_idx = index.split('.')[0]
+                #line_text = self.output_text.get(f"{line_idx}.0", f"{line_idx}.end")
                 
                 # In write_to_log, we strip the prefix. Let's rely on the text content.
                 # Since we insert just the path with the tag, we can try to extract it.
@@ -637,7 +680,13 @@ class OpticsGUIFrame(ttk.Frame):
                                                           ("All files", "*.*")))
         if filename:
             self.pdb_input_var.set(filename)
-
+            
+    def browse_pdb_file_2(self):
+        filename = filedialog.askopenfilename(title="Select PDB File 2",
+                                               filetypes=(("PDB files", "*.pdb"),
+                                                          ("All files", "*.*")))
+        if filename:
+            self.pdb_input_2_var.set(filename)
 
     def toggle_blastp_options(self):
         state = tk.NORMAL if self.blastp_enabled_var.get() else tk.DISABLED
@@ -685,7 +734,7 @@ class OpticsGUIFrame(ttk.Frame):
                 messagebox.showerror("Input Error", "Please specify the SHAP Analysis CSV file.")
                 return
             if not self.pdb_input_var.get():
-                messagebox.showerror("Input Error", "Please specify a PDB file path or ID.")
+                messagebox.showerror("Input Error", "Please specify at least the primary PDB file path or ID.")
                 return
         elif self.mode == 'annotations':
             if not self.annotation_csv_var.get():
@@ -807,18 +856,32 @@ class OpticsGUIFrame(ttk.Frame):
 
             elif self.mode == 'structure':
                 csv_path = self.shap_csv_var.get()
-                pdb_input = self.pdb_input_var.get()
+                
+                # Combine PDBs into a comma-separated string if both are provided
+                pdb_input_1 = self.pdb_input_var.get()
+                pdb_input_2 = self.pdb_input_2_var.get() if hasattr(self, 'pdb_input_2_var') else ""
+                
+                pdb_inputs = pdb_input_1
+                if pdb_input_2:
+                    pdb_inputs = f"{pdb_input_1},{pdb_input_2}"
+                
                 chain_val = self.chain_var.get()
                 use_query_pos = self.use_query_pos_var.get()
                 map_bovine_also = self.map_bovine_also_var.get()
+                comp_target_val = self.comp_target_var.get()
+                top_n_val = self.top_n_labels_var.get()
+                software_val = self.struct_software_var.get().lower()
 
                 pdb_out = run_structural_mapping(
                     shap_csv=csv_path,
-                    pdb_input=pdb_input,
+                    pdb_input=pdb_inputs,
                     output_dir=pred_dir_val,
                     use_query_position=use_query_pos,
                     chain=chain_val,
-                    map_to_bovine_also=map_bovine_also
+                    map_to_bovine_also=map_bovine_also,
+                    comp_target=comp_target_val,
+                    top_n_labels=top_n_val,
+                    software=software_val
                 )
                 
                 self.log_message(f"\n--- Structure Mapping Complete ---")

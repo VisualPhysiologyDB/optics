@@ -1,0 +1,3 @@
+Names	Single_Prediction	Prediction_Means	Prediction_Medians	Prediction_Lower_Bounds	Prediction_Upper_Bounds	Std_Deviation	%Identity_Nearest_VPOD_Sequence	Sequence_Length	Lmax_Hex_Color
+C_phantasticus_LWS1	556.6	555.0	555.0	549.4	560.2	2.9	85.794	359	#b3ff00
+C_phantasticus_LWS2	522.4	514.9	515.3	500.1	529.1	8.8	79.251	354	#1eff00

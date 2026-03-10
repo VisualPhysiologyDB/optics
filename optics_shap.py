@@ -678,8 +678,10 @@ def save_comparison_plot(seq1, seq2, report_dir, save_as, encoding_method, cmd_l
     cols = seq1['encoded_seq'].columns
     mask = (feat1_vals != feat2_vals)
     
-    # Generate True Positions for masking
+    # Generate True Positions and Query Positions for mapping capabilities
     masked_true_pos = []
+    query_pos_1 = []
+    query_pos_2 = []
     
     if isinstance(site_translation_dict, dict):
         masked_cols = np.array(cols)[mask]
@@ -688,23 +690,37 @@ def save_comparison_plot(seq1, seq2, report_dir, save_as, encoding_method, cmd_l
                 try:
                     pos_idx = int(feature[1:].split('_')[0])
                     mapped_pos = site_translation_dict.get(pos_idx, feature)
+                    
+                    # Capture sequence-specific numbering for downstream 3D mapping
+                    query_pos_1.append(seq1['ref_to_query_map'].get(mapped_pos, 'NA'))
+                    query_pos_2.append(seq2['ref_to_query_map'].get(mapped_pos, 'NA'))
+
                     if isinstance(mapped_pos, (int, float)):
                         masked_true_pos.append(f"{mapped_pos:.0f}_{feature.split('_')[1]}")
                     else:
                         masked_true_pos.append(str(mapped_pos))
                 except:
-                    masked_true_pos.append(feature)          
+                    masked_true_pos.append(feature)
+                    query_pos_1.append('NA')
+                    query_pos_2.append('NA')
         else:
             for feature in masked_cols:
                 try:
                     pos_idx = feature[1:]
                     mapped_pos = site_translation_dict.get(pos_idx, feature)
+                    
+                    # Capture sequence-specific numbering for downstream 3D mapping
+                    query_pos_1.append(seq1['ref_to_query_map'].get(int(mapped_pos) if str(mapped_pos).isdigit() else mapped_pos, 'NA'))
+                    query_pos_2.append(seq2['ref_to_query_map'].get(int(mapped_pos) if str(mapped_pos).isdigit() else mapped_pos, 'NA'))
+
                     if isinstance(mapped_pos, (int, float)):
                          masked_true_pos.append(f"{mapped_pos:.0f}_{feature.split('_')[1]}")
                     else:
                          masked_true_pos.append(str(mapped_pos))
                 except:
                     masked_true_pos.append(feature)
+                    query_pos_1.append('NA')
+                    query_pos_2.append('NA')
         
         comparison_df = pd.DataFrame({
             'feature': np.array(cols)[mask],
@@ -713,7 +729,9 @@ def save_comparison_plot(seq1, seq2, report_dir, save_as, encoding_method, cmd_l
             f'{name1}_shap': seq1['shap_values'][0][mask],
             f'{name2}_shap': seq2['shap_values'][0][mask],
             'shap_difference': shap_diff[mask], 
-            'reference_position': masked_true_pos
+            'reference_position': masked_true_pos,
+            'query_position_1': query_pos_1,
+            'query_position_2': query_pos_2
         })
     else:
         comparison_df = pd.DataFrame({
@@ -723,7 +741,9 @@ def save_comparison_plot(seq1, seq2, report_dir, save_as, encoding_method, cmd_l
             f'{name1}_shap': seq1['shap_values'][0][mask],
             f'{name2}_shap': seq2['shap_values'][0][mask],
             'shap_difference': shap_diff[mask],
-            'reference_position': np.array(cols)[mask] # Fallback
+            'reference_position': np.array(cols)[mask], # Fallback
+            'query_position_1': ['NA'] * len(np.array(cols)[mask]),
+            'query_position_2': ['NA'] * len(np.array(cols)[mask])
         })
 
     if encoding_method == 'one_hot':
