@@ -294,7 +294,7 @@ _**WARNING** - Be cautious if you choose the 'comparison' or 'both' mode for SHA
 
 ### 3\. Mapping SHAP Importance to 3D Structure (`optics_structure_map.py`)
 
-<img src="https://github.com/VisualPhysiologyDB/optics/blob/shap_3d_mapping_dev/examples/optics_shap_on_structure_map_ex_2026-03-10_13-19-02/ex_screenshot.png?raw=true" alt="example output of OPTICS SHAP map" style="width:75%; height:75%;">
+<img src="https://github.com/VisualPhysiologyDB/optics/blob/main/examples/optics_shap_on_structure_map_ex_2026-03-10_13-19-02/ex_screenshot.png?raw=true" alt="example output of OPTICS SHAP map" style="width:75%; height:75%;">
 
 _Example output with SHAP values mapped to structure by OPTICS_
 
