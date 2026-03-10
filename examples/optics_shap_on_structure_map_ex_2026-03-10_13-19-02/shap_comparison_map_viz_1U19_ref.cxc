@@ -1,0 +1,41 @@
+camera ortho
+open 1U19_ref_shap_mapped.pdb
+zoom 0.75
+move x -5
+hide atoms
+hide cartoons
+show /A cartoons
+light gentle
+graphics silhouettes true width 1.5
+color byattribute bfactor /A palette #5ab4ac:#f5f5f5:#ef8a62 range 0,100
+set bgColor black
+# Delete the next line if you don't wont the surface loaded...
+surface /A
+transparency 95 target s
+key #5ab4ac:0 #f5f5f5:50 #ef8a62:100 pos 0.85,0.2 size 0.035,0.55 justification left labelOffset 5
+2dlab text 'SHAP Importance' size 30 xpos .79 ypos .145
+# NOTE: B-factors now represent ML Feature Importance (0=Low, 100=High)
+
+# --- Top SHAP Site Labels ---
+label /A:269 text '269'
+show /A:269 atoms
+label /A:208 text '208'
+show /A:208 atoms
+label /A:261 text '261'
+show /A:261 atoms
+label /A:164 text '164'
+show /A:164 atoms
+label /A:30 text '30'
+show /A:30 atoms
+label /A:217 text '217'
+show /A:217 atoms
+label /A:166 text '166'
+show /A:166 atoms
+label /A:275 text '275'
+show /A:275 atoms
+label /A:95 text '95'
+show /A:95 atoms
+label /A:150 text '150'
+show /A:150 atoms
+label color white
+label height 3.0
