@@ -372,6 +372,32 @@ def process_sequences_from_file(file, selected_model, identity_report, blastp, r
     
     model_path = model_directories[selected_model]
     bs_model_folder_path = model_bs_dirs.get(selected_model, '')
+
+    # --- Model Availability Check ---
+    core_models = ['whole-dataset', 'whole-dataset-mnm', 'wildtype', 'wildtype-mnm', 'type-one']
+    missing_paths = []
+
+    if not os.path.exists(model_path):
+        missing_paths.append(model_path)
+
+    if bootstrap and bs_model_folder_path and not os.path.exists(bs_model_folder_path):
+        missing_paths.append(bs_model_folder_path)
+
+    if missing_paths:
+        if selected_model not in core_models:
+            print(f"\n[ERROR] The selected model '{selected_model}' is an 'extra model' and its required files/folders were not found:")
+            for p in missing_paths:
+                print(f" - {p}")
+            print(f"\nPlease download the required extra model files from:")
+            print(f"https://github.com/VisualPhysiologyDB/extra_optics_models/tree/main")
+            print(f"and manually add them to your local OPTICS models directory before running this script.\n")
+        else:
+            print(f"\n[ERROR] Core model '{selected_model}' files are missing:")
+            for p in missing_paths:
+                print(f" - {p}")
+            print(f"\nPlease verify your OPTICS installation.\n")
+        sys.exit(1)
+
     # --- Caching Logic ---
     model_type = 'bs_models' if bootstrap else 'reg_models'
     cache_dir = f"{wrk_dir}/data/cached_predictions/{model_type}/{model_version}/{encoding_method}"
@@ -410,7 +436,7 @@ def process_sequences_from_file(file, selected_model, identity_report, blastp, r
             # Add the real name and sequence to the list for the worker
             sequences_for_mp.append((name, seq))
             
-    print(f"{len(prediction_results)} unique sequences found in cache. Predicting {len(sequences_for_mp)} new unique sequences.")
+    print(f"{len(prediction_results)} unique sequences found in cache. Predicting {len(sequences_for_mp)} new unique sequences.\n")
 
     if sequences_for_mp:
         try:

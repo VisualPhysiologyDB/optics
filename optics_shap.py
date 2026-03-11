@@ -35,7 +35,7 @@ from optics_scripts.utils import extract_fasta_entries
 
 # --- Load physiochemical properties data ---
 def load_amino_acid_properties():
-    """Load both scaled and non-scaled amino acid properties from Excel file."""
+    """Load both scaled and non_scaled amino acid properties from Excel file."""
     script_path = pathlib.Path(__file__).resolve()
     wrk_dir = str(script_path.parent).replace('\\', '/')
     prop_file = os.path.join(wrk_dir, 'data/aa_property_index/aa_property_values.xlsx')
@@ -334,6 +334,22 @@ def generate_shap_explanation(
     if input_file is None:
         raise Exception('Error: No file given')
 
+    alignment_data = model_datasets[model]
+    model_path = model_directories[model]
+
+    # --- Model Availability Check ---
+    core_models = ['whole-dataset', 'whole-dataset-mnm', 'wildtype', 'wildtype-mnm', 'type-one']
+    if not os.path.exists(model_path):
+        if model not in core_models:
+            print(f"\n[ERROR] The selected model '{model}' is an 'extra model' and its file was not found:")
+            print(f" - {model_path}")
+            print(f"\nPlease download the required extra model files from:")
+            print(f"https://github.com/VisualPhysiologyDB/extra_optics_models/tree/main")
+            print(f"and manually add them to your corresponding local OPTICS models directory before running this script.\n")
+        else:
+            print(f"\n[ERROR] The core model '{model}' file is missing:\n - {model_path}\nPlease verify your OPTICS installation.\n")
+        sys.exit(1)
+
     # Load sequences
     names, sequences = extract_fasta_entries(input_file)
     if len(names) == 0:
@@ -354,9 +370,6 @@ def generate_shap_explanation(
         print('\nCache file not found or invalid. A new cache will be created.\n')
 
     # --- Parallel Processing ---
-    alignment_data = model_datasets[model]
-    model_path = model_directories[model]
-    
     sequences_to_process = []
     cached_count = 0
     

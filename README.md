@@ -400,17 +400,37 @@ The GUI provides tabs/buttons for all four major pipelines:
 Understanding the λmax Prediction Models
 ----------------------------------------
 
-The `--model` flag allows you to select a specific pre-trained model. Each is named after the data-subset it was trained on:
+The `--model` flag allows you to select a specific pre-trained model. Each model is named after the data-subset it was trained on. 
 
-### **Base Model Datasets**
+To keep the base installation lightweight, models are divided into **Core** and **Extra** categories.
 
--   **whole-dataset**: Trained on the entire VPOD dataset. **Recommended**.
+### **Core Models (Included by Default)**
 
--   **wildtype**: Trained exclusively on wild-type sequences.
+These models are included out-of-the-box when you clone this repository:
 
--   **vertebrate** / **invertebrate**: Taxonomic subsets.
+-   **```whole-dataset```**: Trained on the entire VPOD dataset. **Recommended**.
 
--   **wildtype-vert**: Wild-type vertebrate sequences only.
+-   **```whole-dataset-mnm```**: Trained on the entire dataset including "Mine-n-Match" inferred data.
+
+-   **```wildtype```**: Trained exclusively on wild-type sequences.
+
+-   **```wildtype-mnm```**: Trained on wild-type sequences including "Mine-n-Match" inferred data.
+
+-   **```type-one```**: Trained on the Type-One (Microbial) opsin dataset (previously published by [**Karyasuyama et al. 2018**](10.1038/s41598-018-33984-w))
+
+### **Extra Models (Requires Separate Download)**
+
+We also offer specialized taxonomic and mutational subset models. Because of file size constraints, these are hosted in a separate repository.
+
+-   **```vertebrate```** & **```vertebrate-mnm```**
+
+-   **```invertebrate```** & **```invertebrate-mnm```**
+
+-   **```wildtype-vert```** & **```wildtype-vert-mnm```**
+
+-   **```wildtype-mut```**
+
+> **📥 How to get Extra Models:** To use any of the extra models, please visit the [**Extra OPTICS Models Repository**](https://github.com/VisualPhysiologyDB/extra_optics_models/tree/main "null"). Download the required `.pkl` files and place them in your local `models/reg_models/` and/or `models/bs_models/` directories as instructed there.
 
 ### **The `-mnm` Suffix**
 

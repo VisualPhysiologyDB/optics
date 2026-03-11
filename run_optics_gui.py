@@ -243,10 +243,12 @@ class OpticsGUIFrame(ttk.Frame):
         
         # --- Choices ---
         self.version_choices = ['vpod_1.3']
-        self.model_choices = ['whole-dataset', 'wildtype', 'vertebrate', 'invertebrate', 
-                              'wildtype-vert', 'type-one', 'whole-dataset-mnm', 
-                              'wildtype-mnm', 'vertebrate-mnm', 'invertebrate-mnm', 
-                              'wildtype-vert-mnm', 'wildtype-mut']
+        self.model_choices = ['whole-dataset', 'wildtype', 'whole-dataset-mnm', 
+                              'wildtype-mnm', 'type-one']
+        #self.model_choices = ['whole-dataset', 'wildtype', 'vertebrate', 'invertebrate', 
+        #                      'wildtype-vert', 'type-one', 'whole-dataset-mnm', 
+        #                      'wildtype-mnm', 'vertebrate-mnm', 'invertebrate-mnm', 
+        #                      'wildtype-vert-mnm', 'wildtype-mut']
         self.encoding_choices = ['one_hot', 'aa_prop']
         self.refseq_choices = ['bovine', 'squid', 'microbe', 'custom']
         self.viz_ftyp_choices = ['svg', 'png', 'pdf']
