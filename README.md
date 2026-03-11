@@ -430,7 +430,7 @@ We also offer specialized taxonomic and mutational subset models. Because of fil
 
 -   **```wildtype-mut```**
 
-> **📥 How to get Extra Models:** To use any of the extra models, please visit the [**Extra OPTICS Models Repository**](https://github.com/VisualPhysiologyDB/extra_optics_models/tree/main "null"). Download the required `.pkl` files and place them in your local `models/reg_models/` and/or `models/bs_models/` directories as instructed there.
+> **📥 How to get Extra Models:** To use any of the extra models, please visit the [**Extra OPTICS Models Repository**](https://github.com/VisualPhysiologyDB/extra_optics_models/tree/main "null"). Download the required `.pkl` files and place them in your local `models/reg_models/` and `models/bs_models/` directories as instructed there.
 
 ### **The `-mnm` Suffix**
 
