@@ -237,11 +237,11 @@ For users interested in the "nitty-gritty" of _why_ sequences have different pre
 
 This tool generates detailed plots and reports that attribute the difference in prediction to specific features (i.e., amino acid sites and their properties).
 
-![](https://github.com/VisualPhysiologyDB/optics/blob/main/examples/optics_shap_on_short_ex_test_aa_prop_2026-01-09_02-28-40/Bombus_impatiens_424_individual_shap.svg?raw=true)
+<img src="https://github.com/VisualPhysiologyDB/optics/blob/main/examples/optics_shap_on_structure_map_ex_2026-03-10_13-19-02/C_phantasticus_LWS1_individual_shap.svg?raw=true" alt="ex optics gui" style="width:75%; height:75%;">
 
 _Example SHAP plot for explaining individual predictions of opsin λmax by OPTICS_
 
-![](https://github.com/VisualPhysiologyDB/optics/blob/main/examples/optics_shap_on_short_ex_test_aa_prop_2026-01-09_02-28-40/Bombus_impatiens_424_vs_Bombus_impatiens_347_viz.svg?raw=true)
+<img src="https://github.com/VisualPhysiologyDB/optics/blob/main/examples/optics_shap_on_structure_map_ex_2026-03-10_13-19-02/C_phantasticus_LWS1_vs_C_phantasticus_LWS2_viz.svg?raw=true" alt="ex optics gui" style="width:75%; height:75%;">
 
 _Example SHAP comparison plot for explaining pair-wise differences in predictions of opsin λmax by OPTICS_
 
@@ -294,7 +294,7 @@ _**WARNING** - Be cautious if you choose the 'comparison' or 'both' mode for SHA
 
 ### 3\. Mapping SHAP Importance to 3D Structure (`optics_structure_map.py`)
 
-<img src="https://github.com/VisualPhysiologyDB/optics/blob/main/examples/optics_shap_on_structure_map_ex_2026-03-10_13-19-02/ex_screenshot.png?raw=true" alt="example output of OPTICS SHAP map" style="width:75%; height:75%;">
+<img src="https://github.com/VisualPhysiologyDB/optics/blob/main/examples/optics_shap_on_structure_map_ex_2026-03-10_13-19-02/ex_LWS1_screenshot.png?raw=true" alt="example output of OPTICS SHAP map" style="width:75%; height:75%;">
 
 _Example output with SHAP values mapped to structure by OPTICS_
 
