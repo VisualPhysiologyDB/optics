@@ -684,7 +684,7 @@ def save_comparison_plot(seq1, seq2, report_dir, save_as, encoding_method, cmd_l
     
     name1 = seq1['name']
     name2 = seq2['name']
-    shap_diff = seq1['shap_values'][0] - seq2['shap_values'][0]
+    shap_diff = seq2['shap_values'][0] - seq1['shap_values'][0]
     
     feat1_vals = seq1['encoded_seq'].values[0]
     feat2_vals = seq2['encoded_seq'].values[0]
@@ -802,10 +802,10 @@ def save_comparison_plot(seq1, seq2, report_dir, save_as, encoding_method, cmd_l
     
     # Plotting Axis selection
     if use_reference_sites_for_plot and isinstance(site_translation_dict, dict):
-        bars = ax.barh(comparison_df['reference_position'], -comparison_df['shap_difference'], color=colors)
+        bars = ax.barh(comparison_df['reference_position'], comparison_df['shap_difference'], color=colors)
         y_label = f'Amino Acid Position ({ref_seq_name} Reference)'
     else:
-        bars = ax.barh(comparison_df['feature'], -comparison_df['shap_difference'], color=colors)
+        bars = ax.barh(comparison_df['feature'], comparison_df['shap_difference'], color=colors)
         y_label = 'Feature'
 
     for i, bar in enumerate(bars):

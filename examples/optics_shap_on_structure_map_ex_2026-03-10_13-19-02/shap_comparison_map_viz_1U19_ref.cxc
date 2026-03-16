@@ -1,5 +1,5 @@
 camera ortho
-open 1U19_ref_shap_mapped.pdb
+open 1U19_ref_shap_comparison_mapped.pdb
 zoom 0.75
 move x -5
 hide atoms

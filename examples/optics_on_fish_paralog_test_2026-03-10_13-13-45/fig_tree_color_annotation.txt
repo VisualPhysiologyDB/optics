@@ -1,3 +1,0 @@
-Name	!color
-C_phantasticus_LWS1	#b3ff00
-C_phantasticus_LWS2	#1eff00

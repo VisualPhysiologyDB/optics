@@ -1,5 +1,5 @@
 camera ortho
-open C_phantasticus_LWS1_esmfold_shap_comparison_mapped.pdb
+open 1U19_ref_LWS1_shap_mapped.pdb
 zoom 0.55
 move x -10
 hide atoms
@@ -17,25 +17,27 @@ key #5ab4ac:0 #f5f5f5:50 #ef8a62:100 pos 0.78,0.2 size 0.035,0.55 justification 
 # NOTE: B-factors now represent ML Feature Importance (0=Low, 100=High)
 
 # --- Top SHAP Site Labels ---
-label /A:283 text '269'
-show /A:283 atoms
-label /A:222 text '208'
-show /A:222 atoms
-label /A:275 text '261'
-show /A:275 atoms
-label /A:178 text '164'
-show /A:178 atoms
-label /A:44 text '30'
-show /A:44 atoms
-label /A:231 text '217'
-show /A:231 atoms
-label /A:180 text '166'
-show /A:180 atoms
-label /A:289 text '275'
-show /A:289 atoms
-label /A:109 text '95'
-show /A:109 atoms
-label /A:164 text '150'
+label /A:286 text '286'
+show /A:286 atoms
+label /A:184 text '184'
+show /A:184 atoms
+label /A:199 text '199'
+show /A:199 atoms
+label /A:208 text '208'
+show /A:208 atoms
+label /A:94 text '94'
+show /A:94 atoms
+label /A:269 text '269'
+show /A:269 atoms
+label /A:261 text '261'
+show /A:261 atoms
+label /A:181 text '181'
+show /A:181 atoms
+label /A:86 text '86'
+show /A:86 atoms
+label /A:164 text '164'
 show /A:164 atoms
+label /A:296 text '296 (CBS)'
+show /A:296 atoms
 label color white
 label height 3.0
