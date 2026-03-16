@@ -478,7 +478,7 @@ Contact information for author questions or feedback.
 
 - *OPTICS v1.3 uses VPOD_v1.3 for training.*
 
-- **[Here](https://tinyurl.com/u7hn9adm)** is a link to a bibliography of the publications used to build VPOD_v1.2 (VPOD_v1.3 version not yet released)
+- **[Here](https://tinyurl.com/u7hn9adm)** is a link to a bibliography of the publications used to build VPOD_v1.3
   
 - If you know of publications for training opsin ML models not included in the VPOD_v1.2 database, please send them to us through **[this form](https://tinyurl.com/29afaxyr)**
   
