@@ -188,7 +188,7 @@ class HumanEyeLoadingScreen(ctk.CTkToplevel):
         # Blink logic
         self.blink_timer -= 1
         if self.blink_timer <= 0:
-            self.blink_duration = 4 # Blink lasts for 4 frames
+            self.blink_duration = 60 # Blink lasts for 60 frames
             self.blink_timer = random.randint(80, 250)
 
         self.canvas.delete("all")
