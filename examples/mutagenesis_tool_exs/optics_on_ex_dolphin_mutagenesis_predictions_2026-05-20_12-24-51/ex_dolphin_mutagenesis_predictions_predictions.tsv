@@ -1,0 +1,4 @@
+Names	Single_Prediction	%Identity_Nearest_VPOD_Sequence	Sequence_Length	Lmax_Hex_Color
+NM_001280659.1_A132S	487.8	N/A	348	#00f6ff
+NM_001280659.1_N151S	487.8	N/A	348	#00f6ff
+NM_001280659.1_A132S,N151S	487.8	N/A	348	#00f6ff

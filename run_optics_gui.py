@@ -10,13 +10,14 @@ import queue
 import platform
 import json
 import glob
+import re
 from PIL import Image, ImageTk
 
 import warnings
 warnings.filterwarnings("ignore")
 warnings.simplefilter('ignore')
 
-# Attempt to import backend functions
+# Attempt to import backend OPTICS functions
 try:
     from optics_predictions import run_optics_predictions
 except ImportError:
@@ -37,9 +38,32 @@ try:
 except ImportError:
     print("Warning: Could not import 'run_structure_annotation'. Annotation mode will fail if selected.")
 
+# Attempt to import backend Mutagenesis functions
+try:
+    from optics_scripts.mutagenesis import get_mutant_combinations, get_mutant_seqs
+except ImportError:
+    print("Warning: Could not import 'mutagenesis'. Mutagenesis mode will fail if selected.")
+
+try:
+    from optics_scripts.chimeras import parse_chimera_string, create_chimera
+except ImportError:
+    print("Warning: Could not import 'chimeras'. Chimeras mode will fail if selected.")
+
+try:
+    from optics_scripts.in_silico_dms import generate_dms_library
+except ImportError:
+    print("Warning: Could not import 'in_silico_dms'. DMS mode will fail if selected.")
+
+try:
+    from optics_scripts.reciprocal_mutagenesis import generate_reciprocal_mutants
+    from Bio import SeqIO
+except ImportError:
+    print("Warning: Could not import 'reciprocal_mutagenesis' or 'Bio'. Reciprocal mode will fail if selected.")
+
+
 # Set CustomTkinter defaults
 ctk.set_appearance_mode("Dark")  # Modes: "System" (standard), "Dark", "Light"
-ctk.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
+ctk.set_default_color_theme("dark-blue")  # Themes: "blue" (standard), "green", "dark-blue"
 
 # Global Button Styles
 BTN_COLOR = "#41b6c4"
@@ -188,7 +212,7 @@ class HumanEyeLoadingScreen(ctk.CTkToplevel):
         # Blink logic
         self.blink_timer -= 1
         if self.blink_timer <= 0:
-            self.blink_duration = 60 # Blink lasts for 60 frames
+            self.blink_duration = 20 # Blink lasts for 30 frames
             self.blink_timer = random.randint(80, 250)
 
         self.canvas.delete("all")
@@ -249,31 +273,66 @@ class ModeSelectorFrame(ctk.CTkFrame):
         title_lbl = ctk.CTkLabel(main_frame, text="Welcome to OPTICS", font=ctk.CTkFont(family="Century Gothic", size=24, weight="bold"))
         title_lbl.pack(pady=10)
         
-        subtitle_lbl = ctk.CTkLabel(main_frame, text="Select your analysis pipeline:", font=ctk.CTkFont(family="Century Gothic", size=14))
+        subtitle_lbl = ctk.CTkLabel(main_frame, text="Select your desired pipeline or tool:", font=ctk.CTkFont(family="Century Gothic", size=14))
         subtitle_lbl.pack(pady=(0, 20))
 
-        btn_font = ctk.CTkFont(family="Century Gothic", size=14)
+        # --- Two-Column Layout for Buttons ---
+        cols_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
+        cols_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
+        cols_frame.columnconfigure(0, weight=1)
+        cols_frame.columnconfigure(1, weight=1)
 
-        pred_btn = ctk.CTkButton(main_frame, text="Standard Predictions\n(λmax & Spectral Tuning)", font=btn_font, height=60,
+        btn_font = ctk.CTkFont(family="Century Gothic", size=13)
+        header_font = ctk.CTkFont(family="Century Gothic", size=16, weight="bold")
+
+        # --- Left Column: Analysis Pipeline ---
+        lbl_analysis = ctk.CTkLabel(cols_frame, text="Analysis Pipeline", font=header_font)
+        lbl_analysis.grid(row=0, column=0, pady=(0,15))
+
+        pred_btn = ctk.CTkButton(cols_frame, text="Standard Predictions\n(λmax & Spectral Tuning)", font=btn_font, height=60,
                             fg_color=BTN_COLOR, hover_color=BTN_HOVER, text_color=BTN_TEXT,
                             command=lambda: self.controller.show_optics_gui('predictions'))
-        pred_btn.pack(fill=tk.X, padx=50, pady=10)
+        pred_btn.grid(row=1, column=0, sticky="ew", padx=20, pady=10)
 
-        shap_btn = ctk.CTkButton(main_frame, text="SHAP Interpretation\n(Amino-Acid Importance)", font=btn_font, height=60,
+        shap_btn = ctk.CTkButton(cols_frame, text="SHAP Interpretation\n(Amino-Acid Importance)", font=btn_font, height=60,
                             fg_color=BTN_COLOR, hover_color=BTN_HOVER, text_color=BTN_TEXT,
                             command=lambda: self.controller.show_optics_gui('shap'))
-        shap_btn.pack(fill=tk.X, padx=50, pady=10)
+        shap_btn.grid(row=2, column=0, sticky="ew", padx=20, pady=10)
 
-        struct_btn = ctk.CTkButton(main_frame, text="Structure SHAP Mapping\n(3D Visualization of SHAP)", font=btn_font, height=60,
+        struct_btn = ctk.CTkButton(cols_frame, text="Structure SHAP Mapping\n(3D Visualization of SHAP)", font=btn_font, height=60,
                               fg_color=BTN_COLOR, hover_color=BTN_HOVER, text_color=BTN_TEXT,
                               command=lambda: self.controller.show_optics_gui('structure'))
-        struct_btn.pack(fill=tk.X, padx=50, pady=10)
+        struct_btn.grid(row=3, column=0, sticky="ew", padx=20, pady=10)
 
-        annot_btn = ctk.CTkButton(main_frame, text="Structure Annotations\n(Custom 3D Visualization)", font=btn_font, height=60,
+        annot_btn = ctk.CTkButton(cols_frame, text="Structure Annotations\n(Custom 3D Visualization)", font=btn_font, height=60,
                               fg_color=BTN_COLOR, hover_color=BTN_HOVER, text_color=BTN_TEXT,
                               command=lambda: self.controller.show_optics_gui('annotations'))
-        annot_btn.pack(fill=tk.X, padx=50, pady=10)
+        annot_btn.grid(row=4, column=0, sticky="ew", padx=20, pady=10)
 
+
+        # --- Right Column: Mutagenesis Tools ---
+        lbl_mut = ctk.CTkLabel(cols_frame, text="Mutagenesis Tools", font=header_font)
+        lbl_mut.grid(row=0, column=1, pady=(0,15))
+
+        sdm_btn = ctk.CTkButton(cols_frame, text="Site-Directed Mutagenesis\n(Generate Opsin Mutants)", font=btn_font, height=60,
+                              fg_color=BTN_COLOR, hover_color=BTN_HOVER, text_color=BTN_TEXT,
+                              command=lambda: self.controller.show_optics_gui('mutagenesis'))
+        sdm_btn.grid(row=1, column=1, sticky="ew", padx=20, pady=10)
+
+        dms_btn = ctk.CTkButton(cols_frame, text="Deep Mutational Scanning\n(In-silico Site-Saturated Mutagenesis)", font=btn_font, height=60,
+                              fg_color=BTN_COLOR, hover_color=BTN_HOVER, text_color=BTN_TEXT,
+                              command=lambda: self.controller.show_optics_gui('dms'))
+        dms_btn.grid(row=2, column=1, sticky="ew", padx=20, pady=10)
+
+        reciprocal_btn = ctk.CTkButton(cols_frame, text="Reciprocal Mutagenesis\n(Swap Differing Amino Acids)", font=btn_font, height=60,
+                              fg_color=BTN_COLOR, hover_color=BTN_HOVER, text_color=BTN_TEXT,
+                              command=lambda: self.controller.show_optics_gui('reciprocal'))
+        reciprocal_btn.grid(row=3, column=1, sticky="ew", padx=20, pady=10)
+
+        chimera_btn = ctk.CTkButton(cols_frame, text="Chimera Construction\n(Stitch Sequences & Mutate)", font=btn_font, height=60,
+                              fg_color=BTN_COLOR, hover_color=BTN_HOVER, text_color=BTN_TEXT,
+                              command=lambda: self.controller.show_optics_gui('chimeras'))
+        chimera_btn.grid(row=4, column=1, sticky="ew", padx=20, pady=10)
 
 # --- Main Logic Frame ---
 class OpticsGUIFrame(ctk.CTkFrame):
@@ -288,14 +347,18 @@ class OpticsGUIFrame(ctk.CTkFrame):
         self.lbl_font = ctk.CTkFont(family="Century Gothic", size=13)
         self.title_font = ctk.CTkFont(family="Century Gothic", size=18, weight="bold")
         
-        if self.mode == 'predictions':
-            self.title_suffix = "Predictions"
-        elif self.mode == 'shap':
-            self.title_suffix = "SHAP Analysis"
-        elif self.mode == 'structure':
-            self.title_suffix = "Structure Mapping"
-        else:
-            self.title_suffix = "Structure Annotations"
+        # --- Mode Titles ---
+        title_map = {
+            'predictions': "Predictions",
+            'shap': "SHAP Analysis",
+            'structure': "Structure Mapping",
+            'annotations': "Structure Annotations",
+            'mutagenesis': "Site-Directed Mutagenesis",
+            'chimeras': "Chimera Construction",
+            'dms': "Deep Mutational Scanning (DMS)",
+            'reciprocal': "Reciprocal Mutagenesis"
+        }
+        self.title_suffix = title_map.get(self.mode, "Pipeline")
         
         # --- Choices ---
         self.version_choices = ['vpod_1.3']
@@ -303,9 +366,10 @@ class OpticsGUIFrame(ctk.CTkFrame):
                               'wildtype-mnm', 'type-one']
         self.encoding_choices = ['one_hot', 'aa_prop']
         self.refseq_choices = ['bovine', 'squid', 'microbe', 'custom']
-        self.viz_ftyp_choices = ['svg', 'png', 'pdf'] # Changed back to SVG default
+        self.viz_ftyp_choices = ['svg', 'png', 'pdf'] 
         self.software_choices = ['PyMOL', 'ChimeraX'] 
         self.shap_mode_choices = ['both', 'comparison', 'single']
+        self.mut_out_format_choices = ['fasta', 'tsv']
 
         # --- Top Bar ---
         top_bar_frame = ctk.CTkFrame(self, fg_color="transparent")
@@ -334,7 +398,7 @@ class OpticsGUIFrame(ctk.CTkFrame):
         # --- INPUT WIDGETS ---
         current_row = 0
 
-        # Input Files First
+        # ---- OPTICS PIPELINE INPUTS ----
         if self.mode in ['predictions', 'shap']:
             ctk.CTkLabel(self.scrollable_frame, font=self.lbl_font, text="Input Sequence/FASTA File:").grid(row=current_row, column=0, padx=10, pady=5, sticky=tk.W)
             self.input_file_var = tk.StringVar()
@@ -392,7 +456,84 @@ class OpticsGUIFrame(ctk.CTkFrame):
             CTkToolTip(self.pdb1_entry, "Enter a 4-letter PDB ID (e.g., 1U19) or select a local .pdb file.")
             current_row += 1
 
-        # 2. Output Directory (Common to all)
+        # ---- MUTAGENESIS TOOLS INPUTS ----
+        elif self.mode == 'mutagenesis':
+            ctk.CTkLabel(self.scrollable_frame, font=self.lbl_font, text="WT Accession (e.g., AncBovine):").grid(row=current_row, column=0, padx=10, pady=5, sticky=tk.W)
+            self.mut_wt_acc_var = tk.StringVar()
+            self.mut_wt_acc_entry = ctk.CTkEntry(self.scrollable_frame, textvariable=self.mut_wt_acc_var)
+            self.mut_wt_acc_entry.grid(row=current_row, column=1, padx=10, pady=5, sticky=tk.EW)
+            CTkToolTip(self.mut_wt_acc_entry, "Accession ID for the wild-type sequence. Will fetch from NCBI if not cached.")
+            current_row += 1
+
+            ctk.CTkLabel(self.scrollable_frame, font=self.lbl_font, text="Mutations (e.g., A116S,S119A):").grid(row=current_row, column=0, padx=10, pady=5, sticky=tk.W)
+            self.mut_list_var = tk.StringVar()
+            self.mut_list_entry = ctk.CTkEntry(self.scrollable_frame, textvariable=self.mut_list_var)
+            self.mut_list_entry.grid(row=current_row, column=1, padx=10, pady=5, sticky=tk.EW)
+            CTkToolTip(self.mut_list_entry, "Comma-separated list of mutations to apply.")
+            current_row += 1
+
+            self.mut_combinatorial_var = tk.BooleanVar(value=False)
+            self.mut_combinatorial_check = ctk.CTkCheckBox(self.scrollable_frame, text="Generate Combinatorial Mutants (Leave Unechecked for Single Mutant)", variable=self.mut_combinatorial_var)
+            self.mut_combinatorial_check.grid(row=current_row, column=1, padx=10, pady=5, sticky=tk.W)
+            CTkToolTip(self.mut_combinatorial_check, "If checked, yields all combination vectors of proposed mutations. If unchecked, builds a single sequence with all modifications in sequence.")
+            current_row += 1
+            current_row += 1
+
+            ctk.CTkLabel(self.scrollable_frame, font=self.lbl_font, text="OR Upload File With Several Mutants:").grid(row=current_row, column=0, padx=10, pady=5, sticky=tk.W)
+            self.mut_file_var = tk.StringVar()
+            self.mut_file_entry = ctk.CTkEntry(self.scrollable_frame, textvariable=self.mut_file_var)
+            self.mut_file_entry.grid(row=current_row, column=1, padx=10, pady=5, sticky=tk.EW)
+            ctk.CTkButton(self.scrollable_frame, text="Browse...", width=80, fg_color=BTN_COLOR, hover_color=BTN_HOVER, text_color=BTN_TEXT, command=lambda: self.mut_file_var.set(filedialog.askopenfilename())).grid(row=current_row, column=2, padx=10, pady=5)
+            CTkToolTip(self.mut_file_entry, "Provide a text file containing target mutant accessions (one per line) instead of combinations.")
+            current_row += 1
+
+            ctk.CTkLabel(self.scrollable_frame, font=self.lbl_font, text="Optional WT FASTA File:").grid(row=current_row, column=0, padx=10, pady=5, sticky=tk.W)
+            self.mut_wt_file_var = tk.StringVar()
+            self.mut_wt_file_entry = ctk.CTkEntry(self.scrollable_frame, textvariable=self.mut_wt_file_var)
+            self.mut_wt_file_entry.grid(row=current_row, column=1, padx=10, pady=5, sticky=tk.EW)
+            ctk.CTkButton(self.scrollable_frame, text="Browse...", width=80, fg_color=BTN_COLOR, hover_color=BTN_HOVER, text_color=BTN_TEXT, command=lambda: self.mut_wt_file_var.set(filedialog.askopenfilename())).grid(row=current_row, column=2, padx=10, pady=5)
+            CTkToolTip(self.mut_wt_file_entry, "Optional: Provide a FASTA file for WT sequences not on NCBI.")
+            current_row += 1
+            
+            self.mut_allow_wt_var = tk.BooleanVar(value=True) 
+            self.mut_allow_wt_check = ctk.CTkCheckBox(self.scrollable_frame, text="Include WT Sequence in Output", variable=self.mut_allow_wt_var)
+            self.mut_allow_wt_check.grid(row=current_row, column=0, columnspan=2, padx=10, pady=10, sticky=tk.W)
+            current_row += 1
+
+        elif self.mode == 'chimeras':
+            ctk.CTkLabel(self.scrollable_frame, font=self.lbl_font, text="Chimera String:").grid(row=current_row, column=0, padx=10, pady=5, sticky=tk.W)
+            self.chimera_string_var = tk.StringVar()
+            self.chimera_entry = ctk.CTkEntry(self.scrollable_frame, textvariable=self.chimera_string_var)
+            self.chimera_entry.grid(row=current_row, column=1, padx=10, pady=5, sticky=tk.EW)
+            CTkToolTip(self.chimera_entry, "Format: Acc1_Start1_End1-Acc2_Start2_End2[Mutation1,...]\ne.g., AncSW1_1_150-AncSW2_151_348[C203A]")
+            current_row += 1
+
+        elif self.mode == 'dms':
+            ctk.CTkLabel(self.scrollable_frame, font=self.lbl_font, text="WT Accession:").grid(row=current_row, column=0, padx=10, pady=5, sticky=tk.W)
+            self.dms_wt_acc_var = tk.StringVar()
+            self.dms_wt_entry = ctk.CTkEntry(self.scrollable_frame, textvariable=self.dms_wt_acc_var)
+            self.dms_wt_entry.grid(row=current_row, column=1, padx=10, pady=5, sticky=tk.EW)
+            CTkToolTip(self.dms_wt_entry, "Accession ID for the wild-type sequence to be mutated.")
+            current_row += 1
+
+            ctk.CTkLabel(self.scrollable_frame, font=self.lbl_font, text="Sites (e.g., S121,A185,G203):").grid(row=current_row, column=0, padx=10, pady=5, sticky=tk.W)
+            self.dms_sites_var = tk.StringVar()
+            self.dms_sites_entry = ctk.CTkEntry(self.scrollable_frame, textvariable=self.dms_sites_var)
+            self.dms_sites_entry.grid(row=current_row, column=1, padx=10, pady=5, sticky=tk.EW)
+            CTkToolTip(self.dms_sites_entry, "Comma-separated list of target sites. Will generate 20 AA variants for each.")
+            current_row += 1
+
+        elif self.mode == 'reciprocal':
+            ctk.CTkLabel(self.scrollable_frame, font=self.lbl_font, text="Aligned FASTA File (3 Seqs):").grid(row=current_row, column=0, padx=10, pady=5, sticky=tk.W)
+            self.recip_file_var = tk.StringVar()
+            self.recip_file_entry = ctk.CTkEntry(self.scrollable_frame, textvariable=self.recip_file_var)
+            self.recip_file_entry.grid(row=current_row, column=1, padx=10, pady=5, sticky=tk.EW)
+            ctk.CTkButton(self.scrollable_frame, text="Browse...", width=80, fg_color=BTN_COLOR, hover_color=BTN_HOVER, text_color=BTN_TEXT, command=lambda: self.recip_file_var.set(filedialog.askopenfilename())).grid(row=current_row, column=2, padx=10, pady=5)
+            CTkToolTip(self.recip_file_entry, "A single FASTA file containing EXACTLY 3 aligned sequences.\nSeq 1 = Ref Positional Numbering, Seq 2 & Seq 3 = To be swapped.")
+            current_row += 1
+
+
+        # --- Common Output Directory (Applies to all) ---
         ctk.CTkLabel(self.scrollable_frame, font=self.lbl_font, text="Output Directory:").grid(row=current_row, column=0, padx=10, pady=(15,5), sticky=tk.W)
         self.output_dir_var = tk.StringVar(value=os.path.join(os.getcwd(), 'prediction_outputs'))
         self.out_dir_entry = ctk.CTkEntry(self.scrollable_frame, textvariable=self.output_dir_var)
@@ -400,16 +541,18 @@ class OpticsGUIFrame(ctk.CTkFrame):
         ctk.CTkButton(self.scrollable_frame, text="Browse...", width=80, fg_color=BTN_COLOR, hover_color=BTN_HOVER, text_color=BTN_TEXT, command=self.browse_output_dir).grid(row=current_row, column=2, padx=10, pady=(15,5))
         CTkToolTip(self.out_dir_entry, "The destination folder for all generated reports and visualizations.")
         current_row += 1
+        
+        # --- Common Output Prefix/Filename ---
+        ctk.CTkLabel(self.scrollable_frame, font=self.lbl_font, text="Output Filename/Prefix:").grid(row=current_row, column=0, padx=10, pady=5, sticky=tk.W)
+        self.prediction_prefix_var = tk.StringVar(value="optics_output")
+        self.prefix_entry = ctk.CTkEntry(self.scrollable_frame, textvariable=self.prediction_prefix_var)
+        self.prefix_entry.grid(row=current_row, column=1, padx=10, pady=5, sticky=tk.EW)
+        CTkToolTip(self.prefix_entry, "Base name appended to all output files (e.g., 'my_data' -> 'my_data_predictions.csv').")
+        current_row += 1
+
 
         # --- Sub-configurations by mode ---
         if self.mode in ['predictions', 'shap']:
-            ctk.CTkLabel(self.scrollable_frame, font=self.lbl_font, text="Output Filename Prefix:").grid(row=current_row, column=0, padx=10, pady=5, sticky=tk.W)
-            self.prediction_prefix_var = tk.StringVar(value="unnamed")
-            self.prefix_entry = ctk.CTkEntry(self.scrollable_frame, textvariable=self.prediction_prefix_var)
-            self.prefix_entry.grid(row=current_row, column=1, padx=10, pady=5, sticky=tk.EW)
-            CTkToolTip(self.prefix_entry, "Base name appended to all output files (e.g., 'my_data' -> 'my_data_predictions.csv').")
-            current_row += 1
-            
             ctk.CTkLabel(self.scrollable_frame, font=self.lbl_font, text="Model Version:").grid(row=current_row, column=0, padx=10, pady=5, sticky=tk.W)
             self.version_var = ctk.StringVar(value=self.version_choices[0])
             self.version_menu = ctk.CTkOptionMenu(self.scrollable_frame, variable=self.version_var, values=self.version_choices)
@@ -501,6 +644,50 @@ class OpticsGUIFrame(ctk.CTkFrame):
             CTkToolTip(self.annot_software_menu, "Choose the rendering script format: .pml for PyMOL or .cxc for ChimeraX.")
             current_row += 1
 
+        elif self.mode in ['mutagenesis', 'chimeras', 'dms', 'reciprocal']:
+            # Shared setting for these modes: Reference Accession
+            default_ref = "NM_001014890"
+            ctk.CTkLabel(self.scrollable_frame, font=self.lbl_font, text="Reference Accession:").grid(row=current_row, column=0, padx=10, pady=5, sticky=tk.W)
+            self.mut_ref_acc_var = tk.StringVar(value=default_ref)
+            self.mut_ref_acc_entry = ctk.CTkEntry(self.scrollable_frame, textvariable=self.mut_ref_acc_var)
+            self.mut_ref_acc_entry.grid(row=current_row, column=1, padx=10, pady=5, sticky=tk.EW)
+            CTkToolTip(self.mut_ref_acc_entry, "Reference NUCLEOTIDE/PROTEIN accession for sequence numbering alignment.")
+            current_row += 1
+
+            if self.mode == 'mutagenesis':
+                ctk.CTkLabel(self.scrollable_frame, font=self.lbl_font, text="Output Format:").grid(row=current_row, column=0, padx=10, pady=5, sticky=tk.W)
+                self.mut_out_format_var = ctk.StringVar(value=self.mut_out_format_choices[0])
+                self.mut_out_format_menu = ctk.CTkOptionMenu(self.scrollable_frame, variable=self.mut_out_format_var, values=self.mut_out_format_choices)
+                self.mut_out_format_menu.grid(row=current_row, column=1, padx=10, pady=5, sticky=tk.EW)
+                current_row += 1
+
+            # --- Mutagenesis to Prediction Pipeline ---
+            pipe_frame = ctk.CTkFrame(self.scrollable_frame)
+            pipe_frame.grid(row=current_row, column=0, columnspan=3, padx=10, pady=10, sticky=tk.EW)
+            pipe_frame.columnconfigure(1, weight=1)
+            current_row += 1
+
+            self.mut_run_pred_var = tk.BooleanVar(value=False)
+            self.mut_run_pred_check = ctk.CTkCheckBox(pipe_frame, text="Directly Run OPTICS Predictions on Mutant Sequences", variable=self.mut_run_pred_var, font=self.title_font, command=self.toggle_mut_pred_options)
+            self.mut_run_pred_check.grid(row=0, column=0, columnspan=2, padx=15, pady=15, sticky=tk.W)
+            CTkToolTip(self.mut_run_pred_check, "Automatically pass the generated sequence(s) into the OPTICS Prediction pipeline.")
+
+            ctk.CTkLabel(pipe_frame, font=self.lbl_font, text="Prediction Model:").grid(row=1, column=0, padx=15, pady=5, sticky=tk.W)
+            self.mut_pred_model_var = ctk.StringVar(value=self.model_choices[0])
+            self.mut_pred_model_menu = ctk.CTkOptionMenu(pipe_frame, variable=self.mut_pred_model_var, values=self.model_choices)
+            self.mut_pred_model_menu.grid(row=1, column=1, padx=15, pady=5, sticky=tk.EW)
+
+            ctk.CTkLabel(pipe_frame, font=self.lbl_font, text="Encoding Method:").grid(row=2, column=0, padx=15, pady=(5,15), sticky=tk.W)
+            self.mut_pred_enc_var = ctk.StringVar(value=self.encoding_choices[1])
+            self.mut_pred_enc_menu = ctk.CTkOptionMenu(pipe_frame, variable=self.mut_pred_enc_var, values=self.encoding_choices)
+            self.mut_pred_enc_menu.grid(row=2, column=1, padx=15, pady=(5,15), sticky=tk.EW)
+            
+            self.mut_bs_var = tk.BooleanVar(value=False)
+            self.mut_bs_var_check = ctk.CTkCheckBox(pipe_frame, text="Bootstrap Predictions...", variable=self.mut_bs_var, font=self.lbl_font)
+            self.mut_bs_var_check.grid(row=3, column=1, padx=15, pady=5, sticky=tk.W)
+            CTkToolTip(self.mut_bs_var_check, "If checked, will run OPTICS predictions with bootstrapping (WARNING: Can take alot longer!).")            
+            
+            self.toggle_mut_pred_options() # initialize state
         # --- SUB-MODE SPECIFIC OPTIONS ---
         if self.mode == 'predictions':
             self.non_standard_aa_var = tk.BooleanVar(value=True) 
@@ -623,11 +810,15 @@ class OpticsGUIFrame(ctk.CTkFrame):
             'predictions': "Run OPTICS Predictions",
             'shap': "Run SHAP Analysis",
             'structure': "Run SHAP Structure Mapping",
-            'annotations': "Run Structure Annotation"
+            'annotations': "Run Structure Annotation",
+            'mutagenesis': "Run Mutagenesis",
+            'chimeras': "Generate Chimeras",
+            'dms': "Run In-Silico DMS",
+            'reciprocal': "Run Reciprocal Mutagenesis"
         }
         self.run_button = ctk.CTkButton(
             action_frame, 
-            text=btn_text_map[self.mode], 
+            text=btn_text_map.get(self.mode, "Run"), 
             font=ctk.CTkFont(size=15, weight="bold"),
             height=45,
             width=320,
@@ -665,11 +856,10 @@ class OpticsGUIFrame(ctk.CTkFrame):
     # --- Profile & Config System ---
     def get_current_config(self):
         """Bundles current UI state into a dictionary for queueing or saving."""
-        cfg = {'mode': self.mode, 'output_dir': self.output_dir_var.get()}
+        cfg = {'mode': self.mode, 'output_dir': self.output_dir_var.get(), 'prediction_prefix': self.prediction_prefix_var.get()}
         
         if self.mode in ['predictions', 'shap']:
             cfg['input_file'] = self.input_file_var.get()
-            cfg['prediction_prefix'] = self.prediction_prefix_var.get()
             cfg['version'] = self.version_var.get()
             cfg['model'] = self.model_var.get()
             cfg['encoding'] = self.encoding_var.get()
@@ -710,6 +900,32 @@ class OpticsGUIFrame(ctk.CTkFrame):
             cfg['chain'] = self.chain_var.get()
             cfg['software'] = self.software_var.get()
             
+        elif self.mode in ['mutagenesis', 'chimeras', 'dms', 'reciprocal']:
+            cfg['mut_run_pred'] = self.mut_run_pred_var.get()
+            cfg['mut_pred_model'] = self.mut_pred_model_var.get()
+            cfg['mut_pred_enc'] = self.mut_pred_enc_var.get()
+            cfg['mut_ref_acc'] = self.mut_ref_acc_var.get()
+            cfg['mut_pred_bs'] = self.mut_bs_var.get()
+
+        if self.mode == 'mutagenesis':
+            cfg['mut_wt_acc'] = self.mut_wt_acc_var.get()
+            cfg['mut_list'] = self.mut_list_var.get()
+            cfg['mut_combinatorial'] = self.mut_combinatorial_var.get()
+            cfg['mut_file'] = self.mut_file_var.get()
+            cfg['mut_wt_file'] = self.mut_wt_file_var.get()
+            cfg['mut_allow_wt'] = self.mut_allow_wt_var.get()
+            cfg['mut_out_format'] = self.mut_out_format_var.get()
+
+        elif self.mode == 'chimeras':
+            cfg['chimera_string'] = self.chimera_string_var.get()
+
+        elif self.mode == 'dms':
+            cfg['dms_wt_acc'] = self.dms_wt_acc_var.get()
+            cfg['dms_sites'] = self.dms_sites_var.get()
+
+        elif self.mode == 'reciprocal':
+            cfg['recip_file'] = self.recip_file_var.get()
+
         return cfg
 
     def set_config(self, cfg):
@@ -722,8 +938,9 @@ class OpticsGUIFrame(ctk.CTkFrame):
                 getattr(self, var_obj).set(cfg[key])
 
         safe_set('output_dir_var', 'output_dir')
-        safe_set('input_file_var', 'input_file')
         safe_set('prediction_prefix_var', 'prediction_prefix')
+        
+        safe_set('input_file_var', 'input_file')
         safe_set('version_var', 'version')
         safe_set('model_var', 'model')
         safe_set('encoding_var', 'encoding')
@@ -758,11 +975,32 @@ class OpticsGUIFrame(ctk.CTkFrame):
         safe_set('annotation_csv_var', 'annotation_csv')
         safe_set('software_var', 'software')
         
+        # Mutagenesis Tools
+        safe_set('mut_wt_acc_var', 'mut_wt_acc')
+        safe_set('mut_list_var', 'mut_list')
+        safe_set('mut_combinatorial_var', 'mut_combinatorial')
+
+        safe_set('mut_file_var', 'mut_file')
+        safe_set('mut_wt_file_var', 'mut_wt_file')
+        safe_set('mut_ref_acc_var', 'mut_ref_acc')
+        safe_set('mut_allow_wt_var', 'mut_allow_wt')
+        safe_set('mut_out_format_var', 'mut_out_format')
+        safe_set('chimera_string_var', 'chimera_string')
+        safe_set('dms_wt_acc_var', 'dms_wt_acc')
+        safe_set('dms_sites_var', 'dms_sites')
+        safe_set('recip_file_var', 'recip_file')        
+        safe_set('mut_run_pred_var', 'mut_run_pred')
+        safe_set('mut_pred_model_var', 'mut_pred_model')
+        safe_set('mut_pred_enc_var', 'mut_pred_enc')
+        safe_set('mut_bs_var','mut_pred_bs')
+        
         if self.mode == 'predictions':
             self.toggle_blastp_options()
             self.toggle_bootstrap_options()
         elif self.mode == 'structure':
             self.toggle_pdb2_state()
+        elif self.mode in ['mutagenesis', 'chimeras', 'dms', 'reciprocal']:
+            self.toggle_mut_pred_options()
 
     def save_profile(self):
         cfg = self.get_current_config()
@@ -795,6 +1033,19 @@ class OpticsGUIFrame(ctk.CTkFrame):
             else:
                 self.pdb2_entry.configure(state=tk.DISABLED)
                 self.pdb2_btn.configure(state=tk.DISABLED)
+
+    def toggle_mut_pred_options(self, event=None):
+        if hasattr(self, 'mut_run_pred_var'):
+            state = tk.NORMAL if self.mut_run_pred_var.get() else tk.DISABLED
+            self.mut_pred_model_menu.configure(state=state)
+            self.mut_pred_enc_menu.configure(state=state)
+            self.mut_bs_var_check.configure(state=state)
+            # Force fasta format if predictions are requested
+            if self.mut_run_pred_var.get() and hasattr(self, 'mut_out_format_var'):
+                self.mut_out_format_var.set('fasta')
+                self.mut_out_format_menu.configure(state=tk.DISABLED)
+            elif hasattr(self, 'mut_out_format_menu'):
+                self.mut_out_format_menu.configure(state=tk.NORMAL)
 
     def open_hyperlink(self, event):
         try:
@@ -934,6 +1185,17 @@ class OpticsGUIFrame(ctk.CTkFrame):
         elif config['mode'] == 'annotations':
             if not config.get('annotation_csv'): return "Please specify the Annotation CSV file."
             if not config.get('pdb_input'): return "Please specify a PDB file path or ID."
+        elif config['mode'] == 'mutagenesis':
+            if not config.get('mut_file') and not (config.get('mut_wt_acc') and config.get('mut_list')):
+                return "Please provide either a mutant override file OR a WT Accession + list of mutations."
+        elif config['mode'] == 'chimeras' and not config.get('chimera_string'):
+            return "Please provide a chimera generation string."
+        elif config['mode'] == 'dms':
+            if not config.get('dms_wt_acc') or not config.get('dms_sites'):
+                return "Please provide a WT accession and a list of target sites for DMS."
+        elif config['mode'] == 'reciprocal' and not config.get('recip_file'):
+            return "Please provide an aligned FASTA file containing exactly 3 sequences."
+
         return None
 
     def start_single_run_thread(self):
@@ -1008,9 +1270,10 @@ class OpticsGUIFrame(ctk.CTkFrame):
         """Dispatches the execution based on the mode config dictionary."""
         mode = cfg['mode']
         pred_dir_val = os.path.abspath(cfg['output_dir'])
+        os.makedirs(pred_dir_val, exist_ok=True)
+        output_val = cfg.get('prediction_prefix') or "optics_results"
 
         if mode == 'predictions':
-            output_val = cfg.get('prediction_prefix') or "optics_results"
             pred_df, output_file_path = run_optics_predictions(
                 input_sequence=cfg['input_file'],
                 pred_dir=pred_dir_val,
@@ -1035,7 +1298,6 @@ class OpticsGUIFrame(ctk.CTkFrame):
                 self.log_message(f"Results located at: >>>LINK<<<{self.last_output_dir}")
 
         elif mode == 'shap':
-            output_val = cfg.get('prediction_prefix') or "optics_results"
             try:
                 n_pos = int(cfg.get('n_positions', 10))
             except ValueError:
@@ -1096,6 +1358,128 @@ class OpticsGUIFrame(ctk.CTkFrame):
             )
             self.last_output_dir = pred_dir_val
             self.log_message(f"Results located at: >>>LINK<<<{self.last_output_dir}")
+
+        # --- MUTAGENESIS EXECUTIONS ---
+        elif mode == 'mutagenesis':
+            out_ext = cfg.get('mut_out_format', 'fasta')
+            if cfg.get('mut_run_pred'): out_ext = 'fasta' # Force fasta if pipelined
+            out_path = os.path.join(pred_dir_val, f"{output_val}.{out_ext}")
+            
+            mutant_list = []
+            if cfg.get('mut_file'):
+                # Sub-mode A: Read target mutants directly from file lines
+                with open(cfg['mut_file'], 'r') as f:
+                    mutant_list = [line.strip() for line in f if line.strip()]
+            else:
+                # Sub-mode B: Manual entry vector parsing
+                wt_acc = cfg['mut_wt_acc']
+                muts = [m.strip() for m in cfg['mut_list'].split(',')]
+                
+                if cfg.get('mut_combinatorial', True):
+                    # Perform combinatorial scaling
+                    mutant_list = get_mutant_combinations(wt_acc, muts)
+                else:
+                    # Sequential linear sequence construction mode
+                    composite_mutant = f"{wt_acc}_{','.join(muts)}"
+                    mutant_list = [composite_mutant]
+                    
+                if cfg.get('mut_allow_wt', True):
+                    mutant_list.insert(0, wt_acc)
+                                
+            get_mutant_seqs(
+                mutant_accessions=mutant_list,
+                wt_seq_file=cfg.get('mut_wt_file') or None,
+                output_file=out_path,
+                reference_accession=cfg.get('mut_ref_acc', 'NP_001014890.1'),
+                output_format=out_ext,
+                allow_wt=cfg.get('mut_allow_wt', True)
+            )
+            self.log_message(f"Results located at: >>>LINK<<<{pred_dir_val}")
+            
+            if cfg.get('mut_run_pred'):
+                self.log_message(f"\n--- Direct Pipelining: Running OPTICS Predictions ---")
+                run_optics_predictions(
+                    input_sequence=out_path,
+                    pred_dir=pred_dir_val,
+                    output=f"{output_val}_predictions",
+                    model=cfg.get('mut_pred_model', 'whole-dataset'),
+                    encoding_method=cfg.get('mut_pred_enc', 'aa_prop'),
+                    model_version='vpod_1.3',
+                    blastp=False,
+                    bootstrap=cfg.get('mut_pred_bs', False)
+                )
+                self.log_message(f"Prediction Results located at: >>>LINK<<<{pred_dir_val}")
+
+        elif mode == 'chimeras':
+            out_path = os.path.join(pred_dir_val, f"{output_val}.fasta")
+            chim_str = cfg['chimera_string']
+            segments, pt_muts = parse_chimera_string(chim_str)
+            final_seq = create_chimera(segments, pt_muts, cfg.get('mut_ref_acc', 'NM_001014890.2'))
+            
+            c_name = re.sub(r'[\[\]]', '_', chim_str).replace(',', '_')
+            with open(out_path, 'w') as f:
+                f.write(f">{c_name}\n{final_seq}\n")
+            
+            self.log_message(f"Results located at: >>>LINK<<<{pred_dir_val}")
+
+            if cfg.get('mut_run_pred'):
+                self.log_message(f"\n--- Direct Pipelining: Running OPTICS Predictions ---")
+                run_optics_predictions(
+                    input_sequence=out_path,
+                    pred_dir=pred_dir_val,
+                    output=f"{output_val}_predictions",
+                    model=cfg.get('mut_pred_model', 'whole-dataset'),
+                    encoding_method=cfg.get('mut_pred_enc', 'aa_prop'),
+                    model_version='vpod_1.3',
+                    blastp=False,
+                    bootstrap=cfg.get('mut_pred_bs', False)
+                )
+                self.log_message(f"Prediction Results located at: >>>LINK<<<{pred_dir_val}")
+        elif mode == 'dms':
+            out_path = os.path.join(pred_dir_val, f"{output_val}_dms.fasta")
+            wt_acc = cfg['dms_wt_acc']
+            sites = [s.strip() for s in cfg['dms_sites'].split(',')]
+            generate_dms_library(
+                wt_accession=wt_acc, 
+                sites=sites, 
+                output_file=out_path, 
+                reference_accession=cfg.get('mut_ref_acc', 'NM_001014890.2')
+            )
+            self.log_message(f"Results located at: >>>LINK<<<{pred_dir_val}")
+            if cfg.get('mut_run_pred'):
+                self.log_message(f"\n--- Direct Pipelining: Running OPTICS Predictions ---")
+                run_optics_predictions(
+                    input_sequence=out_path,
+                    pred_dir=pred_dir_val,
+                    output=f"{output_val}_predictions",
+                    model=cfg.get('mut_pred_model', 'whole-dataset'),
+                    encoding_method=cfg.get('mut_pred_enc', 'aa_prop'),
+                    model_version='vpod_1.3',
+                    blastp=False,
+                    bootstrap=cfg.get('mut_pred_bs', False)
+                )
+                self.log_message(f"Prediction Results located at: >>>LINK<<<{pred_dir_val}")
+        elif mode == 'reciprocal':
+            out_path = os.path.join(pred_dir_val, f"{output_val}_reciprocal.fasta")
+            records = list(SeqIO.parse(cfg['recip_file'], "fasta"))
+            res_records = generate_reciprocal_mutants(records)
+            SeqIO.write(res_records, out_path, "fasta")
+            self.log_message(f"Generated {len(res_records) - 3} reciprocal mutants.")
+            self.log_message(f"Results located at: >>>LINK<<<{pred_dir_val}")
+
+            if cfg.get('mut_run_pred'):
+                self.log_message(f"\n--- Direct Pipelining: Running OPTICS Predictions ---")
+                run_optics_predictions(
+                    input_sequence=out_path,
+                    pred_dir=pred_dir_val,
+                    output=f"{output_val}_predictions",
+                    model=cfg.get('mut_pred_model', 'whole-dataset'),
+                    encoding_method=cfg.get('mut_pred_enc', 'aa_prop'),
+                    model_version='vpod_1.3',
+                    blastp=False,
+                    bootstrap=cfg.get('mut_pred_bs', False)
+                )
+                self.log_message(f"Prediction Results located at: >>>LINK<<<{pred_dir_val}")
 
 
 # --- Main Application Controller ---
