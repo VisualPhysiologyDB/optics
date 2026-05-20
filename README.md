@@ -39,6 +39,10 @@ Key Features
 
 -   **Custom Structure Annotation**: Visualize custom annotations on 3D structures using automated PyMOL or ChimeraX scripting.
 
+-   **Mutagenesis Tools**: Generate site-directed mutant libraries, in-silico deep mutational scanning libraries, reciprocal mutants, and chimeric opsin sequences.
+
+-   **Direct Mutagenesis-to-Prediction Pipeline**: In the GUI, generated mutant/chimera libraries can be passed directly into OPTICS λmax prediction workflows.
+
 Table of Contents
 -----------------
 
@@ -56,7 +60,15 @@ Table of Contents
 
     -   [Custom Structure Annotation: `optics_structure_annotations.py`](#4-generate-custom-structure-annotations-optics_structure_annotationspy)
 
-    -   [GUI: `run_optics_gui.py`](#5-using-the-optics-gui)
+    -   [Site-Directed Mutagenesis: `optics_scripts/mutagenesis.py`](#5-site-directed-mutagenesis-optics_scriptsmutagenesispy)
+
+    -   [In-Silico Deep Mutational Scanning: `optics_scripts/in_silico_dms.py`](#6-in-silico-deep-mutational-scanning-optics_scriptsin_silico_dmspy)
+
+    -   [Reciprocal Mutagenesis: `optics_scripts/reciprocal_mutagenesis.py`](#7-reciprocal-mutagenesis-optics_scriptsreciprocal_mutagenesispy)
+
+    -   [Chimera Construction: `optics_scripts/chimeras.py`](#8-chimera-construction-optics_scriptschimeraspy)
+
+    -   [GUI: `run_optics_gui.py`](#9-using-the-optics-gui)
 
 4.  [Understanding Model Choice](#understanding-the-λmax-prediction-models)
 
@@ -130,6 +142,7 @@ optics/
 │   ├── importance_reports/ # Feature importance data & site translation information (Feature Name -> True Position)
 │   ├── cached_structures/  # Stores downloaded PDB files (e.g., 1U19.pdb)
 │   ├── cached_predictions/ # Stores previous predictions (JSON) to speed up runtime
+│   ├── cached_seqs/        # Stores fetched WT/reference sequences used by mutagenesis tools
 |   └── cached_blastp_analysis/ # Stores data from previous runs of BLASTp (JSON) to speed up runtime
 ├── models/
 │   ├── reg_models/         # Regression models (XGBoost/GradientBoosting) for point predictions
@@ -372,7 +385,212 @@ python optics_structure_annotations.py -a ./examples/optics_custom_annotations_e
 
 - Custom Annotation Script (ChimeraX or PyMol): Generates a ChimeraX or PyMol specific visualization script. Typically you can just open these if your protein structure of interest is in the same folder.
 
-### 5\. Using the OPTICS GUI
+### 5\. Site-Directed Mutagenesis (`optics_scripts/mutagenesis.py`)
+
+A general-purpose tool for generating in-silico point mutants from wild-type opsin sequences.
+
+This script can:
+
+- Generate all combinatorial mutants from a WT accession and a comma-separated list of mutations.
+- Generate one sequence with several specified mutations applied together.
+- Generate sequences from a file of pre-defined mutant accession strings.
+- Optionally include the WT sequence in the output.
+
+Mutation positions are interpreted relative to a user-specified reference sequence, then mapped onto the target sequence by pairwise protein alignment. This helps keep numbering consistent when the target sequence has insertions/deletions relative to the reference.
+
+```
+Input Mode Args (choose one):
+
+  --wt_accession: Wild-type accession/name to mutate. Requires --mutations.
+
+  --mutant_accession: Single mutant string to generate, formatted as WT_A123G,F45S.
+
+  --mutant_file: Text file containing mutant strings, one per line.
+
+Mutation Args:
+
+  --mutations: Comma-separated list of mutations to use with --wt_accession
+               (e.g., A116S,S119A,G121A).
+
+General Args:
+
+  -o, --output_file: Path to save the generated mutant sequence file. Required.
+
+  -ra, --reference_accession: Reference accession used for sequence numbering.
+                              Default: NM_001014890 (Bos taurus rh1).
+
+  --db_preference: NCBI database to search first. Options: nucleotide, protein.
+                   Default: nucleotide, with fallback to protein.
+
+  --output_format: Output file type. Options: fasta, tsv. Default: fasta
+
+  --no_wt: Prevent wild-type sequences from being included in the output.
+
+  --email: Email address for NCBI Entrez queries.
+
+```
+
+**Example Command #1: Generate All Combinatorial Mutants**
+
+```
+python optics_scripts/mutagenesis.py --wt_accession AncBovine --mutations "A116S,S119A,G121A" -o ./examples/combined_mutants.fasta -ra NM_001014890
+```
+
+**Example Command #2: Generate One Multi-Mutant Sequence**
+
+```
+python optics_scripts/mutagenesis.py --mutant_accession "AncBovine_A116S,G121A" -o ./examples/single_mutant.fasta -ra NM_001014890
+```
+
+### Input
+
+- WT accession/name plus a mutation list, OR a mutant accession string/file.
+- Mutant strings should follow the format:
+  ```
+  WT_ACCESSION_A123G,F45S
+  ```
+- Mutations should follow the standard original-AA / reference-position / new-AA format (e.g., `A123G`).
+
+### Output
+
+- Mutant Sequence File (FASTA or TSV): Generated WT and/or mutant sequences.
+- Sequence Cache (JSON): Fetched WT/reference sequences are stored in `data/cached_seqs/` to speed up later runs.
+
+### 6\. In-Silico Deep Mutational Scanning (`optics_scripts/in_silico_dms.py`)
+
+This tool generates site-saturated in-silico mutant libraries for selected opsin sites.
+
+For each requested site, OPTICS maps the position onto the WT sequence using a reference-guided alignment and creates all alternate standard amino-acid substitutions at that position. The WT residue is not duplicated in the output.
+
+```
+Required Args:
+
+  --wt_accession: Accession/name for the wild-type sequence to mutate.
+
+  --sites: Comma-separated list of sites to scan (e.g., S121,A185,G203).
+
+  -o, --output_file: Path to save the generated DMS library FASTA file.
+
+General Optional Args:
+
+  -ra, --reference_accession: Reference accession used for sequence numbering.
+                              Default: NM_001014890 (Bos taurus rh1).
+
+  --db_preference: NCBI database to search first. Options: nucleotide, protein.
+                   Default: nucleotide, with fallback to protein.
+
+  --email: Email address for NCBI Entrez queries.
+
+```
+
+**Example Command:**
+
+```
+python optics_scripts/in_silico_dms.py --wt_accession AncRho1 --sites "S121,A185,G203" -o ./examples/dms_library.fasta -ra NM_001014890
+```
+
+### Input
+
+- WT accession/name.
+- A comma-separated set of target sites using original amino acid and reference position (e.g., `S121,A185,G203`).
+
+### Output
+
+- DMS Library (FASTA): One mutant sequence per alternate amino-acid substitution at each requested site.
+
+### 7\. Reciprocal Mutagenesis (`optics_scripts/reciprocal_mutagenesis.py`)
+
+This tool creates reciprocal single-mutant sequences between two aligned opsins.
+
+It takes a FASTA alignment containing exactly three sequences:
+
+1. Reference sequence used for positional numbering.
+2. First target sequence.
+3. Second target sequence.
+
+OPTICS compares sequences 2 and 3 at non-gap aligned positions. Wherever they differ, it generates one mutant that changes sequence 2 to match sequence 3 at that site, and one mutant that changes sequence 3 to match sequence 2.
+
+```
+Required Args:
+
+  input_file: Aligned FASTA file containing exactly three sequences.
+
+  output_file: Path to save the reciprocal mutant FASTA file.
+
+```
+
+**Example Command:**
+
+```
+python optics_scripts/reciprocal_mutagenesis.py ./examples/three_opsins_aligned.fasta ./examples/reciprocal_mutants.fasta
+```
+
+### Input
+
+- Aligned FASTA with exactly three protein sequences.
+- Sequence 1 provides reference numbering for mutation names.
+- Sequences 2 and 3 are compared and reciprocally mutated.
+
+### Output
+
+- Reciprocal Mutant FASTA: Includes the three original ungapped sequences plus all reciprocal single mutants.
+
+### 8\. Chimera Construction (`optics_scripts/chimeras.py`)
+
+This tool builds chimeric opsin sequences by stitching together reference-numbered segments from one or more source sequences. Optional point mutations can also be applied after the chimera is assembled.
+
+The chimera definition string uses the following format:
+
+```
+Acc1_Start1_End1-Acc2_Start2_End2[Mutation1,Mutation2,...]
+```
+
+- Segments are separated by `-`.
+- Each segment uses `Accession_Start_End`.
+- Start/end coordinates are interpreted relative to the reference sequence.
+- Optional point mutations are added at the end in brackets.
+
+```
+Required Args:
+
+  -co, --chimera: Chimera definition string.
+
+  -o, --output_file: Path to save the generated chimera FASTA file.
+
+General Optional Args:
+
+  -ra, --reference_accession: Reference accession used for sequence numbering.
+                              Default: NM_001014890 (Bos taurus rh1).
+
+  --db_preference: NCBI database to search first. Options: nucleotide, protein.
+                   Default: nucleotide, with fallback to protein.
+
+  --email: Email address for NCBI Entrez queries.
+
+```
+
+**Example Command:**
+
+```
+python optics_scripts/chimeras.py --chimera "AncSW1_1_150-AncSW2_151_348[C203A,F204Y]" -o ./examples/my_chimera.fasta -ra NM_001014890
+```
+
+### Input
+
+- A chimera string describing the source accession/name and reference-numbered coordinates for each segment.
+- Optional point mutations in standard format (e.g., `C203A`).
+
+### Output
+
+- Chimera FASTA: A single generated chimeric protein sequence.
+
+### Mutagenesis-to-Prediction Pipeline in the GUI
+
+All four mutagenesis tools are also available in the OPTICS GUI. Each mutagenesis mode includes a **Directly Run OPTICS Predictions on Mutant Sequences** option.
+
+When enabled, the GUI writes the generated sequence library as FASTA and immediately passes it to the standard OPTICS prediction workflow. Users can choose the prediction model, encoding method, and whether to run bootstrap predictions.
+
+### 9\. Using the OPTICS GUI
 
 That's right! No-need for command line, OPTICS can also be used as a GUI! 
 The usage is quite simple, just use the command below (with your OPTICS conda enviornment activated) and get to predicting. ;)
@@ -385,7 +603,7 @@ python run_optics_gui.py
 
 <img src="https://github.com/VisualPhysiologyDB/optics/blob/main/data/logo/optics_gui_ex.png?raw=true" alt="ex optics gui" style="width:65%; height:65%;">
 
-The GUI provides tabs/buttons for all four major pipelines:
+The GUI provides tabs/buttons for the main OPTICS analysis pipelines and the mutagenesis tools:
 
 1.  **Standard Predictions**: Run the main λmax prediction workflow.
 
@@ -394,6 +612,14 @@ The GUI provides tabs/buttons for all four major pipelines:
 3.  **Structure Mapping**: Map SHAP values to PDB files.
 
 4.  **Structure Annotations**: Visualize custom data on structures.
+
+5.  **Site-Directed Mutagenesis**: Generate single, combined, or combinatorial point-mutant sequences.
+
+6.  **Deep Mutational Scanning**: Generate site-saturated mutant libraries for selected sites.
+
+7.  **Reciprocal Mutagenesis**: Swap differing residues between two aligned sequences.
+
+8.  **Chimera Construction**: Stitch reference-numbered sequence segments together and optionally add point mutations.
 
 ---
 
