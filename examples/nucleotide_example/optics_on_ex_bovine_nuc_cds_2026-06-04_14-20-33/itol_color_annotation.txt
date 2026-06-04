@@ -1,0 +1,4 @@
+TREE_COLORS
+SEPARATOR TAB
+DATA
+NM_001014890.3:1-1047_Bos_taurus_rhodopsin_(RHO),_mRNA	label_background	#00ffb4

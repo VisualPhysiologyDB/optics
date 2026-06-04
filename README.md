@@ -181,6 +181,13 @@ General Optional Args:
 
   -e, --encoding: Encoding method to use (optional). Options: one_hot, aa_prop. Default: aa_prop
 
+  --input_seq_type: Input sequence type. Options: auto, protein, nucleotide. Default: auto
+                    In auto mode, OPTICS detects full-length nucleotide FASTA records at the beginning of prediction and translates them to amino-acid sequences before λmax inference. 
+                    (WARNING - TRANSLATION WILL NOT CURRENTLY WORK FOR SEQS WITH EXONS! IT MUST BE THE CDS!)
+
+  --translation_frame: Reading frame for nucleotide input. Options: auto, 1, 2, 3, -1, -2, -3. Default: auto
+                       In auto mode, OPTICS evaluates all six reading frames and selects the best candidate by minimizing internal stops and favoring a plausible opsin protein length.
+
   --tolerate_non_standard_aa: Allows OPTICS to run predictions on sequences with 'non-standard' amino-acids (e.g. - 'X','O','B', etc...)(optional). Default: True
 
   --tolerate_incomplete_seqs: Allows OPTICS to run predictions on sequences outside the predefined limits of 250-650 amino-acids. (optional) Default: False 
@@ -215,15 +222,21 @@ Bootstrap Analysis Args (optional):
 
 ```
 
-**Example Command:**
+**Example Protein FASTA Command:**
 
 ```
   python optics_predictions.py -i ./examples/optics_ex_short.txt -o ./examples -p ex_predictions -m whole-dataset -e aa_prop --blastp --blastp_report blastp_report_ex --refseq squid --bootstrap --visualize_bootstrap --bootstrap_viz_file bootstrap_viz --save_viz_as svg
 ```
 
+**Example Nucleotide FASTA Command:**
+(*WARNING* - TRANSLATION WILL NOT CURRENTLY WORK FOR SEQS WITH EXONS! IT MUST BE THE CDS!)
+```
+  python optics_predictions.py -i ./examples/ex_bovine_opsin_cds.fasta -o ./examples -p cds_predictions -m whole-dataset -e aa_prop --input_seq_type auto --translation_frame auto
+```
+
 ### Input
 
-- **Unaligned** FASTA file containing opsin amino-acid sequences.
+- **Unaligned** FASTA file containing opsin amino-acid sequences or nucleotide coding sequences. Nucleotide records are translated to amino-acid sequences before prediction when `--input_seq_type auto` detects them or when `--input_seq_type nucleotide` is specified.
 - Example FASTA Entry:
   ```
     >NP_001014890.1_rhodopsin_Bos_taurus
@@ -237,6 +250,8 @@ Bootstrap Analysis Args (optional):
 ### Output
 
 - Predictions (TSV, Excel): λmax values, BLASTp information, hex-codes (colors) corresponding to predicted λmax.
+- Translation/preparation report (TSV, when nucleotide detection/translation is active): detected input type, selected frame, internal stop count, ambiguous codon count, Biopython translation method, and final protein length.
+- Protein FASTA used for prediction (FASTA, when nucleotide detection/translation is active): translated and cleaned amino-acid sequences passed to OPTICS.
 - BLAST Results (TXT, optional): Comparison of query sequences to reference datasets.
 - Bootstrap Graphs (PDF, optional): Visualization of bootstrap prediction results.
 - Job Log (TXT): Log file containing input command to OPTICS, including encoding method and model used.

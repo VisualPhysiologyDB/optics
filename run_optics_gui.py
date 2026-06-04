@@ -20,45 +20,54 @@ warnings.simplefilter('ignore')
 # Attempt to import backend OPTICS functions
 try:
     from optics_predictions import run_optics_predictions
-except ImportError:
-    pass
+except ImportError as e:
+    print("Warning: Could not import 'run_optics_predictions'. Prediction mode will fail if selected.")
+    print(f"Here is the import error: {e}\n")
+
 
 try:
     from optics_shap import generate_shap_explanation
-except ImportError:
+except ImportError as e:
     print("Warning: Could not import 'generate_shap_explanation'. SHAP mode will fail if selected.")
+    print(f"Here is the import error: {e}\n")
 
 try:
     from optics_structure_map import run_structural_mapping
-except ImportError:
+except ImportError as e:
     print("Warning: Could not import 'run_structural_mapping'. Structure Mapping mode will fail if selected.")
+    print(f"Here is the import error: {e}\n")
 
 try:
     from optics_structure_annotations import run_structure_annotation
-except ImportError:
+except ImportError as e:
     print("Warning: Could not import 'run_structure_annotation'. Annotation mode will fail if selected.")
+    print(f"Here is the import error: {e}\n")
 
 # Attempt to import backend Mutagenesis functions
 try:
     from optics_scripts.mutagenesis import get_mutant_combinations, get_mutant_seqs
-except ImportError:
+except ImportError as e:
     print("Warning: Could not import 'mutagenesis'. Mutagenesis mode will fail if selected.")
+    print(f"Here is the import error: {e}\n")
 
 try:
     from optics_scripts.chimeras import parse_chimera_string, create_chimera
-except ImportError:
+except ImportError as e:
     print("Warning: Could not import 'chimeras'. Chimeras mode will fail if selected.")
+    print(f"Here is the import error: {e}\n")
 
 try:
     from optics_scripts.in_silico_dms import generate_dms_library
-except ImportError:
+except ImportError as e:
     print("Warning: Could not import 'in_silico_dms'. DMS mode will fail if selected.")
+    print(f"Here is the import error: {e}\n")
 
 try:
     from optics_scripts.reciprocal_mutagenesis import generate_reciprocal_mutants
     from Bio import SeqIO
-except ImportError:
+except ImportError as e:
     print("Warning: Could not import 'reciprocal_mutagenesis' or 'Bio'. Reciprocal mode will fail if selected.")
+    print(f"Here is the import error: {e}\n")
 
 
 # Set CustomTkinter defaults
@@ -365,6 +374,8 @@ class OpticsGUIFrame(ctk.CTkFrame):
         self.model_choices = ['whole-dataset', 'wildtype', 'whole-dataset-mnm', 
                               'wildtype-mnm', 'type-one']
         self.encoding_choices = ['one_hot', 'aa_prop']
+        self.input_seq_type_choices = ['auto', 'protein', 'nucleotide']
+        self.translation_frame_choices = ['auto', '1', '2', '3', '-1', '-2', '-3']
         self.refseq_choices = ['bovine', 'squid', 'microbe', 'custom']
         self.viz_ftyp_choices = ['svg', 'png', 'pdf'] 
         self.software_choices = ['PyMOL', 'ChimeraX'] 
@@ -690,6 +701,25 @@ class OpticsGUIFrame(ctk.CTkFrame):
             self.toggle_mut_pred_options() # initialize state
         # --- SUB-MODE SPECIFIC OPTIONS ---
         if self.mode == 'predictions':
+            ctk.CTkLabel(self.scrollable_frame, font=self.lbl_font, text="Input Sequence Type:").grid(row=current_row, column=0, padx=10, pady=5, sticky=tk.W)
+            self.input_seq_type_var = ctk.StringVar(value=self.input_seq_type_choices[0])
+            self.input_seq_type_menu = ctk.CTkOptionMenu(
+                self.scrollable_frame,
+                variable=self.input_seq_type_var,
+                values=self.input_seq_type_choices,
+                command=self.toggle_translation_options
+            )
+            self.input_seq_type_menu.grid(row=current_row, column=1, padx=10, pady=5, sticky=tk.EW)
+            CTkToolTip(self.input_seq_type_menu, "auto: detect nucleotide FASTA records and translate them before prediction.\nprotein: treat all records as amino-acid sequences.\nnucleotide: force translation for all records.")
+            current_row += 1
+
+            ctk.CTkLabel(self.scrollable_frame, font=self.lbl_font, text="Translation Frame:").grid(row=current_row, column=0, padx=10, pady=5, sticky=tk.W)
+            self.translation_frame_var = ctk.StringVar(value=self.translation_frame_choices[0])
+            self.translation_frame_menu = ctk.CTkOptionMenu(self.scrollable_frame, variable=self.translation_frame_var, values=self.translation_frame_choices)
+            self.translation_frame_menu.grid(row=current_row, column=1, padx=10, pady=5, sticky=tk.EW)
+            CTkToolTip(self.translation_frame_menu, "auto evaluates all six reading frames and selects the best coding sequence.\nUse 1, 2, 3 for forward frames or -1, -2, -3 for reverse-complement frames.")
+            current_row += 1
+
             self.non_standard_aa_var = tk.BooleanVar(value=True) 
             self.non_standard_aa_check = ctk.CTkCheckBox(self.scrollable_frame, text="Tolerate Non-standard AAs", variable=self.non_standard_aa_var)
             self.non_standard_aa_check.grid(row=current_row, column=0, columnspan=2, padx=10, pady=10, sticky=tk.W)
@@ -764,6 +794,7 @@ class OpticsGUIFrame(ctk.CTkFrame):
             CTkToolTip(self.xaxis_check, "Check this to force the X-axis to span the entire visible spectrum scale.\nOtherwise, axes dynamically fit your prediction range.")
 
             # Init options
+            self.toggle_translation_options()
             self.toggle_blastp_options()
             self.toggle_bootstrap_options()
             self.toggle_custom_ref_file()
@@ -865,6 +896,8 @@ class OpticsGUIFrame(ctk.CTkFrame):
             cfg['encoding'] = self.encoding_var.get()
         
         if self.mode == 'predictions':
+            cfg['input_seq_type'] = self.input_seq_type_var.get()
+            cfg['translation_frame'] = self.translation_frame_var.get()
             cfg['tolerate_non_standard_aa'] = self.non_standard_aa_var.get()
             cfg['tolerate_incomplete_seqs'] = self.incomp_seqs_var.get()
             cfg['blastp_enabled'] = self.blastp_enabled_var.get()
@@ -944,6 +977,8 @@ class OpticsGUIFrame(ctk.CTkFrame):
         safe_set('version_var', 'version')
         safe_set('model_var', 'model')
         safe_set('encoding_var', 'encoding')
+        safe_set('input_seq_type_var', 'input_seq_type')
+        safe_set('translation_frame_var', 'translation_frame')
         
         safe_set('non_standard_aa_var', 'tolerate_non_standard_aa')
         safe_set('incomp_seqs_var', 'tolerate_incomplete_seqs')
@@ -995,6 +1030,7 @@ class OpticsGUIFrame(ctk.CTkFrame):
         safe_set('mut_bs_var','mut_pred_bs')
         
         if self.mode == 'predictions':
+            self.toggle_translation_options()
             self.toggle_blastp_options()
             self.toggle_bootstrap_options()
         elif self.mode == 'structure':
@@ -1046,6 +1082,11 @@ class OpticsGUIFrame(ctk.CTkFrame):
                 self.mut_out_format_menu.configure(state=tk.DISABLED)
             elif hasattr(self, 'mut_out_format_menu'):
                 self.mut_out_format_menu.configure(state=tk.NORMAL)
+
+    def toggle_translation_options(self, event=None):
+        if hasattr(self, 'input_seq_type_var') and hasattr(self, 'translation_frame_menu'):
+            state = tk.DISABLED if self.input_seq_type_var.get() == 'protein' else tk.NORMAL
+            self.translation_frame_menu.configure(state=state)
 
     def open_hyperlink(self, event):
         try:
@@ -1291,7 +1332,9 @@ class OpticsGUIFrame(ctk.CTkFrame):
                 full_spectrum_xaxis=cfg.get('viz_xaxis_scale', False),
                 model_version=cfg['version'],
                 tolerate_non_standard_aa=cfg.get('tolerate_non_standard_aa', True),
-                tolerate_incomplete_seqs=cfg.get('tolerate_incomplete_seqs', False)
+                tolerate_incomplete_seqs=cfg.get('tolerate_incomplete_seqs', False),
+                input_seq_type=cfg.get('input_seq_type', 'auto'),
+                translation_frame=cfg.get('translation_frame', 'auto')
             )
             if output_file_path:
                 self.last_output_dir = os.path.dirname(os.path.abspath(output_file_path))
@@ -1406,7 +1449,8 @@ class OpticsGUIFrame(ctk.CTkFrame):
                     encoding_method=cfg.get('mut_pred_enc', 'aa_prop'),
                     model_version='vpod_1.3',
                     blastp=False,
-                    bootstrap=cfg.get('mut_pred_bs', False)
+                    bootstrap=cfg.get('mut_pred_bs', False),
+                    input_seq_type='protein'
                 )
                 self.log_message(f"Prediction Results located at: >>>LINK<<<{pred_dir_val}")
 
@@ -1432,7 +1476,8 @@ class OpticsGUIFrame(ctk.CTkFrame):
                     encoding_method=cfg.get('mut_pred_enc', 'aa_prop'),
                     model_version='vpod_1.3',
                     blastp=False,
-                    bootstrap=cfg.get('mut_pred_bs', False)
+                    bootstrap=cfg.get('mut_pred_bs', False),
+                    input_seq_type='protein'
                 )
                 self.log_message(f"Prediction Results located at: >>>LINK<<<{pred_dir_val}")
         elif mode == 'dms':
@@ -1456,7 +1501,8 @@ class OpticsGUIFrame(ctk.CTkFrame):
                     encoding_method=cfg.get('mut_pred_enc', 'aa_prop'),
                     model_version='vpod_1.3',
                     blastp=False,
-                    bootstrap=cfg.get('mut_pred_bs', False)
+                    bootstrap=cfg.get('mut_pred_bs', False),
+                    input_seq_type='protein'
                 )
                 self.log_message(f"Prediction Results located at: >>>LINK<<<{pred_dir_val}")
         elif mode == 'reciprocal':
@@ -1477,7 +1523,8 @@ class OpticsGUIFrame(ctk.CTkFrame):
                     encoding_method=cfg.get('mut_pred_enc', 'aa_prop'),
                     model_version='vpod_1.3',
                     blastp=False,
-                    bootstrap=cfg.get('mut_pred_bs', False)
+                    bootstrap=cfg.get('mut_pred_bs', False),
+                    input_seq_type='protein'
                 )
                 self.log_message(f"Prediction Results located at: >>>LINK<<<{pred_dir_val}")
 
