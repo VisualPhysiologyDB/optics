@@ -1,0 +1,2 @@
+query_id,status,closest_match_id,match_species,match_opsin_family,match_accession,match_lambda_max,percent_identity,alignment_length,mismatches,gap_opens,e_value,differences_from_match
+"NM_001014890.3:1-1047_Bos_taurus_rhodopsin_(RHO),_mRNA",Success,Bovine,Bos_tarus,Rh1,NM_001014890,500.0,100.0,348,0,0,0.0,No Differences

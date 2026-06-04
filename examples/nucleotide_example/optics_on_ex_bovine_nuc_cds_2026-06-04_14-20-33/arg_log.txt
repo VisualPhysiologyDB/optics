@@ -1,0 +1,19 @@
+Selected Options...
+input_sequence: D:/safra/Github/optics/examples/ex_bovine_opsin_cds.txt
+report_dir: D:\safra\Github\optics\prediction_outputs/optics_on_optics_output_2026-06-04_14-20-33
+output_file: optics_output
+model: whole-dataset
+encoding_method: aa_prop
+input_seq_type: auto
+translation_frame: auto
+tolerate_non_standard_aa: True
+tolerate_incomplete_seqs: False
+blastp: True
+	blastp_report: blastp_report.txt
+	refseq: bovine
+	custom_ref_file: 
+bootstrap: True
+	visualize_bootstrap: True
+		bootstrap_viz_file: bootstrap_viz
+		save_as: svg
+		full_spectrum_xaxis: False
