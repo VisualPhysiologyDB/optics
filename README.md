@@ -1,7 +1,7 @@
 **Code & Data**: [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0) / **OPTICS_v1.3.1**: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20308090.svg)](https://doi.org/10.5281/zenodo.20308090) / **VPOD_v1.3.1**: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19051998.svg)](https://doi.org/10.5281/zenodo.19051998)
 
 # Opsin Phenotype Tool for Inference of Color Sensitivity (OPTICS) [v1.3] - 
-*_Note_* - A simpler version of an intro to OPTICS is also available on our organization github.io page -> [here](https://visualphysiologydb.github.io/optics.html)
+### *Note* - A simpler version of an intro to OPTICS is also available on our [VisualPhysiologyDB organization page](https://visualphysiologydb.github.io/optics.html)
 
 ![](https://github.com/VisualPhysiologyDB/optics/blob/main/data/logo/optics_bs_fig_ex.svg?raw=true)
 
