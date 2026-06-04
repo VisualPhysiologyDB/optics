@@ -273,7 +273,7 @@ def process_sequences_from_file(file, selected_model, identity_report, blastp, r
 
         if translation_meta.get('translated'):
             translated_count += 1
-            if len(translation_meta.get('Raw_Sequence_Length') > 1950):
+            if translation_meta.get('raw_sequence_length') > 1950:
                 print(f'WARNING: Prior to translation sequence {name} had a length greater than 1950, please ensure that the nucelotide sequence does not contain exons... ')
 
         translation_row.update({
@@ -637,10 +637,8 @@ def process_sequences_from_file(file, selected_model, identity_report, blastp, r
             blast_map = blastp_results_df.set_index('query_id')['percent_identity'].to_dict()
             name_to_seq_map = {item['name']: item['sequence'] for item in final_blast_entries}
             seq_to_blast_result = {seq: blast_map.get(name) for seq, name in unique_blast_seqs.items()}
-            
             per_iden_list = [seq_to_blast_result.get(name_to_seq_map.get(name), 'N/A') for name in names]
-
-
+            
     return names, mean_predictions, ci_lowers, ci_uppers, prediction_dict, predictions, median_predictions, per_iden_list, std_dev_list, seq_lens, removed_sequences
 
 
