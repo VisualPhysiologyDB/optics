@@ -36,7 +36,7 @@ def calculate_ensemble_CI(original_prediction, loaded_bs_models, query, name, bo
         for filename in os.listdir(model_folder):
             if filename.endswith('.pkl') and i < bootstrap_num:  # Assuming you saved models as .pkl
                 model_path = os.path.join(model_folder, filename)
-                model = load_obj(model_path)  # You'll need a 'load_model' function
+                model = load_obj(model_path)
                 prediction = model.predict(query)
                 prediction = round(float(prediction[0]),1)
                 predictions_all.append(prediction)

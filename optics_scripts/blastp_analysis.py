@@ -341,6 +341,11 @@ def run_blastp_analysis(query_sequences, query_ids, opsin_database, opsin_db_fas
     if final_ordered_list:
         results_df = pd.DataFrame(final_ordered_list)
         results_df.to_csv(output_file, index=False)
+            
+        if results_df['status'].str.contains('Processing Error').any():
+            print('WARNING: It appears that some of your sequences triggered processing errors during BLASTp.\nThis could be due to an inability to align your sequences to the reference sequence.')
+            print('Please double-check that they are indeed opsins sequences and in the correct FASTA format before trying again.')
+            
         print(f"\n✅ Analysis complete. BLASTp analysis results saved to '{output_file}'\n")
         return results_df
     else:

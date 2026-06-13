@@ -1,0 +1,2 @@
+Names	Single_Prediction	Prediction_Means	Prediction_Medians	Prediction_Lower_Bounds	Prediction_Upper_Bounds	Std_Deviation	%Identity_Nearest_VPOD_Sequence	Sequence_Length	Lmax_Hex_Color
+NM_001014890.3:1-1047_Bos_taurus_rhodopsin_(RHO),_mRNA	496.9	497.1	497.1	495.9	498.2	0.6	100.0	348	#00ffb4

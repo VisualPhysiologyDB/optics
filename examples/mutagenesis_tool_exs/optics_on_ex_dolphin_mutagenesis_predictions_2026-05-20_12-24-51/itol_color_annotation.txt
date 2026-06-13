@@ -1,0 +1,6 @@
+TREE_COLORS
+SEPARATOR TAB
+DATA
+NM_001280659.1_A132S	label_background	#00f6ff
+NM_001280659.1_N151S	label_background	#00f6ff
+NM_001280659.1_A132S,N151S	label_background	#00f6ff

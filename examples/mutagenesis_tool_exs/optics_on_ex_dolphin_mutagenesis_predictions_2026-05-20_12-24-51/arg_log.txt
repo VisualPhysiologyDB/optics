@@ -1,0 +1,17 @@
+Selected Options...
+input_sequence: D:\safra\Github\optics\prediction_outputs\dolphin_mutagenesis_test.fasta
+report_dir: D:\safra\Github\optics\prediction_outputs/optics_on_dolphin_mutagenesis_test_predictions_2026-05-20_12-24-51
+output_file: dolphin_mutagenesis_test_predictions
+model: whole-dataset
+encoding_method: aa_prop
+tolerate_non_standard_aa: True
+tolerate_incomplete_seqs: False
+blastp: False
+	blastp_report: blastp_report.txt
+	refseq: bovine
+	custom_ref_file: None
+bootstrap: False
+	visualize_bootstrap: True
+		bootstrap_viz_file: bootstrap_viz
+		save_as: svg
+		full_spectrum_xaxis: False

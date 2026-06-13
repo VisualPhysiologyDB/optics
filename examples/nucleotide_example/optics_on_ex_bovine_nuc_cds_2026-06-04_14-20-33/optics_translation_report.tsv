@@ -1,0 +1,2 @@
+Name	Requested_Input_Type	Requested_Translation_Frame	Detected_Input_Type	Translated	Translation_Frame	Translation_Internal_Stops	Translation_Ambiguous_Codons	Translation_Method	Raw_Sequence_Length	Prepared_Protein_Length	Status	Reason
+NM_001014890.3:1-1047_Bos_taurus_rhodopsin_(RHO),_mRNA	auto	auto	nucleotide	True	1	0	0	Biopython Seq.translate(table=1)	1047	348	kept	

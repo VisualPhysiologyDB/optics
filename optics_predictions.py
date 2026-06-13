@@ -18,7 +18,11 @@ matplotlib.use('Agg')  # Use 'Agg' to prevent Mac crash when using GUI
 # The VPOD/OPTICS special sauce ~
 from deepBreaks.utils import load_obj
 from deepBreaks.preprocessing import read_data
-from optics_scripts.utils import extract_fasta_entries, write_to_excel
+from optics_scripts.utils import (
+    extract_fasta_entries,
+    write_to_excel,
+    prepare_sequence_for_prediction,
+)
 from optics_scripts.blastp_analysis import run_blastp_analysis
 from optics_scripts.bootstrap_predictions import calculate_ensemble_CI, plot_prediction_subsets_with_CI, wavelength_to_rgb
 
@@ -211,46 +215,150 @@ def _worker_predict_sequence(name, sequence, selected_model, bootstrap, wrk_dir,
             os.remove(temp_ali_path)
 
 def process_sequences_from_file(file, selected_model, identity_report, blastp, refseq, reffile, 
-                                bootstrap, bootstrap_num, encoding_method, wrk_dir, model_version, preload_to_memory, n_jobs, tolerate_non_standard_aa=True, tolerate_incomplete_seqs=False):
+                                bootstrap, bootstrap_num, encoding_method, wrk_dir, model_version, preload_to_memory, n_jobs,
+                                tolerate_non_standard_aa=True, tolerate_incomplete_seqs=False,
+                                input_seq_type='auto', translation_frame='auto',
+                                translation_report_path=None, translated_fasta_path=None):
     if file is None:
         raise ValueError('Error: No input file was provided.')
         
     names_unfiltered, sequences_unfiltered = extract_fasta_entries(file)
     
-    # Process all sequences first, tracking valid entries ---
-    # This list will store all sequences that pass initial checks, preserving duplicates and order.
+    # Process all sequences first, tracking valid entries.
+    # This list stores amino-acid sequences that pass initial checks, preserving
+    # duplicates and order. Nucleotide records are translated before they reach
+    # alignment, prediction, caching, or BLASTp analysis.
     all_valid_entries = []
     removed_sequences = []
+    translation_records = []
+    translated_count = 0
     
     for name, seq_entry in zip(names_unfiltered, sequences_unfiltered):
-        seq_body = seq_entry.split('\n', 1)[1].replace('\n', '')
+        if '\n' in seq_entry:
+            seq_body = seq_entry.split('\n', 1)[1].replace('\n', '')
+        else:
+            seq_body = seq_entry.replace('\n', '')
+
+        translation_row = {
+            'Name': name,
+            'Requested_Input_Type': input_seq_type,
+            'Requested_Translation_Frame': translation_frame,
+            'Detected_Input_Type': '',
+            'Translated': False,
+            'Translation_Frame': '',
+            'Translation_Internal_Stops': '',
+            'Translation_Ambiguous_Codons': '',
+            'Translation_Method': '',
+            'Raw_Sequence_Length': len(seq_body),
+            'Prepared_Protein_Length': '',
+            'Status': 'pending',
+            'Reason': ''
+        }
+
+        try:
+            seq_body, translation_meta = prepare_sequence_for_prediction(
+                seq_body,
+                input_seq_type=input_seq_type,
+                translation_frame=translation_frame
+            )
+        except Exception as exc:
+            print(f'WARNING: Sequence {name} could not be prepared for prediction: {exc}')
+            removed_sequences.append(name)
+            translation_row.update({
+                'Status': 'removed',
+                'Reason': f'translation/preparation failed: {exc}'
+            })
+            translation_records.append(translation_row)
+            continue
+
+        if translation_meta.get('translated'):
+            translated_count += 1
+            if translation_meta.get('raw_sequence_length') > 1950:
+                print(f'WARNING: Prior to translation sequence {name} had a length greater than 1950, please ensure that the nucelotide sequence does not contain exons... ')
+
+        translation_row.update({
+            'Detected_Input_Type': translation_meta.get('detected_input_type', ''),
+            'Translated': translation_meta.get('translated', False),
+            'Translation_Frame': translation_meta.get('translation_frame', ''),
+            'Translation_Internal_Stops': translation_meta.get('translation_internal_stops', ''),
+            'Translation_Ambiguous_Codons': translation_meta.get('translation_ambiguous_codons', ''),
+            'Translation_Method': translation_meta.get('translation_method', ''),
+            'Prepared_Protein_Length': translation_meta.get('prepared_sequence_length', len(seq_body))
+        })
+
         clean_seq_body = filter_non_standard_aa(seq_body)
         
         # Condition 1: Check for non-standard amino acids
         if (clean_seq_body != seq_body) and not tolerate_non_standard_aa:
             print(f'WARNING: Sequence {name} contained non-standard amino acids and will be skipped.')
             removed_sequences.append(name)
+            translation_row.update({
+                'Status': 'removed',
+                'Reason': 'non-standard amino acid(s) after preparation'
+            })
+            translation_records.append(translation_row)
             continue # Skip to the next sequence
 
+        if len(clean_seq_body) == 0:
+            print(f'WARNING: Sequence {name} is empty after preparation and will be skipped.')
+            removed_sequences.append(name)
+            translation_row.update({
+                'Status': 'removed',
+                'Reason': 'empty amino-acid sequence after preparation'
+            })
+            translation_records.append(translation_row)
+            continue
+
         # Condition 2: Check for valid length
-        if not (250 <= len(clean_seq_body) <= 650) and tolerate_incomplete_seqs:
+        if not (250 <= len(clean_seq_body) <= 650) and not tolerate_incomplete_seqs:
             print(f'WARNING: Sequence {name} (length {len(clean_seq_body)}) is outside the 250-650 aa range and will be skipped as it is likely an incomplete sequence.\n')
             if seq_body != clean_seq_body:
                 print(f'NOTE: This sequence was originally {len(seq_body)} aa but was cleaned to {len(clean_seq_body)} aa.\n')
             removed_sequences.append(name)
+            translation_row.update({
+                'Status': 'removed',
+                'Reason': 'outside 250-650 aa range'
+            })
+            translation_records.append(translation_row)
             continue # Skip to the next sequence
         
         if len(removed_sequences)>0:
             print(f'If you still wish to predict on sequences outside our predefined range (250-650 aa), then enable the "--tolerate_incomplete_seqs" flag\n')
             
         # If all checks pass, add it to our list of valid entries
-        # We add the original sequence since it will be cleaned in a similar way during the prediction pre-processing. 
-        all_valid_entries.append({'name': name, 'sequence': seq_body})
+        # Use the cleaned amino-acid sequence so non-standard residues and
+        # translation artifacts are removed before MAFFT/deepBreaks processing.
+        all_valid_entries.append({'name': name, 'sequence': clean_seq_body})
+        translation_row.update({
+            'Prepared_Protein_Length': len(clean_seq_body),
+            'Status': 'kept'
+        })
+        translation_records.append(translation_row)
+
+    if translated_count > 0:
+        print(f'Translated {translated_count} nucleotide sequence(s) to amino-acid sequence(s) before prediction.')
+
+    if translation_records and (translated_count > 0 or input_seq_type == 'nucleotide'):
+        if translation_report_path:
+            try:
+                pd.DataFrame(translation_records).to_csv(translation_report_path, sep='\t', index=False)
+                print(f'Saved translation/preparation report to: {translation_report_path}')
+            except Exception as exc:
+                print(f'Warning: Could not save translation report: {exc}')
+
+        if translated_fasta_path and all_valid_entries:
+            try:
+                with open(translated_fasta_path, 'w') as fasta_out:
+                    for entry in all_valid_entries:
+                        fasta_out.write(f">{entry['name']}\n{entry['sequence']}\n")
+                print(f'Saved protein FASTA used for prediction to: {translated_fasta_path}')
+            except Exception as exc:
+                print(f'Warning: Could not save translated protein FASTA: {exc}')
 
     if tolerate_non_standard_aa:
-        print(f'\n{len(removed_sequences)} sequences were removed due to length constraints.')
+        print(f'\n{len(removed_sequences)} sequences were removed during input preparation and length checks.')
     else:
-        print(f'\n{len(removed_sequences)} sequences were removed due to length constraints and/or non-standard amino acids.')
+        print(f'\n{len(removed_sequences)} sequences were removed due to input preparation, length constraints and/or non-standard amino acids.')
 
     # Get the unique set of sequences that actually need prediction
     unique_seq_to_name_map = {}
@@ -372,6 +480,32 @@ def process_sequences_from_file(file, selected_model, identity_report, blastp, r
     
     model_path = model_directories[selected_model]
     bs_model_folder_path = model_bs_dirs.get(selected_model, '')
+
+    # --- Model Availability Check ---
+    core_models = ['whole-dataset', 'whole-dataset-mnm', 'wildtype', 'wildtype-mnm', 'type-one']
+    missing_paths = []
+
+    if not os.path.exists(model_path):
+        missing_paths.append(model_path)
+
+    if bootstrap and bs_model_folder_path and not os.path.exists(bs_model_folder_path):
+        missing_paths.append(bs_model_folder_path)
+
+    if missing_paths:
+        if selected_model not in core_models:
+            print(f"\n[ERROR] The selected model '{selected_model}' is an 'extra model' and its required files/folders were not found:")
+            for p in missing_paths:
+                print(f" - {p}")
+            print(f"\nPlease download the required extra model files from:")
+            print(f"https://github.com/VisualPhysiologyDB/extra_optics_models/tree/main")
+            print(f"and manually add them to your local OPTICS models directory before running this script.\n")
+        else:
+            print(f"\n[ERROR] Core model '{selected_model}' files are missing:")
+            for p in missing_paths:
+                print(f" - {p}")
+            print(f"\nPlease verify your OPTICS installation.\n")
+        sys.exit(1)
+
     # --- Caching Logic ---
     model_type = 'bs_models' if bootstrap else 'reg_models'
     cache_dir = f"{wrk_dir}/data/cached_predictions/{model_type}/{model_version}/{encoding_method}"
@@ -410,7 +544,7 @@ def process_sequences_from_file(file, selected_model, identity_report, blastp, r
             # Add the real name and sequence to the list for the worker
             sequences_for_mp.append((name, seq))
             
-    print(f"{len(prediction_results)} unique sequences found in cache. Predicting {len(sequences_for_mp)} new unique sequences.")
+    print(f"{len(prediction_results)} unique sequences found in cache. Predicting {len(sequences_for_mp)} new unique sequences.\n")
 
     if sequences_for_mp:
         try:
@@ -503,10 +637,8 @@ def process_sequences_from_file(file, selected_model, identity_report, blastp, r
             blast_map = blastp_results_df.set_index('query_id')['percent_identity'].to_dict()
             name_to_seq_map = {item['name']: item['sequence'] for item in final_blast_entries}
             seq_to_blast_result = {seq: blast_map.get(name) for seq, name in unique_blast_seqs.items()}
-            
             per_iden_list = [seq_to_blast_result.get(name_to_seq_map.get(name), 'N/A') for name in names]
-
-
+            
     return names, mean_predictions, ci_lowers, ci_uppers, prediction_dict, predictions, median_predictions, per_iden_list, std_dev_list, seq_lens, removed_sequences
 
 
@@ -514,7 +646,8 @@ def run_optics_predictions(input_sequence, pred_dir=None, output='optics_predict
                            model="whole-dataset", encoding_method='aa_prop', blastp=True,
                            iden_report='blastp_report.txt', refseq='bovine', reffile=None,
                            bootstrap=True, bootstrap_num = 100, visualize_bootstrap=True, bootstrap_viz_file='bootstrap_viz', save_as='svg', full_spectrum_xaxis=False,
-                           model_version='vpod_1.3', preload_to_memory=False, n_jobs=-1, tolerate_non_standard_aa=True, tolerate_incomplete_seqs=False, command_run=None):
+                           model_version='vpod_1.3', preload_to_memory=False, n_jobs=-1, tolerate_non_standard_aa=True, tolerate_incomplete_seqs=False,
+                           input_seq_type='auto', translation_frame='auto', command_run=None):
 
     dt_label = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
     script_path = pathlib.Path(__file__).resolve()
@@ -526,6 +659,14 @@ def run_optics_predictions(input_sequence, pred_dir=None, output='optics_predict
     if bootstrap_num > 100:
         print("Warning: bootstrap_num cannot exceed 100. Setting to 100.")
         bootstrap_num = 100
+
+    input_seq_type = (input_seq_type or 'auto').lower().strip()
+    if input_seq_type not in {'auto', 'protein', 'nucleotide'}:
+        raise ValueError("input_seq_type must be one of: auto, protein, nucleotide")
+
+    translation_frame = str(translation_frame or 'auto').lower().strip()
+    if translation_frame not in {'auto', '1', '2', '3', '-1', '-2', '-3'}:
+        raise ValueError("translation_frame must be one of: auto, 1, 2, 3, -1, -2, -3")
 
     # Directory setup
     os.makedirs(f'{wrk_dir}/tmp', exist_ok=True)
@@ -543,6 +684,8 @@ def run_optics_predictions(input_sequence, pred_dir=None, output='optics_predict
 
     blastp_file = f'{report_dir}/{iden_report}'.replace('.tsv', '').replace('.txt', '') + '.csv'
     bootstrap_file_path = f'{report_dir}/{bootstrap_viz_file}'
+    translation_report_path = f'{report_dir}/{output_prefix}_translation_report.tsv'
+    translated_fasta_path = f'{report_dir}/{output_prefix}_predicted_protein_translation.fasta'
     log_file = f'{report_dir}/arg_log.txt'
     
     # Logging
@@ -552,6 +695,7 @@ def run_optics_predictions(input_sequence, pred_dir=None, output='optics_predict
     
         arg_string = (f"input_sequence: {input_sequence}\nreport_dir: {report_dir}\n"
                     f"output_file: {output}\nmodel: {model}\nencoding_method: {encoding_method}\n"
+                    f"input_seq_type: {input_seq_type}\ntranslation_frame: {translation_frame}\n"
                     f"tolerate_non_standard_aa: {tolerate_non_standard_aa}\ntolerate_incomplete_seqs: {tolerate_incomplete_seqs}\n"
                     f"blastp: {blastp}\n\tblastp_report: {iden_report}\n\trefseq: {refseq}\n"
                     f"\tcustom_ref_file: {reffile}\nbootstrap: {bootstrap}\n"
@@ -576,7 +720,9 @@ def run_optics_predictions(input_sequence, pred_dir=None, output='optics_predict
         names, mean_preds, ci_lows, ci_ups, pred_dict, preds, median_preds, iden_list, std_devs, seq_lens_list, removed = process_sequences_from_file(
             input_sequence_path, model, blastp_file, blastp, refseq, reffile, bootstrap, 
             bootstrap_num, encoding_method, wrk_dir, model_version, preload_to_memory, n_jobs, 
-            tolerate_non_standard_aa, tolerate_incomplete_seqs
+            tolerate_non_standard_aa, tolerate_incomplete_seqs,
+            input_seq_type, translation_frame,
+            translation_report_path, translated_fasta_path
         )
 
         output_path = f'{report_dir}/{output_prefix}_predictions.tsv'
@@ -683,6 +829,18 @@ if __name__ == '__main__':
                         default="aa_prop",
                         choices=['one_hot', 'aa_prop'],
                         required=False)
+    parser.add_argument("--input_seq_type",
+                        help="Input sequence type. 'auto' detects nucleotide FASTA records and translates them before prediction; 'protein' disables translation; 'nucleotide' forces translation for all records.",
+                        type=str,
+                        default="auto",
+                        choices=['auto', 'protein', 'nucleotide'],
+                        required=False)
+    parser.add_argument("--translation_frame",
+                        help="Reading frame for nucleotide input. Use 'auto' to evaluate all six frames, or specify 1, 2, 3, -1, -2, or -3.",
+                        type=str,
+                        default="auto",
+                        choices=['auto', '1', '2', '3', '-1', '-2', '-3'],
+                        required=False)
     parser.add_argument("--tolerate_non_standard_aa",
                             help="Allows OPTICS to run predictions on sequences with 'non-standard' amino-acids (e.g. - 'X','O','B', etc...)(optional)", 
                             action="store_true",
@@ -743,4 +901,5 @@ if __name__ == '__main__':
                         args.prediction_prefix, args.model, args.encoding,
                         args.blastp, args.blastp_report, args.refseq, args.custom_ref_file,
                         args.bootstrap, args.bootstrap_num, args.visualize_bootstrap, args.bootstrap_viz_file, args.save_viz_as, 
-                        args.full_spectrum_xaxis, args.model_version, False, args.n_jobs, args.tolerate_non_standard_aa, args.tolerate_incomplete_seqs, command_run)
+                        args.full_spectrum_xaxis, args.model_version, False, args.n_jobs, args.tolerate_non_standard_aa, args.tolerate_incomplete_seqs,
+                        args.input_seq_type, args.translation_frame, command_run)
