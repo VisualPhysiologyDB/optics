@@ -87,7 +87,12 @@ def _worker_predict_sequence(name, sequence, selected_model, bootstrap, wrk_dir,
     Worker function executed by each parallel process.
     It loads its own models to prevent memory duplication in the main process.
     """
-    time.sleep(0.1)
+    #time.sleep(0.1)
+
+    if wrk_dir == None:
+        script_path = pathlib.Path(__file__).resolve()
+        wrk_dir = str(script_path.parent).replace('\\', '/')
+    
     ### All model loading now happens HERE, inside the worker.
     # Each process gets its own copy without overwhelming the system.
     main_model = load_obj(model_path)
@@ -221,7 +226,11 @@ def process_sequences_from_file(file, selected_model, identity_report, blastp, r
                                 translation_report_path=None, translated_fasta_path=None):
     if file is None:
         raise ValueError('Error: No input file was provided.')
-        
+    
+    if wrk_dir == None:
+        script_path = pathlib.Path(__file__).resolve()
+        wrk_dir = str(script_path.parent).replace('\\', '/')
+
     names_unfiltered, sequences_unfiltered = extract_fasta_entries(file)
     
     # Process all sequences first, tracking valid entries.
