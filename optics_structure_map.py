@@ -219,6 +219,11 @@ def _execute_mapping(shap_csv, pdb_input, output_dir, use_query_position, chain,
         
         pdb_input = "1U19"
         pdb_file_path = f"{wrk_dir}/data/cached_structures/1U19.pdb"
+        if not os.path.isfile(pdb_file_path):
+            os.makedirs(os.path.dirname(pdb_file_path), exist_ok=True)
+            pdb_file_path = fetch_pdb_from_rcsb("1U19", os.path.dirname(pdb_file_path))
+            if not pdb_file_path:
+                raise RuntimeError("Could not download the bovine reference structure after cache cleanup.")
         
         # When mapping to 1U19, we MUST use reference positions (unless user has pre-mapped SHAP data)
         # Usually, SHAP on query seq -> Query Position. 

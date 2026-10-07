@@ -24,6 +24,7 @@ from optics_scripts.utils import (
     prepare_sequence_for_prediction,
 )
 from optics_scripts.blastp_analysis import run_blastp_analysis
+from optics_scripts.cache_management import prepare_prediction_cache, save_prediction_cache
 from optics_scripts.bootstrap_predictions import calculate_ensemble_CI, plot_prediction_subsets_with_CI, wavelength_to_rgb
 
 import contextlib
@@ -223,7 +224,8 @@ def process_sequences_from_file(file, selected_model, identity_report, blastp, r
                                 bootstrap, bootstrap_num, encoding_method, wrk_dir, model_version, preload_to_memory, n_jobs,
                                 tolerate_non_standard_aa=True, tolerate_incomplete_seqs=False,
                                 input_seq_type='auto', translation_frame='auto',
-                                translation_report_path=None, translated_fasta_path=None):
+                                translation_report_path=None, translated_fasta_path=None,
+                                ignore_cache=False, delete_cached_predictions=False):
     if file is None:
         raise ValueError('Error: No input file was provided.')
     
@@ -518,16 +520,15 @@ def process_sequences_from_file(file, selected_model, identity_report, blastp, r
     # --- Caching Logic ---
     model_type = 'bs_models' if bootstrap else 'reg_models'
     cache_dir = f"{wrk_dir}/data/cached_predictions/{model_type}/{model_version}/{encoding_method}"
-    os.makedirs(cache_dir, exist_ok=True)
     cache_file = f"{cache_dir}/{selected_model}_pred_dict.json"
-    
-    try:
-        with open(cache_file, 'r') as f:
-            cached_pred_dict = json.load(f)
-        print('\nPrediction cache file successfully loaded.\n')
-    except (json.JSONDecodeError, FileNotFoundError):
-        cached_pred_dict = {}
-        print('\nCache file not found or invalid. A new cache will be created.\n')
+    cached_pred_dict, deleted_count = prepare_prediction_cache(
+        cache_file, unique_seq_to_name_map,
+        ignore_cache=ignore_cache, delete_cached_predictions=delete_cached_predictions
+    )
+    if delete_cached_predictions:
+        print(f"Deleted {deleted_count} cached prediction(s) for this input and model configuration.")
+    if ignore_cache:
+        print("Ignoring prediction cache for this run; fresh predictions will not be cached.")
     
     prediction_results = {}
     # The list for multiprocessing will now store tuples of (name, sequence)
@@ -536,7 +537,7 @@ def process_sequences_from_file(file, selected_model, identity_report, blastp, r
     # Iterate through the unique sequences using the new map
     for seq, name in unique_seq_to_name_map.items():
         hit = False
-        if seq in cached_pred_dict:
+        if not ignore_cache and isinstance(cached_pred_dict.get(seq), dict):
             entry = cached_pred_dict[seq]
             if bootstrap:
                 # In bootstrap mode, we must ensure the cached entry used the same number of replicates
@@ -583,20 +584,18 @@ def process_sequences_from_file(file, selected_model, identity_report, blastp, r
                     # Mark this sequence as failed in our results dictionary
                     prediction_results[seq_key] = None
             
-            if newly_predicted_count > 0:
+            if newly_predicted_count > 0 and not ignore_cache:
                 print(f"Saving {newly_predicted_count} new predictions to cache file...")
                 try:
-                    with open(cache_file, 'w') as f:
-                        json.dump(cached_pred_dict, f, indent=4)
+                    save_prediction_cache(cache_file, cached_pred_dict)
                 except Exception as e:
                     print(f"Error: Could not save cache file: {e}")
 
         except Exception as e:
             print(f"A critical error occurred during multiprocessing: {e}")
             # Attempt to save any results we managed to get before the error
-            if any(prediction_results):
-                with open(cache_file, 'w') as f:
-                    json.dump(cached_pred_dict, f, indent=4)
+            if any(prediction_results) and not ignore_cache:
+                save_prediction_cache(cache_file, cached_pred_dict)
             raise
 
     # Assemble final results by iterating through the original valid entries ---
@@ -656,7 +655,8 @@ def run_optics_predictions(input_sequence, pred_dir=None, output='optics_predict
                            iden_report='blastp_report.txt', refseq='bovine', reffile=None,
                            bootstrap=True, bootstrap_num = 100, visualize_bootstrap=True, bootstrap_viz_file='bootstrap_viz', save_as='svg', full_spectrum_xaxis=False,
                            model_version='vpod_1.3', preload_to_memory=False, n_jobs=-1, tolerate_non_standard_aa=True, tolerate_incomplete_seqs=False,
-                           input_seq_type='auto', translation_frame='auto', command_run=None):
+                           input_seq_type='auto', translation_frame='auto', command_run=None,
+                           ignore_cache=False, delete_cached_predictions=False):
 
     dt_label = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
     script_path = pathlib.Path(__file__).resolve()
@@ -705,6 +705,7 @@ def run_optics_predictions(input_sequence, pred_dir=None, output='optics_predict
         arg_string = (f"input_sequence: {input_sequence}\nreport_dir: {report_dir}\n"
                     f"output_file: {output}\nmodel: {model}\nencoding_method: {encoding_method}\n"
                     f"input_seq_type: {input_seq_type}\ntranslation_frame: {translation_frame}\n"
+                    f"ignore_cache: {ignore_cache}\ndelete_cached_predictions: {delete_cached_predictions}\n"
                     f"tolerate_non_standard_aa: {tolerate_non_standard_aa}\ntolerate_incomplete_seqs: {tolerate_incomplete_seqs}\n"
                     f"blastp: {blastp}\n\tblastp_report: {iden_report}\n\trefseq: {refseq}\n"
                     f"\tcustom_ref_file: {reffile}\nbootstrap: {bootstrap}\n"
@@ -731,7 +732,8 @@ def run_optics_predictions(input_sequence, pred_dir=None, output='optics_predict
             bootstrap_num, encoding_method, wrk_dir, model_version, preload_to_memory, n_jobs, 
             tolerate_non_standard_aa, tolerate_incomplete_seqs,
             input_seq_type, translation_frame,
-            translation_report_path, translated_fasta_path
+            translation_report_path, translated_fasta_path,
+            ignore_cache=ignore_cache, delete_cached_predictions=delete_cached_predictions
         )
 
         output_path = f'{report_dir}/{output_prefix}_predictions.tsv'
@@ -862,6 +864,11 @@ if __name__ == '__main__':
                         help="Number of parallel processes to run.\n-1 is the default, utilizing all avaiable processors.", 
                         type=int,
                         default=-1)
+    cache_group = parser.add_argument_group("Prediction cache controls")
+    cache_group.add_argument("--ignore-cache", "--ignore_cache", action="store_true",
+                             help="Recompute predictions without reading or writing the prediction cache. BLAST caching is unchanged.")
+    cache_group.add_argument("--delete-cached-predictions", "--delete_cached_predictions", action="store_true",
+                             help="Delete predictions for the input sequences in the selected model/version/encoding/bootstrap cache before running. Combine with --ignore-cache to leave them uncached.")
     blastp_group = parser.add_argument_group("BLASTp analysis (optional)")
     blastp_group.add_argument("--blastp", 
                             help="Enable BLASTp analysis.", 
@@ -911,4 +918,5 @@ if __name__ == '__main__':
                         args.blastp, args.blastp_report, args.refseq, args.custom_ref_file,
                         args.bootstrap, args.bootstrap_num, args.visualize_bootstrap, args.bootstrap_viz_file, args.save_viz_as, 
                         args.full_spectrum_xaxis, args.model_version, False, args.n_jobs, args.tolerate_non_standard_aa, args.tolerate_incomplete_seqs,
-                        args.input_seq_type, args.translation_frame, command_run)
+                        args.input_seq_type, args.translation_frame, command_run,
+                        ignore_cache=args.ignore_cache, delete_cached_predictions=args.delete_cached_predictions)

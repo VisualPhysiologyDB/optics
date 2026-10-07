@@ -153,7 +153,25 @@ optics/
 
 ```
 
-*Note: The `cached_predictions` folder allows OPTICS to skip re-running heavy alignment/prediction steps for sequences it has seen before. You can clear this folder to force a fresh run.*
+*Note: The `cached_predictions` folder allows OPTICS to skip re-running heavy alignment/prediction steps for sequences it has seen before.*
+
+### Managing caches
+
+Predictions reuse cached results by default. Both the prediction GUI and CLI provide these controls:
+
+- **Ignore prediction cache for this run** (`--ignore-cache`, also `--ignore_cache`): recompute without reading or writing the prediction cache. Existing saved predictions remain intact.
+- **Delete cached predictions for this input before running** (`--delete-cached-predictions`, also `--delete_cached_predictions`): remove entries for the current input sequences and selected model, model version, encoding and bootstrap mode, then run predictions and cache the fresh results. Other sequences and model configurations are kept. Matching uses the prepared protein sequence, including translation and amino-acid cleanup.
+- Combine both options to remove the matching entries and run without caching their replacements. If recomputation fails, deleted entries remain deleted.
+
+```bash
+python optics_predictions.py -i sequences.fasta --ignore-cache
+python optics_predictions.py -i sequences.fasta --delete-cached-predictions
+python optics_predictions.py -i sequences.fasta --delete-cached-predictions --ignore-cache
+```
+
+These options affect prediction results; optional BLAST analysis has its own cache. GUI profiles and batch jobs preserve the selected cache controls.
+
+The **Clear cache...** dropdown in the upper-right corner of the GUI main menu can clear **Predictions**, **BLAST results**, **Downloaded sequences**, **Structures**, or **All caches**. It shows the number and size of cached files and asks for confirmation before deleting them. Whole-cache cleanup is available only in the GUI. Saved outputs, trained models and source datasets are kept. Wait for other OPTICS processes to finish before clearing their caches. Removed sequence/structure downloads require internet access when next needed.
 
 Usage
 -----

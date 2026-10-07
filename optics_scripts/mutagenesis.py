@@ -53,7 +53,7 @@ from Bio.Align import substitution_matrices
 ENTREZ_EMAIL = 'your.email@example.com'
 Entrez.email = ENTREZ_EMAIL
 
-cache_dir = f"./data/cached_seqs"
+cache_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "cached_seqs")
 os.makedirs(cache_dir, exist_ok=True)
 cache_file = f"{cache_dir}/wt_opsin_seq_dict.json"
 try:

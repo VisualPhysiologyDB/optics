@@ -12,6 +12,7 @@ import json
 import glob
 import re
 from PIL import Image, ImageTk
+from optics_scripts.cache_management import CACHE_DIRECTORIES, ALL_CACHES, cache_files, clear_cache
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -274,6 +275,15 @@ class ModeSelectorFrame(ctk.CTkFrame):
         main_frame = ctk.CTkFrame(self)
         main_frame.pack(fill=tk.BOTH, expand=True, padx=40, pady=40)
 
+        cache_bar = ctk.CTkFrame(main_frame, fg_color="transparent")
+        cache_bar.pack(fill=tk.X, padx=15, pady=(10, 0))
+        self.cache_menu = ctk.CTkOptionMenu(
+            cache_bar, values=list(CACHE_DIRECTORIES) + [ALL_CACHES],
+            command=self.clear_selected_cache, width=190
+        )
+        self.cache_menu.set("Clear cache...")
+        self.cache_menu.pack(side=tk.RIGHT)
+
         # Logo
         if hasattr(self.controller, 'ctk_logo_img') and self.controller.ctk_logo_img:
             logo_lbl = ctk.CTkLabel(main_frame, image=self.controller.ctk_logo_img, text="")
@@ -342,6 +352,43 @@ class ModeSelectorFrame(ctk.CTkFrame):
                               fg_color=BTN_COLOR, hover_color=BTN_HOVER, text_color=BTN_TEXT,
                               command=lambda: self.controller.show_optics_gui('chimeras'))
         chimera_btn.grid(row=4, column=1, sticky="ew", padx=20, pady=10)
+
+    def clear_selected_cache(self, category):
+        self.cache_menu.set("Clear cache...")
+        if self.controller.job_running:
+            messagebox.showwarning("OPTICS is running", "Wait for the current job to finish before clearing caches.")
+            return
+        workspace = os.path.dirname(os.path.abspath(__file__))
+        try:
+            files = cache_files(workspace, category)
+            sequence_module = None
+            if category in ("Downloaded sequences", ALL_CACHES):
+                sequence_module = sys.modules.get("optics_scripts.mutagenesis")
+            memory_count = len(sequence_module.CACHED_SEQUENCES) if sequence_module is not None else 0
+            if not files and not memory_count:
+                messagebox.showinfo("Cache empty", f"{category}: no cached files to delete.")
+                return
+            size_mb = sum(path.stat().st_size for path in files) / (1024 * 1024)
+            if not messagebox.askyesno(
+                "Clear OPTICS cache",
+                f"Clear {category.lower()}?\n\n"
+                f"This deletes {len(files)} cached file(s) ({size_mb:.1f} MB) from this OPTICS installation.\n"
+                + (f"Also clears {memory_count} sequence(s) held in memory.\n" if memory_count else "") +
+                "Saved results, models and source datasets are kept.\n"
+                "Deleted caches will be rebuilt when needed; downloads require internet access.",
+                default="no"
+            ):
+                return
+            count = clear_cache(workspace, category)
+            # Mutagenesis also keeps downloaded sequences in memory.
+            if sequence_module is not None:
+                sequence_module.CACHED_SEQUENCES.clear()
+                sequence_module.original_key_count = 0
+            messagebox.showinfo("Cache cleared", f"Deleted {count} cached file(s) from {category.lower()}."
+                                + (f"\nCleared {memory_count} sequence(s) from memory." if memory_count else ""))
+        except (OSError, ValueError) as exc:
+            messagebox.showerror("Cache cleanup failed", f"Could not finish clearing the cache:\n{exc}\n\nSome files may remain.")
+
 
 # --- Main Logic Frame ---
 class OpticsGUIFrame(ctk.CTkFrame):
@@ -701,6 +748,21 @@ class OpticsGUIFrame(ctk.CTkFrame):
             self.toggle_mut_pred_options() # initialize state
         # --- SUB-MODE SPECIFIC OPTIONS ---
         if self.mode == 'predictions':
+            self.ignore_cache_var = tk.BooleanVar(value=False)
+            self.ignore_cache_check = ctk.CTkCheckBox(
+                self.scrollable_frame, text="Ignore prediction cache for this run", variable=self.ignore_cache_var
+            )
+            self.ignore_cache_check.grid(row=current_row, column=0, columnspan=3, padx=10, pady=5, sticky=tk.W)
+            CTkToolTip(self.ignore_cache_check, "Recompute without reading or updating saved predictions. BLAST caching is unchanged.")
+            current_row += 1
+            self.delete_cached_predictions_var = tk.BooleanVar(value=False)
+            self.delete_cached_predictions_check = ctk.CTkCheckBox(
+                self.scrollable_frame, text="Delete cached predictions for this input before running",
+                variable=self.delete_cached_predictions_var
+            )
+            self.delete_cached_predictions_check.grid(row=current_row, column=0, columnspan=3, padx=10, pady=5, sticky=tk.W)
+            CTkToolTip(self.delete_cached_predictions_check, "Only entries for these input sequences and the selected model, version, encoding and bootstrap mode are deleted.\nFresh results are cached unless 'Ignore prediction cache' is also checked.")
+            current_row += 1
             ctk.CTkLabel(self.scrollable_frame, font=self.lbl_font, text="Input Sequence Type:").grid(row=current_row, column=0, padx=10, pady=5, sticky=tk.W)
             self.input_seq_type_var = ctk.StringVar(value=self.input_seq_type_choices[0])
             self.input_seq_type_menu = ctk.CTkOptionMenu(
@@ -896,6 +958,8 @@ class OpticsGUIFrame(ctk.CTkFrame):
             cfg['encoding'] = self.encoding_var.get()
         
         if self.mode == 'predictions':
+            cfg['ignore_cache'] = self.ignore_cache_var.get()
+            cfg['delete_cached_predictions'] = self.delete_cached_predictions_var.get()
             cfg['input_seq_type'] = self.input_seq_type_var.get()
             cfg['translation_frame'] = self.translation_frame_var.get()
             cfg['tolerate_non_standard_aa'] = self.non_standard_aa_var.get()
@@ -979,6 +1043,10 @@ class OpticsGUIFrame(ctk.CTkFrame):
         safe_set('encoding_var', 'encoding')
         safe_set('input_seq_type_var', 'input_seq_type')
         safe_set('translation_frame_var', 'translation_frame')
+        # Profiles written before cache controls existed must retain default behavior.
+        if hasattr(self, 'ignore_cache_var'):
+            self.ignore_cache_var.set(cfg.get('ignore_cache', False))
+            self.delete_cached_predictions_var.set(cfg.get('delete_cached_predictions', False))
         
         safe_set('non_standard_aa_var', 'tolerate_non_standard_aa')
         safe_set('incomp_seqs_var', 'tolerate_incomplete_seqs')
@@ -1265,6 +1333,8 @@ class OpticsGUIFrame(ctk.CTkFrame):
         thread.start()
 
     def _prep_ui_for_run(self, log_msg):
+        self.controller.job_running = True
+        self.back_button.configure(state=tk.DISABLED)
         self.run_button.configure(state=tk.DISABLED)
         self.run_queue_btn.configure(state=tk.DISABLED)
         
@@ -1277,6 +1347,8 @@ class OpticsGUIFrame(ctk.CTkFrame):
         self.loading_screen.start_animation()
 
     def _finish_run(self):
+        self.controller.job_running = False
+        self.back_button.configure(state=tk.NORMAL)
         self.run_button.configure(state=tk.NORMAL)
         self.run_queue_btn.configure(state=tk.NORMAL)
         if self.loading_screen:
@@ -1334,7 +1406,9 @@ class OpticsGUIFrame(ctk.CTkFrame):
                 tolerate_non_standard_aa=cfg.get('tolerate_non_standard_aa', True),
                 tolerate_incomplete_seqs=cfg.get('tolerate_incomplete_seqs', False),
                 input_seq_type=cfg.get('input_seq_type', 'auto'),
-                translation_frame=cfg.get('translation_frame', 'auto')
+                translation_frame=cfg.get('translation_frame', 'auto'),
+                ignore_cache=cfg.get('ignore_cache', False),
+                delete_cached_predictions=cfg.get('delete_cached_predictions', False)
             )
             if output_file_path:
                 self.last_output_dir = os.path.dirname(os.path.abspath(output_file_path))
@@ -1535,6 +1609,7 @@ class OpticsApp(ctk.CTk):
         super().__init__()
         self.title("OPTICS Pipeline")
         self.geometry("1100x950")
+        self.job_running = False
         
         # --- Theme ---
         self.dark_mode_enabled = True
