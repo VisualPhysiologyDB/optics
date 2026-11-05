@@ -758,11 +758,22 @@ def run_optics_predictions(input_sequence, pred_dir=None, output='optics_predict
                 })
                 pred_df.to_csv(f, sep='\t', index=False)
             else:
-                hex_color_list = plot_prediction_subsets_with_CI(names, pred_dict, mean_preds,
+                hex_color_list = plot_prediction_subsets_with_CI(names, pred_dict, median_preds,
                                                                 bootstrap_file_path, visualize_bootstrap, save_as=save_as, full_spectrum_xaxis=full_spectrum_xaxis)
+                statistic_colors = {
+                    f'{statistic}_Hex_Color': [matplotlib.colors.to_hex(wavelength_to_rgb(p)) for p in values]
+                    for statistic, values in (
+                        ('Single_Prediction', preds),
+                        ('Prediction_Means', mean_preds),
+                        ('Prediction_Medians', median_preds),
+                        ('Prediction_Lower_Bounds', ci_lows),
+                        ('Prediction_Upper_Bounds', ci_ups),
+                    )
+                }
                 write_to_excel(names, preds, iden_list, excel_output,
                                 mean_preds, median_preds, ci_lows,
-                                ci_ups, std_devs, hex_color_list, seq_lens_list)
+                                ci_ups, std_devs, hex_color_list, seq_lens_list,
+                                statistic_colors=statistic_colors)
                 pred_df = pd.DataFrame({
                     'Names': names,
                     'Single_Prediction': preds,
@@ -773,7 +784,8 @@ def run_optics_predictions(input_sequence, pred_dir=None, output='optics_predict
                     'Std_Deviation': std_devs,
                     '%Identity_Nearest_VPOD_Sequence': iden_list,
                     'Sequence_Length': seq_lens_list,
-                    'Lmax_Hex_Color': hex_color_list
+                    'Lmax_Hex_Color': hex_color_list,
+                    **statistic_colors,
                 })
                 pred_df.to_csv(f, sep='\t', index=False)
         
