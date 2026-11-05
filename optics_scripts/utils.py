@@ -224,7 +224,8 @@ def extract_fasta_entries(file):
 
 def write_to_excel(names, predictions, per_iden_list, output_filename="output.xlsx", 
                   mean_predictions=None, median_predictions=None, ci_lowers=None, 
-                  ci_uppers=None, std_dev_list=None, hex_color_list=None, seq_lens_list=None):
+                  ci_uppers=None, std_dev_list=None, hex_color_list=None, seq_lens_list=None,
+                  statistic_colors=None):
     """
     Writes data to an Excel sheet, including bootstrap statistics and
     hexadecimal color codes, and colors the cells based on the hex codes.
@@ -241,6 +242,7 @@ def write_to_excel(names, predictions, per_iden_list, output_filename="output.xl
         std_dev_list: List of standard deviations (optional, for bootstrap).
         hex_color_list: List of hexadecimal color codes.
         seq_lens_list: List of sequence lengths
+        statistic_colors: Optional mapping of bootstrap color column names to hex code lists.
         """
 
     wb = Workbook()
@@ -257,15 +259,22 @@ def write_to_excel(names, predictions, per_iden_list, output_filename="output.xl
                                                         end_color=hex_color, 
                                                         fill_type="solid")
     else:
+        statistic_colors = statistic_colors or {}
         ws.append(['Names', 'Single_Prediction', 'Prediction_Means', 'Prediction_Medians',
                     'Prediction_Lower_Bounds', 'Prediction_Upper_Bounds', 'Std_Deviation', 
-                    '%Identity_Nearest_VPOD_Sequence', 'Sequence_Lengths','Lmax_Hex_Color'])
+                    '%Identity_Nearest_VPOD_Sequence', 'Sequence_Lengths','Lmax_Hex_Color',
+                    *statistic_colors])
         for i in range(len(names)):
             # Because openpyxel is picky about hex-codes we need to remove the '#' symbol for it to accept it as a fill color.
             hex_color = hex_color_list[i].replace('#','') 
             ws.append([names[i], predictions[i], mean_predictions[i], median_predictions[i],
-                        ci_lowers[i], ci_uppers[i], std_dev_list[i], per_iden_list[i], seq_lens_list[i], hex_color_list[i]])
+                        ci_lowers[i], ci_uppers[i], std_dev_list[i], per_iden_list[i], seq_lens_list[i], hex_color_list[i],
+                        *[colors[i] for colors in statistic_colors.values()]])
             ws.cell(row=i+2, column=10).fill = PatternFill(start_color=hex_color, 
                                                         end_color=hex_color, 
                                                         fill_type="solid")
+            for column, colors in enumerate(statistic_colors.values(), start=11):
+                color = colors[i].replace('#', '')
+                ws.cell(row=i+2, column=column).fill = PatternFill(
+                    start_color=color, end_color=color, fill_type="solid")
     wb.save(output_filename)

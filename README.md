@@ -268,6 +268,8 @@ Bootstrap Analysis Args (optional):
 ### Output
 
 - Predictions (TSV, Excel): λmax values, BLASTp information, hex-codes (colors) corresponding to predicted λmax.
+
+  Single-prediction runs provide one color in `Lmax_Hex_Color`. Bootstrap runs additionally provide `<statistic>_Hex_Color` columns for `Single_Prediction`, `Prediction_Means`, `Prediction_Medians`, `Prediction_Lower_Bounds`, and `Prediction_Upper_Bounds`. Bootstrap `Lmax_Hex_Color`, plot colors, and tree annotations use the prediction median for visualization.
 - Translation/preparation report (TSV, when nucleotide detection/translation is active): detected input type, selected frame, internal stop count, ambiguous codon count, Biopython translation method, and final protein length.
 - Protein FASTA used for prediction (FASTA, when nucleotide detection/translation is active): translated and cleaned amino-acid sequences passed to OPTICS.
 - BLAST Results (TXT, optional): Comparison of query sequences to reference datasets.

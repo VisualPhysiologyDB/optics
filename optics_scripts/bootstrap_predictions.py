@@ -74,8 +74,9 @@ def plot_prediction_subsets_with_CI(names, predictions, mean_preds, pdf_file, vi
         A dictionary mapping sequence names from `names` to their corresponding
         list or array of bootstrapped prediction values (e.g., λmax).
     mean_preds : list or array-like
-        A list of mean prediction values for each sequence, used to determine
-        the color of the boxplots. The order must match the `names` list.
+        Prediction values used to determine the color of the boxplots.
+        OPTICS passes the bootstrap medians here; the parameter name is retained
+        for compatibility. The order must match the `names` list.
     pdf_file : str
         The base path and filename for the output plots, without the file
         extension. E.g., 'results/my_analysis'.
@@ -94,7 +95,7 @@ def plot_prediction_subsets_with_CI(names, predictions, mean_preds, pdf_file, vi
     - The function saves output plots as a series of files named using the
       `pdf_file` base, such as `{pdf_file}_part1.{save_as}`,
       `{pdf_file}_part2.{save_as}`, etc.
-    - The color of each boxplot is determined by mapping the `mean_preds`
+    - The color of each boxplot is determined by mapping the supplied prediction
       value to a color via the `wavelength_to_rgb` helper function.
     """
     
